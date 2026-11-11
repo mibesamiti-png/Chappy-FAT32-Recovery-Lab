@@ -45,6 +45,24 @@ function MakeZip([bool]$is3mf) {
     return ,$bytes
 }
 # Deterministic single-entry STORED ZIP, with standard CRC32 test vector "123456789".
+function MakeDeflateZip([byte[]]$Payload) {
+    $memory=[IO.MemoryStream]::new()
+    $archive=[IO.Compression.ZipArchive]::new($memory,[IO.Compression.ZipArchiveMode]::Create,$true)
+    try {
+        $entry=$archive.CreateEntry('fake.txt',[IO.Compression.CompressionLevel]::Optimal)
+        $write=$entry.Open()
+        try {$write.Write($Payload,0,$Payload.Length)} finally {$write.Dispose()}
+    } finally {$archive.Dispose()}
+    $bytes=$memory.ToArray();$memory.Dispose()
+    return ,$bytes
+}
+function FindSyntheticCentralDirectory([byte[]]$Bytes) {
+    for($j=0;$j -le $Bytes.Length-46;$j++) {
+        if($Bytes[$j] -eq 0x50 -and $Bytes[$j+1] -eq 0x4b -and
+           $Bytes[$j+2] -eq 1 -and $Bytes[$j+3] -eq 2) { return $j }
+    }
+    throw 'Synthetic central directory marker missing'
+}
 function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9,[byte[]]$Payload=$null) {
     $mem=New-Object IO.MemoryStream
     $writer=New-Object IO.BinaryWriter($mem)
@@ -100,10 +118,10 @@ function WriteSynthetic([string]$path,[byte[]]$content,[int]$size=0) {
     $s=[IO.File]::Open($path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
     try {$s.Write($content,0,$content.Length);if($size -gt $content.Length){$s.SetLength($size)}} finally {$s.Dispose()}
 }
-function Scan([string]$file,[long]$start=0,[long]$count=1048576) {
+function Scan([string]$file,[long]$start=0,[long]$count=1048576,[switch]$DeflateCrc) {
     $s=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
     # Synthetic regression fixture: explicitly permit rereads, never access beyond scan window.
-    try {return Get-ChappyCarvingCandidates -Stream $s -StartOffset $start -MaxScanBytes $count -MaxFileBytes 1048576 -ExtraValidationReadBytes 1048576} finally {$s.Dispose()}
+    try {return Get-ChappyCarvingCandidates -Stream $s -StartOffset $start -MaxScanBytes $count -MaxFileBytes 1048576 -ExtraValidationReadBytes 1048576 -EnableSmallDeflateCrc:$DeflateCrc} finally {$s.Dispose()}
 }
 try {
     # Valid 3MF: central directory and all three required part names.
@@ -240,6 +258,119 @@ try {
     Assert ($largeStoredHits[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'budget-skipped CRC cannot certify payload'
     Write-Host 'PASS: bounded CRC budget marks unchecked ZIP content'
 
+
+    # R3 Issue #32: opt-in only, tiny artificial method-8 CRC/deflate validation.
+    # Default scanner remains structural-only: no content inflate unless requested.
+    $deflateGood=Scan $f 0 1048576 -DeflateCrc
+    $deflateThree=@($deflateGood.items | Where-Object {$_.format -eq '3mf' -and $_.offsetBytes -eq 65534})
+    Assert ($deflateThree.Count -eq 1 -and $deflateThree[0].crc32Status -eq 'match') 'opt-in 3MF method-8 CRC matches all three tiny entries'
+    Assert ($deflateThree[0].crc32CheckedEntries -eq 3 -and $deflateThree[0].crc32UncheckedEntries -eq 0) 'small 3MF deflate checked subset counters'
+    Assert ($deflateThree[0].evidence -contains 'zip.deflate_crc_checked') 'anonymous deflate check evidence'
+    Assert ($deflateThree[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'deflate CRC match does not prove original 3MF data'
+    Assert ($before -eq (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash) 'opt-in 3MF inflate did not change source'
+    $deflateReportPath=Join-Path $fixtureRoot 'deflate_optin_report.json'
+    [void](Write-ChappyCarvingReport -Result $deflateGood -ReportPath $deflateReportPath)
+    $deflateReport=Get-Content -LiteralPath $deflateReportPath -Raw | ConvertFrom-Json
+    $deflateSafe=@($deflateReport.items | Where-Object {$_.format -eq '3mf'})
+    Assert ($deflateSafe.Count -eq 1 -and $deflateSafe[0].crc32Status -eq 'match') 'allowlisted report retains opt-in CRC match'
+    Assert ($deflateSafe[0].checks -eq 'zip_structure_and_optin_deflate_crc32') 'allowlisted report preserves deflate check scope'
+    Assert (-not ((Get-Content -LiteralPath $deflateReportPath -Raw) -match '3dmodel.model')) 'report never includes 3MF internal filename'
+    Write-Host 'PASS: opt-in small DEFLATE 3MF CRC match, all entries bounded, report redacted'
+
+    $deflateZipPath=Join-Path $fixtureRoot 'deflate_good_zip.img'
+    WriteSynthetic $deflateZipPath $z
+    $deflateZipScan=Scan $deflateZipPath 0 1048576 -DeflateCrc
+    $deflateZipHits=@($deflateZipScan.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($deflateZipHits.Count -eq 1 -and $deflateZipHits[0].crc32Status -eq 'match') 'opt-in deflate regular ZIP matches'
+    Assert ($deflateZipHits[0].crc32CheckedEntries -eq 1) 'opt-in deflate ZIP single entry checked'
+
+    # Mismatched declared CRC (central directory), not original-file integrity.
+    $badCrc=[byte[]]$z.Clone()
+    $cd=FindSyntheticCentralDirectory $badCrc
+    $badCrc[$cd+16]=[byte]($badCrc[$cd+16] -bxor 1)
+    $badCrcPath=Join-Path $fixtureRoot 'deflate_wrong_crc.img'
+    WriteSynthetic $badCrcPath $badCrc
+    $mismatchScan=Scan $badCrcPath 0 1048576 -DeflateCrc
+    $mismatch=@($mismatchScan.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($mismatch.Count -eq 1 -and $mismatch[0].confidence -eq 'partial') 'deflate CRC mismatch downgraded candidate'
+    Assert ($mismatch[0].crc32Status -eq 'mismatch' -and $mismatch[0].evidence -contains 'zip.deflate_crc_mismatch') 'deflate mismatch is an anonymous reason code'
+    $wrongReportPath=Join-Path $fixtureRoot 'deflate_wrong_crc_report.json'
+    [void](Write-ChappyCarvingReport -Result $mismatchScan -ReportPath $wrongReportPath)
+    $wrongReport=(Get-Content -LiteralPath $wrongReportPath -Raw | ConvertFrom-Json)
+    Assert ($wrongReport.items[0].checks -eq 'zip_deflate_crc_mismatch') 'deflate mismatch serializes as fixed enum code'
+    Write-Host 'PASS: opt-in deflate CRC mismatch downgrades confidence and report'
+
+    # Invalid DEFLATE block header, while ZIP container references are intact.
+    $badInflate=[byte[]]$z.Clone()
+    $payloadStart=30+[BitConverter]::ToUInt16($badInflate,26)+[BitConverter]::ToUInt16($badInflate,28)
+    $badInflate[$payloadStart]=0xff
+    $badInflatePath=Join-Path $fixtureRoot 'deflate_invalid_stream.img'
+    WriteSynthetic $badInflatePath $badInflate
+    $badInflateResult=Scan $badInflatePath 0 1048576 -DeflateCrc
+    $failed=@($badInflateResult.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($failed.Count -eq 1 -and $failed[0].confidence -eq 'partial') 'failed DEFLATE is not verified'
+    Assert ($failed[0].crc32Status -eq 'partial' -and $failed[0].checks -eq 'zip_deflate_inflate_failed') 'failed inflation retains structural candidate and negative code'
+    Write-Host 'PASS: malformed DEFLATE fails closed without claiming CRC match'
+
+    # A valid archive with extreme declared expansion ratio MUST be skipped, not inflated.
+    $repetitive=New-Object byte[] 32768
+    for($n=0;$n -lt $repetitive.Length;$n++) {$repetitive[$n]=65}
+    $ratioZip=MakeDeflateZip $repetitive
+    Assert ([BitConverter]::ToUInt16($ratioZip,8) -eq 8) 'ratio fixture uses ZIP method 8'
+    $ratioPath=Join-Path $fixtureRoot 'deflate_ratio_bomb.img'
+    WriteSynthetic $ratioPath $ratioZip
+    $ratioResult=Scan $ratioPath 0 1048576 -DeflateCrc
+    $ratioHits=@($ratioResult.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($ratioHits.Count -eq 1 -and $ratioHits[0].crc32Status -eq 'not_checked') 'high expansion ratio skipped without inflate'
+    Assert ($ratioHits[0].crc32UncheckedEntries -eq 1 -and $ratioHits[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'ratio skipped remains structurally classified, content unverified'
+    # A non-opted-in candidate must never claim content verification.
+    $ratioDefault=Scan $ratioPath
+    Assert (@($ratioDefault.items | Where-Object {$_.crc32Status -eq 'match'}).Count -eq 0) 'default opt-out never inflates ratio fixture'
+    Write-Host 'PASS: declared expansion-ratio risk skipped; default-off preserved'
+
+    # Header lies about the expanded size: even if the *declared* ratio looks
+    # small, the stream must stop as soon as actual output exceeds declaration.
+    $hiddenBomb=[byte[]]$ratioZip.Clone()
+    $bombCd=FindSyntheticCentralDirectory $hiddenBomb
+    [Array]::Copy([BitConverter]::GetBytes([uint32]32),0,$hiddenBomb,$bombCd+24,4)
+    $bombPath=Join-Path $fixtureRoot 'deflate_underdeclared_expansion.img'
+    WriteSynthetic $bombPath $hiddenBomb
+    $bombResult=Scan $bombPath 0 1048576 -DeflateCrc
+    $bombHits=@($bombResult.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($bombHits.Count -eq 1 -and $bombHits[0].confidence -eq 'partial') 'underdeclared real expansion fails instead of being accepted'
+    Assert ($bombHits[0].checks -eq 'zip_deflate_inflate_failed') 'underdeclared expansion produces bounded negative code'
+    Write-Host 'PASS: actual decompression output cannot exceed declared bounded size'
+
+    # Global 16-entry inflate cap must span separate archives, not restart at
+    # each independent ZIP candidate in one stream.
+    $miniDeflate=MakeDeflateZip ([Text.Encoding]::ASCII.GetBytes('uncompressible artificial ABCD-1234'))
+    $archiveCount=18
+    $many=New-Object byte[] ($miniDeflate.Length*$archiveCount)
+    for($i=0;$i -lt $archiveCount;$i++){
+        [Array]::Copy($miniDeflate,0,$many,($miniDeflate.Length*$i),$miniDeflate.Length)
+    }
+    $manyPath=Join-Path $fixtureRoot 'multiple_zip_global_inflate_quota.img'
+    WriteSynthetic $manyPath $many
+    $manyStream=[ChappyCountingReadStream]::new([IO.File]::OpenRead($manyPath))
+    try {
+        $manyResult=Get-ChappyCarvingCandidates -Stream $manyStream -MaxScanBytes $many.Length -MaxFileBytes 1048576 -MaxProbeBytes 1048576 -MaxProbes 64 -MaxCandidates 32 -ExtraValidationReadBytes 1048576 -EnableSmallDeflateCrc
+        $allZip=@($manyResult.items | Where-Object {$_.format -eq 'zip'})
+        Assert ($allZip.Count -eq $archiveCount) 'all eighteen non-overlapping small synthetic ZIPs still discovered'
+        Assert (@($allZip | Where-Object {$_.crc32Status -eq 'match'}).Count -eq 16) 'only first sixteen ZIP payloads CRC-checked globally'
+        Assert (@($allZip | Where-Object {$_.crc32Status -eq 'not_checked'}).Count -eq 2) 'global compressed/expanded entry limit marks remaining as unchecked'
+        Assert ($manyStream.BytesRead -eq $manyResult.metrics.bytesRead -and $manyResult.metrics.bytesRead -le ($many.Length+1048576)) 'global source-byte budget includes all attempted inflate reads'
+        Assert ($manyResult.metrics.entriesChecked -le 64 -and -not $manyStream.CanWrite) 'global probes bounded and stream read only'
+    } finally {$manyStream.Dispose()}
+    Write-Host 'PASS: DEFLATE global entry cap applies across ZIP candidates with bounded reads'
+
+    # Truncated ZIP still remains signature-only even with inflate opted in.
+    $cutDeflate=New-Object byte[] ($z.Length-9)
+    [Array]::Copy($z,0,$cutDeflate,0,$cutDeflate.Length)
+    $cutDeflatePath=Join-Path $fixtureRoot 'deflate_truncated_zip.img'
+    WriteSynthetic $cutDeflatePath $cutDeflate
+    $cutDeflateResult=Scan $cutDeflatePath 0 1048576 -DeflateCrc
+    Assert (@($cutDeflateResult.items | Where-Object {$_.confidence -eq 'verified'}).Count -eq 0) 'truncated opt-in DEFLATE ZIP never considered verified'
+    Write-Host 'PASS: opt-in DEFLATE truncated archive remains unverified'
 
     # Truncated central directory is not verified.
     $broken=New-Object byte[] ($z.Length-9)
