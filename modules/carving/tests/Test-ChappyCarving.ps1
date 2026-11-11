@@ -314,7 +314,7 @@ try {
 
     # A valid archive with extreme declared expansion ratio MUST be skipped, not inflated.
     $repetitive=New-Object byte[] 32768
-    [Array]::Fill($repetitive,[byte]65)
+    for($n=0;$n -lt $repetitive.Length;$n++) {$repetitive[$n]=65}
     $ratioZip=MakeDeflateZip $repetitive
     Assert ([BitConverter]::ToUInt16($ratioZip,8) -eq 8) 'ratio fixture uses ZIP method 8'
     $ratioPath=Join-Path $fixtureRoot 'deflate_ratio_bomb.img'
