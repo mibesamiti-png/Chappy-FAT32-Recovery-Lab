@@ -5,9 +5,9 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) **R2 OPEN**; former [#2](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/2) closed | `feature/b-directory-r2-20261111` | `modules/directory/` | **ACTIVE: R2 hierarchy/false-positive reduction; draft PR** |
+| B | Existing Team B chat | [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) **R2 OPEN**; [PR #10](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/10) merged | `feature/b-directory-r2-hierarchy-20261111` | `modules/directory/` | **NEXT: R2 parent-child edge evidence and ambiguity/cycle tests; Draft PR** |
 | C | Existing Team C chat | [#3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3); [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) | `feature/c-carving-r1-20261111` | `modules/carving/` | **A requested P1 bounds/privacy fixes; continue PR #5** |
-| D | Existing Team D chat | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) **R3 OPEN**; former [#4](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/4) closed | `research/d-fat-r3-20261111` | `modules/fat-analysis/` | **ACTIVE: R3 FAT mirror/pattern corruption diagnostics; draft PR** |
+| D | Existing Team D chat | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) **R3 OPEN**; [PR #11](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/11) merged | `research/d-fat-r3-eb58-20261111` | `modules/fat-analysis/` | **NEXT: R3 bounded EB-58 pattern mapping / offset hypotheses; Draft PR** |
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
@@ -32,6 +32,16 @@ For a completely new chat without a known role, do not change the repository unt
 - **C remains on existing [Issue #3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3) / [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5)**; do not create a duplicate C branch or Issue.
 - Use the **identical existing universal bootstrap prompt** in each existing team chat; the role persists from its chat. On every continuation, read the **current dispatch** before the older static default table in the universal instruction. B and D may begin their new assigned work immediately.
 - No synthetic code in GitHub may access actual user data, original microSD or 31GB master IMG. No actual recovery has been verified.
+
+## A second integration checkpoint (Team A — 2026-11-11)
+
+- **B R2 P1**: [PR #10](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/10) merged (`00a1bba6`): guarded dot/dotdot pair, reduced one-entry false positives, structured rejection reasons; Issue #8 remains OPEN for confidence-aware hierarchy reconstruction.
+- **D R3 P1**: [PR #11](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/11) merged (`98cafeb4`): bounded FAT1/FAT2 read-only regional comparison; Issue #9 remains OPEN for EB-58 mapping, chain anomaly density and directory/FAT conflict summaries.
+- **A integrated synthetic regression**: [PR #12](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/12) merged (`7094e780`); [post-merge Windows CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42972326019). This only tests artificial data and does not validate any real IMG.
+- **C**: [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) remains open at reviewed head `6b4b3ab`. Global read/probe budgets added and synthetic CI passed; A still requires secure export destination / device path handling, strict report string sanitization, and explicit structural-only ZIP integrity semantics.
+- B next branch `feature/b-directory-r2-hierarchy-20261111`, D next branch `research/d-fat-r3-eb58-20261111` created from A-integrated `main` HEAD `7094e7809239b1efc721b2d05db9507b4c256f38`. Branches may fall behind later doc commits; fetch latest main and reconcile before work.
+- Do **not** open a second PR for completed B R2 P1 or D R3 P1. Continue the still-open Issues #8 and #9 with one scoped task at a time. C continues same Draft PR #5.
+- No actual 31GB IMG scans, repair, recovery validation or public private-data uploads have occurred.
 
 ## Coordination updates
 
