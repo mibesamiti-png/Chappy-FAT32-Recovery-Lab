@@ -128,12 +128,12 @@ Assert-B ($legacyGraph.edges.Count -eq 1 -and
 
 # Artificial incomplete reads or graph limits could hide conflicting parents.
 # No link in an incomplete graph may remain structurally probable.
-$incomplete = [pscustomobject]@{
+$r6IncompleteInput = [pscustomobject]@{
     scanIncomplete = $true
     directoryContainers = $sim.directoryContainers
     items = $sim.items
 }
-$incompleteGraph = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $incomplete
+$incompleteGraph = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $r6IncompleteInput
 Assert-B ($incompleteGraph.scanIncomplete -and $incompleteGraph.status -eq 'partial' -and
     $incompleteGraph.metrics.probableEdgeAssertions -eq 0 -and
     @($incompleteGraph.edges | Where-Object {$_.confidence -ne 'partial'}).Count -eq 0 -and
