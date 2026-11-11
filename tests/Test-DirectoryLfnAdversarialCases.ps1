@@ -119,7 +119,7 @@ function Add-SyntheticBenchmarkB {
         isRoot = $IsRoot
     })
 }
-function New-BRecords { return (New-Object System.Collections.ArrayList) }
+function New-BRecords { return ,(New-Object System.Collections.ArrayList) }
 
 $bench = New-Object System.Collections.ArrayList
 $one = New-ShortB 'ONE     TXT' 0x20 90 9
