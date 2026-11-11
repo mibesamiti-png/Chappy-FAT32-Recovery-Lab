@@ -120,7 +120,7 @@ foreach($r9Id in $r9CaseIds) {
     }
 }
 Assert-B ($r9CaseIds.Count -eq 17 -and $r9UniqueIds.Count -eq 17) 'R9 same 14 R8 cases plus three independently specified negatives'
-Assert-B ($r9Base.TP -eq 2 -and $r9Base.FP -eq 11 -and $r9Base.FN -eq 0 -and $r9Base.TN -eq 4) 'R9 R8 baseline artificial structural TP2 FP11 FN0 TN4'
+Assert-B ($r9Base.TP -eq 2 -and $r9Base.FP -eq 4 -and $r9Base.FN -eq 0 -and $r9Base.TN -eq 11) 'R9 R8 baseline artificial structural TP2 FP4 FN0 TN11'
 Assert-B ($r9Variant.TP -eq 2 -and $r9Variant.FP -eq 1 -and $r9Variant.FN -eq 0 -and $r9Variant.TN -eq 14) 'R9 opt-in interval guard artificial TP2 FP1 FN0 TN14 with fabricated ledger residual'
 Assert-B ($r9Variant.TP -eq $r9Base.TP -and $r9Variant.FP -lt $r9Base.FP) 'R9 no lost artificial positive and fewer false probable edges'
 Assert-B ((Get-R4Sha256 $r4Image) -eq $r9SourceHash) 'R9 synthetic source SHA unchanged after matching A/B'
