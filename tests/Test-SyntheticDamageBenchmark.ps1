@@ -139,6 +139,10 @@ try {
             Check-A ($g.Count -le 1 -and $z.Count -le 1) 'Duplicate candidates'
             $gok=($g.Count -eq 1 -and (Matches-OriginalA $s $g[0] $gcAt $gcode))
             $zok=($z.Count -eq 1 -and (Matches-OriginalA $s $z[0] $zipAt $threeMf))
+            Write-Host ("SYNTHETIC DEBUG {0} C_found={1} C_status={2} g_count={3} z_count={4} g_exact={5} z_exact={6} orig_g_len={7} orig_z_len={8}" -f $fixture.id,$c.items.Count,$c.status,$g.Count,$z.Count,$gok,$zok,$gcode.Length,$threeMf.Length)
+            foreach($candidate in $c.items){
+                Write-Host ("SYNTHETIC DEBUG candidate format={0} offset={1} length={2} confidence={3}" -f $candidate.format,$candidate.offsetBytes,$candidate.lengthBytes,$candidate.confidence)
+            }
             $exact=([int]$gok)+([int]$zok)
             Check-A ($exact -eq $fixture.exact) ('Byte-for-byte mismatch '+$fixture.id)
             if($fixture.kind -eq 'zip'){
