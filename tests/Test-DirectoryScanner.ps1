@@ -56,10 +56,16 @@ function New-LfnB([string]$Name,[byte[]]$ShortEntry) {
 function Write-DirectoryB([System.IO.Stream]$S,[long]$At,[object[]]$Entries) {
     [byte[]]$cluster=New-Object byte[] 1024
     $offset=0
+    $entryIndex=0
     foreach($entry in $Entries) {
         if($offset+32 -gt $cluster.Length){throw 'Fixture directory overflow'}
-        [Array]::Copy([byte[]]$entry,0,$cluster,$offset,32)
+        [byte[]]$source=[byte[]]$entry
+        if($source.Length -ne 32) {
+            throw "Fixture entry $entryIndex has length $($source.Length), expected 32 (directory offset $At)"
+        }
+        [Array]::Copy($source,0,$cluster,$offset,32)
         $offset+=32
+        $entryIndex++
     }
     Write-B $S $At $cluster
 }
