@@ -30,6 +30,7 @@ $tests=@(
     'modules\fat-analysis\tests\Run-TeamD-R4-Geometry.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R5-Disagreement.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R6-MirrorVbr.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R7-StratifiedAB.Tests.ps1',
     'tests\Test-LocalReadOnlyPreflight.ps1',
     'tests\Test-SyntheticDamageBenchmark.ps1'
 )
