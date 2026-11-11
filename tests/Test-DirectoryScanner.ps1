@@ -53,7 +53,7 @@ function New-LfnB([string]$Name,[byte[]]$ShortEntry) {
     }
     return ,$pieces.ToArray()
 }
-function Write-DirectoryB([System.IO.Stream]$S,[long]$At,[object[]]$Entries) {
+function Write-DirectoryB([System.IO.Stream]$S,[long]$At,[System.Collections.IList]$Entries) {
     [byte[]]$cluster=New-Object byte[] 1024
     $offset=0
     $entryIndex=0
@@ -128,21 +128,26 @@ try {
         $deleted[0]=0xE5
         [void]$root.Add($deleted)
         [void]$root.Add((New-ShortB 'BIGFILE BIN' 0x20 40 4294967295L))
-        Write-Host ("Fixture root count: " + $root.Count)
-        for ($debugIndex = 0; $debugIndex -lt [Math]::Min($root.Count,4); $debugIndex++) {
-            $debugEntry=$root[$debugIndex]
-            Write-Host ("Fixture root entry " + $debugIndex + " type=" + $debugEntry.GetType().FullName + " length=" + @($debugEntry).Length)
-        }
-        Write-DirectoryB $s (ClusterAt 2) @($root.ToArray())
+        Write-DirectoryB $s (ClusterAt 2) $root
         $sub=New-Object System.Collections.ArrayList
         [void]$sub.Add((New-ShortB '.          ' 0x10 7 0))
         [void]$sub.Add((New-ShortB '..         ' 0x10 2 0))
         [void]$sub.Add((New-ShortB 'CHILD   TXT' 0x20 31 500))
         [void]$sub.Add((New-ShortB 'NEST       ' 0x10 10 0))
-        Write-DirectoryB $s (ClusterAt 7) @($sub.ToArray())
-        Write-DirectoryB $s (ClusterAt 10) @((New-ShortB '.          ' 0x10 10 0), (New-ShortB '..         ' 0x10 7 0), (New-ShortB 'INNER   TXT' 0x20 52 70))
-        Write-DirectoryB $s (ClusterAt 19) @((New-ShortB '.          ' 0x10 19 0), (New-ShortB '..         ' 0x10 0 0), (New-ShortB 'ORPHAN  TXT' 0x20 88 60))
-        Write-DirectoryB $s (ClusterAt 20) @((New-ShortB 'FAKE    TXT' 0x20 77 17)) # isolated random-like hit
+        Write-DirectoryB $s (ClusterAt 7) $sub
+        $nest=New-Object System.Collections.ArrayList
+        [void]$nest.Add((New-ShortB '.          ' 0x10 10 0))
+        [void]$nest.Add((New-ShortB '..         ' 0x10 7 0))
+        [void]$nest.Add((New-ShortB 'INNER   TXT' 0x20 52 70))
+        Write-DirectoryB $s (ClusterAt 10) $nest
+        $orphan=New-Object System.Collections.ArrayList
+        [void]$orphan.Add((New-ShortB '.          ' 0x10 19 0))
+        [void]$orphan.Add((New-ShortB '..         ' 0x10 0 0))
+        [void]$orphan.Add((New-ShortB 'ORPHAN  TXT' 0x20 88 60))
+        Write-DirectoryB $s (ClusterAt 19) $orphan
+        $falsePositive=New-Object System.Collections.ArrayList
+        [void]$falsePositive.Add((New-ShortB 'FAKE    TXT' 0x20 77 17))
+        Write-DirectoryB $s (ClusterAt 20) $falsePositive # isolated random-like hit
     } finally {$s.Dispose()}
     $before=Hash-B $imagePath
     $read=[IO.File]::Open($imagePath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
