@@ -831,6 +831,7 @@ try {
 
     # Issue #54: independently bounded non-oracle synthetic tail discovery.
     . (Join-Path $PSScriptRoot 'R6NonOracleResearch.ps1')
+    . (Join-Path $PSScriptRoot 'R7HintAblationResearch.ps1')
 
     # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
     $f7=Join-Path $fixtureRoot 'fixture_bounded.img'

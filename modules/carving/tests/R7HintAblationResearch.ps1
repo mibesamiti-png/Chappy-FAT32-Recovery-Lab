@@ -1,0 +1,246 @@
+#requires -Version 5.1
+# Team C R7, Issue #61: research-only first-offset ablation, synthetic tests.
+# Not an exported or default-enabled production API.
+function Test-R7NoFirstOffsetSynthetic {
+    [CmdletBinding()]param(
+        [Parameter(Mandatory=$true)][IO.Stream]$Source,
+        [ValidateSet('gcode','3mf')][string]$ExpectedFormat,
+        [ValidateRange(1,512)][int]$SecondBytes,
+        [ValidateRange(512,131072)][int]$SearchBytes=131072,
+        [ValidateRange(1,2)][int]$MaxStarts=2,
+        [ValidateRange(1024,401408)][long]$MaxSourceBytes=401408,
+        [ValidateRange(9216,147456)][long]$MaxValidationBytes=147456,
+        [ValidateRange(100,60000)][int]$MaxMilliseconds=30000
+    )
+    if (-not $Source.CanRead -or -not $Source.CanSeek -or $Source.CanWrite) {
+        throw 'R7 research requires non-writable readable seekable synthetic Stream'
+    }
+    if ($SearchBytes % 512 -ne 0 -or $SearchBytes -gt $Source.Length) {
+        throw 'R7 artificial grid window outside stream or unaligned'
+    }
+    $watch=[Diagnostics.Stopwatch]::StartNew()
+    $all=New-Object 'System.Collections.Generic.List[object]'
+    $sourceBytes=0L;$validationBytes=0L;$grid=0;$pairs=0;$evaluated=0
+    $status='ok';$code='none'
+    # R0 correction: production carver correctly reports incomplete
+    # full-file/ZIP validation on fragmented objects. Start-location research
+    # must only discover raw file anchors and NOT upgrade them to full files.
+    # Scan every synthetic 512B boundary without privileged original offsets.
+    if ([long]$SearchBytes -gt $MaxSourceBytes) {
+        $watch.Stop()
+        return [pscustomobject]@{
+            status='partial';decision='incomplete';candidates=@()
+            metrics=[pscustomobject]@{
+                startsProposed=0;startsEvaluated=0;scoutBytesRead=0L
+                sourceBytesRead=0L;validationBytesRead=0L;gridProbes=0
+                pairsEvaluated=0;elapsedMilliseconds=$watch.ElapsedMilliseconds
+                stopCode='search.source_budget_not_reserved'
+            }
+        }
+    }
+    $starts=New-Object 'System.Collections.Generic.List[long]'
+    $seen=New-Object 'System.Collections.Generic.HashSet[long]'
+    $scoutOffsets=0
+    $scoutBytes=0L
+    for($at=0L;$at -lt [long]$SearchBytes;$at+=512L) {
+        if($watch.ElapsedMilliseconds -ge ($MaxMilliseconds-100)){
+            $status='partial';$code='search.time_budget_exhausted';break
+        }
+        if($sourceBytes+512L -gt $MaxSourceBytes){
+            $status='partial';$code='search.source_limit';break
+        }
+        $chunk=New-Object byte[] 512
+        [void]$Source.Seek($at,[IO.SeekOrigin]::Begin)
+        $n=0
+        while($n -lt 512){
+            $read=$Source.Read($chunk,$n,512-$n)
+            if($read -le 0){$status='partial';$code='search.short_read';break}
+            $n+=$read;$sourceBytes += [long]$read
+        }
+        if($status -ne 'ok'){break}
+        $scoutOffsets++
+        $signal=$false
+        if($ExpectedFormat -eq '3mf'){
+            $signal=($chunk[0] -eq 0x50 -and $chunk[1] -eq 0x4b -and
+                     $chunk[2] -eq 0x03 -and $chunk[3] -eq 0x04)
+        } else {
+            $head=[Text.Encoding]::ASCII.GetString($chunk,0,64)
+            # Same broad semantic start families as C's scanner, independently
+            # implemented solely for bounded artificial-grid discovery.
+            $signal=($head -match '^(?:;\s*(?:FLAVOR:|generated|HEADER_START|BambuStudio)|G28\b|M104\b|M140\b|M73\b)')
+        }
+        if($signal -and $seen.Add([long]$at)){$starts.Add([long]$at)}
+        if($starts.Count -gt $MaxStarts){
+            $status='partial';$code='search.start_limit';break
+        }
+    }
+    $scoutBytes=$sourceBytes
+    if($status -ne 'ok'){
+        # Do not validate a truncated/cherry-picked prefix of candidate starts.
+    }elseif($starts.Count -gt $MaxStarts){
+        $status='partial';$code='search.start_limit'
+    }else{
+        foreach($first in $starts){
+            if($watch.ElapsedMilliseconds -ge $MaxMilliseconds-100){
+                $status='partial';$code='search.time_budget_exhausted';break
+            }
+            # Every R6 scan can consume at most 135168B of source data.
+            if($sourceBytes+135168L -gt $MaxSourceBytes){
+                $status='partial';$code='search.source_limit';break
+            }
+            $remaining=[int]($MaxMilliseconds-$watch.ElapsedMilliseconds)
+            $trial=Test-R6NonOracleSyntheticTailSearch -Source $Source -FirstOffset $first -FirstBytes 512 -SecondBytes $SecondBytes -ExpectedFormat $ExpectedFormat -SearchStart 0 -SearchBytes $SearchBytes -MaxOffsets 256 -MaxPairs 8 -MaxSourceBytes 135168 -MaxValidationBytes 73728 -MaxMilliseconds ([int][Math]::Max(100,[Math]::Min(30000,$remaining)))
+            $evaluated++
+            $sourceBytes += [long]$trial.metrics.sourceBytesRead
+            $validationBytes += [long]$trial.metrics.formatValidationBytesRead
+            $grid += [int]$trial.metrics.sampledOffsets
+            $pairs += [int]$trial.metrics.evaluatedPairs
+            if($sourceBytes -gt $MaxSourceBytes -or $validationBytes -gt $MaxValidationBytes){
+                throw 'R7 aggregate byte accounting invariant failed'
+            }
+            foreach($p in $trial.candidates){
+                $all.Add([pscustomobject]@{
+                    firstOffset=$first;secondOffset=$p.offset
+                    possible=[bool]$p.possible;sha256=$p.sha256;code=$p.code
+                })
+            }
+            if($trial.status -ne 'ok'){
+                $status='partial';$code='search.tail_incomplete';break
+            }
+        }
+    }
+    $count=@($all.ToArray() | Where-Object {$_.possible}).Count
+    $decision=if($status -ne 'ok'){'incomplete'}elseif($count -eq 0){'unknown'}elseif($count -eq 1){'one_possible'}else{'ambiguous'}
+    $watch.Stop()
+    return [pscustomobject]@{
+        status=$status;decision=$decision;candidates=@($all.ToArray())
+        metrics=[pscustomobject]@{
+            startsProposed=$starts.Count;startsEvaluated=$evaluated
+            scoutBytesRead=$scoutBytes
+            sourceBytesRead=$sourceBytes;validationBytesRead=$validationBytes
+            gridProbes=$grid;pairsEvaluated=$pairs
+            elapsedMilliseconds=$watch.ElapsedMilliseconds;stopCode=$code
+        }
+    }
+}
+
+# The reference method receives a true first offset. R7 does NOT.
+# Ground truth is accessed only in scoring, never in the R7 search function.
+$r7TP=0;$r7FP=0;$r7FN=0;$r7TN=0
+$r7Unique=0;$r7Ambiguous=0;$r7Unknown=0;$r7Incomplete=0
+$r7Source=0L;$r7ScoutRead=0L;$r7MemoryRead=0L;$r7Grid=0;$r7Pairs=0;$r7Starts=0
+$r7ReferenceReads=0L
+# Frozen case-level expectations from prior exact-head synthetic CI. These
+# values belong exclusively to this external test oracle, NEVER to either
+# experimental candidate-discovery function.
+$r7Expected=@{
+    'gcode_unique'                   = @{starts=1;decision='one_possible';accepted=1;correct=1}
+    'gcode_decoy'                    = @{starts=1;decision='ambiguous';accepted=2;correct=1}
+    '3mf_unique'                     = @{starts=2;decision='one_possible';accepted=1;correct=1}
+    '3mf_structural_decoy'           = @{starts=2;decision='ambiguous';accepted=2;correct=1}
+    '3mf_true_tail_outside_scan'     = @{starts=1;decision='unknown';accepted=0;correct=0}
+}
+Assert ($r6Cases.Count -eq 5 -and $r7Expected.Count -eq 5) 'R7 external scorer has exactly five frozen synthetic scenarios'
+foreach($case in $r6Cases){
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{$before=[BitConverter]::ToString($sha.ComputeHash($case.bytes)).Replace('-','')}
+    finally{$sha.Dispose()}
+    $reference=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.bytes,$false))
+    try{
+        $originalR6=Test-R6NonOracleSyntheticTailSearch -Source $reference -FirstOffset $case.first -FirstBytes 512 -SecondBytes $case.tailBytes -ExpectedFormat $case.kind -SearchBytes $case.searchBytes -MaxOffsets 256 -MaxPairs 8 -MaxSourceBytes 135168 -MaxValidationBytes 73728 -MaxMilliseconds 30000
+        Assert ($reference.BytesRead -eq $originalR6.metrics.sourceBytesRead -and $reference.BytesRead -le 401408) ($case.name+': R6 known-first-offset reference is counted')
+        Assert ($originalR6.status -eq 'ok' -and $originalR6.decision -eq $case.expected) ($case.name+': R6 reference must retain its frozen decision')
+        $r7ReferenceReads += $reference.BytesRead
+    }finally{$reference.Dispose()}
+    $input=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.bytes,$false))
+    try{
+        $result=Test-R7NoFirstOffsetSynthetic -Source $input -ExpectedFormat $case.kind -SecondBytes $case.tailBytes -SearchBytes $case.searchBytes -MaxStarts 2 -MaxSourceBytes 401408 -MaxValidationBytes 147456
+        Assert ($input.BytesRead -eq $result.metrics.sourceBytesRead -and $input.BytesRead -le 401408) ($case.name+': R7 bytes independently measured')
+        Assert ($result.metrics.gridProbes -le 512 -and $result.metrics.pairsEvaluated -le 16) ($case.name+': R7 bounded grid and pairs')
+        Assert ($result.metrics.validationBytesRead -le 147456 -and -not $input.CanWrite) ($case.name+': R7 bounded memory validator and source nonwritable')
+        $r7Source += $input.BytesRead
+        $r7ScoutRead += [long]$result.metrics.scoutBytesRead
+        $r7MemoryRead += [long]$result.metrics.validationBytesRead
+        $r7Grid += [int]$result.metrics.gridProbes
+        $r7Pairs += [int]$result.metrics.pairsEvaluated
+        $r7Starts += [int]$result.metrics.startsProposed
+        $accepted=@($result.candidates | Where-Object {$_.possible})
+        $correct=@($accepted | Where-Object {$_.sha256 -eq $case.originalHash -and $_.firstOffset -eq $case.first}).Count
+        $expect=$r7Expected[$case.name]
+        Assert ($null -ne $expect) ($case.name+': no unknown or silently skipped R7 case')
+        Assert ($result.status -eq 'ok' -and $result.decision -eq $expect.decision) ($case.name+': R7 frozen format-only decision')
+        Assert ($result.metrics.startsProposed -eq $expect.starts -and
+                $result.metrics.startsEvaluated -eq $expect.starts) ($case.name+': all candidate starts, including false ZIP headers, must be examined')
+        Assert ($accepted.Count -eq $expect.accepted -and $correct -eq $expect.correct) ($case.name+': exact independent artificial-byte truth and false candidate count')
+        Assert (@($accepted | Where-Object {$_.code -ne 'pair.format_consistent'}).Count -eq 0) ($case.name+': no invented original-verified label for format-consistent candidates')
+        Assert (@($result.candidates | Where-Object {$null -ne $_.PSObject.Properties['verifiedOriginal']}).Count -eq 0) ($case.name+': test helper cannot assert unobserved original-file provenance')
+        $r7TP += $correct
+        $r7FP += ($accepted.Count-$correct)
+        if($correct -eq 0){$r7FN++}
+        $r7TN += @($result.candidates | Where-Object {-not $_.possible}).Count
+        switch($result.decision){
+            'unknown' {$r7Unknown++}
+            'ambiguous' {$r7Ambiguous++}
+            'one_possible' {$r7Unique++}
+            'incomplete' {$r7Incomplete++}
+        }
+        Write-Host ("R7 CASE {0} starts={1} decision={2} accepted={3} correct={4} source_bytes={5}" -f $case.name,$result.metrics.startsProposed,$result.decision,$accepted.Count,$correct,$result.metrics.sourceBytesRead)
+    }finally{$input.Dispose()}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{$after=[BitConverter]::ToString($sha.ComputeHash($case.bytes)).Replace('-','')}
+    finally{$sha.Dispose()}
+    Assert ($before -eq $after) ($case.name+': artificial bytes unchanged')
+}
+Assert ($r7TP -eq 4 -and $r7FP -eq 2 -and $r7FN -eq 1 -and $r7TN -eq 3) 'R7 frozen pair-scoped confusion totals TP4 FP2 FN1 TN3; changed results need deliberate review'
+Assert ($r7Unique -eq 2 -and $r7Ambiguous -eq 2 -and $r7Unknown -eq 1 -and $r7Incomplete -eq 0) 'R7 exactly two possible/ambiguous, one unknown, zero incomplete on frozen corpus'
+Assert ($r7Starts -eq 7 -and $r7Grid -eq 1657 -and $r7Pairs -eq 9) 'R7 candidate start/grid/pair counts remain stable on deterministic fixture'
+Assert ($r7Source -gt $r7ReferenceReads -and $r7ScoutRead -gt 0 -and $r7MemoryRead -gt 0) 'R7 must record additional scout and in-memory validation work rather than claiming free improvement'
+Write-Host 'PASS: R7 all five frozen case outcomes, original-byte truth and ambiguity totals match independent scorer'
+Write-Host ("R7 SYNTHETIC ABLATION METRICS cases=5 TP={0} FP={1} FN={2} TN={3} unique={4} ambiguous={5} unknown={6} incomplete={7} start_proposals={8} pair_trials={9} grid_probes={10} scout_bytes={11} source_bytes={12} in_memory_bytes={13} r6_reference_bytes={14}" -f $r7TP,$r7FP,$r7FN,$r7TN,$r7Unique,$r7Ambiguous,$r7Unknown,$r7Incomplete,$r7Starts,$r7Pairs,$r7Grid,$r7ScoutRead,$r7Source,$r7MemoryRead,$r7ReferenceReads)
+Write-Host 'PASS: R7 synthetic first-offset ablation, measured reference, bounded starts and independent truth'
+
+$writable=[IO.MemoryStream]::new($split,$true)
+try{
+    $blocked=$false
+    try{Test-R7NoFirstOffsetSynthetic -Source $writable -ExpectedFormat gcode -SecondBytes $r5GRest | Out-Null}
+    catch{$blocked=$true}
+    Assert $blocked 'R7 refuses writable input'
+}finally{$writable.Dispose()}
+$tiny=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($split,$false))
+try{
+    $partial=Test-R7NoFirstOffsetSynthetic -Source $tiny -ExpectedFormat gcode -SecondBytes $r5GRest -MaxSourceBytes 1024
+    Assert ($partial.decision -eq 'incomplete' -and $partial.metrics.sourceBytesRead -eq 0 -and $tiny.BytesRead -eq 0) 'R7 tiny scout budget fails closed before reads'
+}finally{$tiny.Dispose()}
+# An additional fake ZIP local header beyond the existing one creates THREE
+# untrusted starts. It must NOT silently truncate to the first two or select
+# the true one simply because the artificial test knows its offset.
+$tooMany=[byte[]]$split.Clone()
+$thirdAt=115200
+$tooMany[$thirdAt]=0x50
+$tooMany[$thirdAt+1]=0x4b
+$tooMany[$thirdAt+2]=0x03
+$tooMany[$thirdAt+3]=0x04
+$tooManySource=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($tooMany,$false))
+try{
+    $tooManyResult=Test-R7NoFirstOffsetSynthetic -Source $tooManySource -ExpectedFormat 3mf -SecondBytes $r5ZRest -MaxStarts 2
+    Assert ($tooManyResult.decision -eq 'incomplete' -and $tooManyResult.status -eq 'partial' -and $tooManyResult.metrics.stopCode -eq 'search.start_limit') 'R7 third ZIP decoy causes explicit incomplete coverage'
+    Assert ($tooManyResult.metrics.startsProposed -eq 3 -and $tooManyResult.metrics.pairsEvaluated -eq 0) 'R7 never cherry-picks starts or validates partial prefix'
+    Assert ($tooManySource.BytesRead -eq $tooManyResult.metrics.sourceBytesRead -and $tooManySource.BytesRead -le 401408) 'R7 fake ZIP-start flood is source-read bounded'
+}finally{$tooManySource.Dispose()}
+
+# The 512B-alignment assumption is an acknowledged failure mode: an invented
+# genuine G-code first fragment shifted by one byte is not discoverable
+# through this narrow scout. The test scorer knows the true shift, the
+# experimental helper receives neither first offset nor truth metadata.
+$offGrid=[byte[]]$split.Clone()
+$offGrid[$gStart]=0
+[Array]::Copy($gOriginal,0,$offGrid,($gStart+1),512)
+$offGridRead=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($offGrid,$false))
+try{
+    $shifted=Test-R7NoFirstOffsetSynthetic -Source $offGridRead -ExpectedFormat gcode -SecondBytes $r5GRest
+    Assert ($shifted.decision -eq 'unknown' -and $shifted.metrics.startsProposed -eq 0) 'R7 cannot find genuine unaligned artificial G-code start'
+    Assert ($offGridRead.BytesRead -eq $shifted.metrics.sourceBytesRead -and $offGridRead.BytesRead -le 401408) 'R7 off-grid miss remains strictly bounded'
+}finally{$offGridRead.Dispose()}
+Write-Host 'PASS: R7 third fake ZIP start fails closed, off-grid true G-code start remains unknown'
+
+Write-Host 'PASS: R7 writable source rejected and scout budget exhaustion is incomplete'
