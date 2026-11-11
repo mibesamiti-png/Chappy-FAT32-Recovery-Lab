@@ -55,6 +55,39 @@ inside **earlier recognized candidate intervals**, not unrelated earlier files.
   remains a **candidate**, not proof that a real corrupted disk's original bytes survived.
   The separate Team A damage benchmark in Draft PR #22 is independently reviewed.
 
+## R4: fragmented-cluster evidence (synthetic QA only)
+
+This round adds **tests and documentation only**, not a guessed FAT chain
+reconstructor or a new default-on scanner option. It builds a deliberately tiny
+128 KiB FAT32-like arithmetic model, **not a mountable standards-compliant FAT32 volume**.
+Both synthetic FAT copies map two file beginnings to remote continuation clusters
+(512-byte clusters, G-code 18 -> 58; 3MF/ZIP 98 -> 154). Original
+artificial G-code and 3MF each occupy more than one cluster. Ground truth
+assembles their two clusters **inside the test only** and compares exact bytes.
+
+- **Contiguous positive control:** compare scanner candidate offset/length and
+  independently known original G-code and 3MF byte slices; both should match.
+- **Discontiguous G-code:** a deliberately invalid intervening line yields
+  `fragmentationSuspected=true`, `confidence=partial`, and just the first
+  contiguous valid text portion. No claim that the remaining file was restored.
+- **Discontiguous 3MF:** the local header is present, but EOCD and central
+  directory have moved to a physically remote cluster. The starting candidate
+  must remain `lengthBytes=0`, `confidence=partial`,
+  `integrityScope=signature_only_not_validated`, not a recovered 3MF file.
+- **Negative cases:** a standalone fake `PK` local-header signature and a ZIP
+  with a damaged EOCD must never be promoted to structurally verified content.
+  The test also checks source SHA invariance and counting-stream byte/probe caps.
+- `scanIncomplete` means **scan coverage was limited** (e.g. MaxScanBytes or
+  budget), not that every candidate in an otherwise complete scan is intact.
+  A complete-window scan may return `scanIncomplete=false` while individual
+  ZIP or G-code candidates remain `partial`. This distinction is intentional.
+
+Fragmentation is **not** reconstruction. The scanner never follows these
+artificial FAT links, does not locate the correct remote cluster by itself,
+does not fill missing data, and never certifies provenance or restored bytes.
+One favorable exact-byte synthetic case is not a real recovery probability.
+Original microSD and the unique 31 GB master IMG remain out of scope.
+
 ## Opt-in extraction
 
 `Export-ChappyCarvingCandidate` is **disabled by default** and throws without the explicit `-EnableFileExport` switch. It is for synthetic fixtures only until Team A independently approves a safe local recovery workflow. Only existing absolute local drive-letter source files and destination directories are accepted. Device/volume namespaces, UNC/drive-relative paths, alternate data streams and paths under reparse-point/symlink/junction ancestors are rejected. Output must be in a **separate directory tree** (not the source folder or its ancestor/descendant). No filename from source content is trusted: output names derive from offsets. The function writes into `structurally_verified`, `probable`, or `partial` subfolders with `FileMode.CreateNew`; no overwrite is allowed.

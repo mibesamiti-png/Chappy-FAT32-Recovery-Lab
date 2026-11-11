@@ -63,6 +63,49 @@ function FindSyntheticCentralDirectory([byte[]]$Bytes) {
     }
     throw 'Synthetic central directory marker missing'
 }
+# R4 ground truth is deliberately independent of the C carver.
+# This is a tiny FAT32-like arithmetic model, NOT a mountable FAT32 volume.
+function New-R4FAT32LikeImage([bool]$Split) {
+    $bytes=New-Object byte[] 131072  # 256 synthetic sectors of 512 bytes
+    $bytes[11]=0; $bytes[12]=2; $bytes[13]=1
+    $bytes[14]=8; $bytes[16]=2
+    [Array]::Copy([BitConverter]::GetBytes([uint32]256),0,$bytes,32,4)
+    [Array]::Copy([BitConverter]::GetBytes([uint32]8),0,$bytes,36,4)
+    [Array]::Copy([BitConverter]::GetBytes([uint32]2),0,$bytes,44,4)
+    [Array]::Copy([Text.Encoding]::ASCII.GetBytes('FAT32   '),0,$bytes,82,8)
+    $bytes[510]=0x55; $bytes[511]=0xaa
+    # Reserved=8 sectors, FATs=2*8 sectors: data base = 12,288.
+    # Two artificial FAT copies point to discontiguous continuation clusters.
+    foreach($fatBase in @(4096,8192)) {
+        $gNext=if($Split){58}else{19}
+        $zNext=if($Split){154}else{99}
+        [Array]::Copy([BitConverter]::GetBytes([uint32]$gNext),0,$bytes,($fatBase+18*4),4)
+        [Array]::Copy([BitConverter]::GetBytes([uint32]268435455),0,$bytes,($fatBase+$gNext*4),4)
+        [Array]::Copy([BitConverter]::GetBytes([uint32]$zNext),0,$bytes,($fatBase+98*4),4)
+        [Array]::Copy([BitConverter]::GetBytes([uint32]268435455),0,$bytes,($fatBase+$zNext*4),4)
+    }
+    return ,$bytes
+}
+function Make-R4Fragmentable3MF {
+    $memory=[IO.MemoryStream]::new()
+    $archive=[IO.Compression.ZipArchive]::new($memory,[IO.Compression.ZipArchiveMode]::Create,$true)
+    try {
+        foreach($name in @('[Content_Types].xml','_rels/.rels','3D/3dmodel.model','Metadata/artificial.bin')) {
+            $entry=$archive.CreateEntry($name)
+            $writer=$entry.Open()
+            try {
+                if($name -eq 'Metadata/artificial.bin') {
+                    # Reproducible, deliberately non-secret 280-byte test data.
+                    $payload=New-Object byte[] 280
+                    for($k=0;$k -lt $payload.Length;$k++) {$payload[$k]=[byte](($k*73+19)%256)}
+                } else {$payload=[Text.Encoding]::UTF8.GetBytes('synthetic test body')}
+                $writer.Write($payload,0,$payload.Length)
+            } finally {$writer.Dispose()}
+        }
+    } finally {$archive.Dispose()}
+    $result=$memory.ToArray();$memory.Dispose()
+    return ,$result
+}
 function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9,[byte[]]$Payload=$null) {
     $mem=New-Object IO.MemoryStream
     $writer=New-Object IO.BinaryWriter($mem)
@@ -479,6 +522,109 @@ try {
     Assert ($frag.Count -eq 1) 'discontinuous G-code candidate found'
     Assert ($frag[0].fragmentationSuspected -and $frag[0].confidence -eq 'partial') 'discontinuous G-code marked partial'
     Write-Host 'PASS: non-text G-code discontinuity is partial'
+
+    # R4 Issue #39: independent synthetic byte truth over discontiguous 512-byte
+    # FAT32-like clusters. No scanner input contains actual user data or files.
+    $nl=[char]10
+    $gFirstText=(@(';FLAVOR:Marlin','G28','M104 S200','M140 S55','G1 X1 Y1','M73 P10') -join $nl)+$nl
+    while(($gFirstText.Length+6) -le 512) {$gFirstText+='G1 X1'+$nl}
+    $remaining=512-$gFirstText.Length
+    if($remaining -eq 1) {$gFirstText+=$nl}
+    elseif($remaining -gt 1) {$gFirstText+=';'+('A'*($remaining-2))+$nl}
+    Assert ($gFirstText.Length -eq 512) 'artificial G-code begins with one full 512-byte cluster'
+    $gOriginal=[Text.Encoding]::ASCII.GetBytes($gFirstText+'G1 X99 Y99'+$nl+'M84'+$nl)
+    $zOriginal=Make-R4Fragmentable3MF
+    Assert ($gOriginal.Length -gt 512 -and $gOriginal.Length -lt 1024) 'G-code crosses exactly one cluster boundary'
+    Assert ($zOriginal.Length -gt 512 -and $zOriginal.Length -lt 1024) '3MF crosses exactly one cluster boundary'
+    $gStart=20480; $gTail=40960; $zStart=61440; $zTail=90112; $decoyAt=112640
+    $control=New-R4FAT32LikeImage $false
+    [Array]::Copy($gOriginal,0,$control,$gStart,$gOriginal.Length)
+    [Array]::Copy($zOriginal,0,$control,$zStart,$zOriginal.Length)
+    $controlPath=Join-Path $fixtureRoot 'r4_contiguous_cluster_control.img'
+    WriteSynthetic $controlPath $control
+    $controlBefore=(Get-FileHash -LiteralPath $controlPath -Algorithm SHA256).Hash
+    $controlScan=Scan $controlPath
+    $controlG=@($controlScan.items | Where-Object {$_.format -eq 'gcode' -and $_.offsetBytes -eq $gStart})
+    $controlZ=@($controlScan.items | Where-Object {$_.format -eq '3mf' -and $_.offsetBytes -eq $zStart})
+    Assert ($controlG.Count -eq 1 -and $controlZ.Count -eq 1) 'two independent contiguous file candidates found'
+    Assert ($controlG[0].lengthBytes -eq $gOriginal.Length -and $controlZ[0].lengthBytes -eq $zOriginal.Length) 'contiguous candidates have exact ground-truth lengths'
+    $controlGBytes=New-Object byte[] $gOriginal.Length
+    $controlZBytes=New-Object byte[] $zOriginal.Length
+    [Array]::Copy($control,$gStart,$controlGBytes,0,$gOriginal.Length)
+    [Array]::Copy($control,$zStart,$controlZBytes,0,$zOriginal.Length)
+    Assert ([Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($controlGBytes,$gOriginal) -and [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($controlZBytes,$zOriginal)) 'independent byte-for-byte contiguous positive control'
+    Assert ($controlZ[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'ZIP structure confidence remains independent of original-byte truth'
+    Assert (-not $controlScan.scanIncomplete) 'full-window contiguous scan covered every synthetic byte'
+    Assert ($controlBefore -eq (Get-FileHash -LiteralPath $controlPath -Algorithm SHA256).Hash) 'positive control input unchanged'
+    Write-Host 'PASS: R4 FAT32-like contiguous controls yield exact known G-code/3MF byte slices'
+
+    $split=New-R4FAT32LikeImage $true
+    [Array]::Copy($gOriginal,0,$split,$gStart,512)
+    [Array]::Copy($gOriginal,512,$split,$gTail,($gOriginal.Length-512))
+    [Array]::Copy($zOriginal,0,$split,$zStart,512)
+    [Array]::Copy($zOriginal,512,$split,$zTail,($zOriginal.Length-512))
+    # A clearly invalid intervening line is evidence of G-code discontinuity,
+    # not enough evidence to reconstruct or infer the later cluster location.
+    $badLine=[Text.Encoding]::ASCII.GetBytes('UNRELATED_MATERIAL'+$nl)
+    [Array]::Copy($badLine,0,$split,($gStart+512),$badLine.Length)
+    # Non-file ZIP signature decoy after the two discontiguous ground-truth files.
+    $split[$decoyAt]=0x50;$split[$decoyAt+1]=0x4b;$split[$decoyAt+2]=3;$split[$decoyAt+3]=4
+    $split[$decoyAt+26]=9
+    $splitPath=Join-Path $fixtureRoot 'r4_discontiguous_clusters_and_decoy.img'
+    WriteSynthetic $splitPath $split
+    $splitBefore=(Get-FileHash -LiteralPath $splitPath -Algorithm SHA256).Hash
+    $readOnly=[ChappyCountingReadStream]::new([IO.File]::OpenRead($splitPath))
+    try {
+        $fragmented=Get-ChappyCarvingCandidates -Stream $readOnly -StartOffset 0 -MaxScanBytes $split.Length -MaxFileBytes 1048576 -MaxProbes 32 -MaxCandidates 16 -ExtraValidationReadBytes 1048576
+        Assert ($readOnly.BytesRead -eq $fragmented.metrics.bytesRead -and $fragmented.metrics.bytesRead -le ($split.Length+1048576)) 'fragmented synthetic actual stream reads globally bounded and measured'
+        Assert ($fragmented.metrics.entriesChecked -le 32 -and -not $readOnly.CanWrite) 'fragmented synthetic probe cap and read-only source'
+    } finally {$readOnly.Dispose()}
+    $fragG=@($fragmented.items | Where-Object {$_.format -eq 'gcode' -and $_.offsetBytes -eq $gStart})
+    $fragZ=@($fragmented.items | Where-Object {$_.offsetBytes -eq $zStart -and $_.format -eq 'zip'})
+    Assert ($fragG.Count -eq 1 -and $fragZ.Count -eq 1) 'fragmented original anchors visible without guessed reconstruction'
+    Assert ($fragG[0].confidence -eq 'partial' -and $fragG[0].fragmentationSuspected) 'intervening bytes yield G-code fragment evidence'
+    Assert ($fragG[0].lengthBytes -eq 512 -and $fragG[0].integrityScope -eq 'heuristic_text_only_not_original_file_integrity') 'only initial G-code cluster is validated, not complete file'
+    Assert ($fragZ[0].lengthBytes -eq 0 -and $fragZ[0].confidence -eq 'partial' -and $fragZ[0].integrityScope -eq 'signature_only_not_validated') 'split 3MF stays signature-only with zero extractable length'
+    Assert (@($fragmented.items | Where-Object {$_.confidence -eq 'verified' -and $_.format -in @('zip','3mf')}).Count -eq 0) 'no false structurally verified ZIP from broken cluster chain or decoy'
+    Assert (-not $fragmented.scanIncomplete) 'fully traversed scan window is different from incomplete candidate content'
+    $localGBytes=New-Object byte[] $gOriginal.Length
+    $localZBytes=New-Object byte[] $zOriginal.Length
+    [Array]::Copy($split,$gStart,$localGBytes,0,$gOriginal.Length)
+    [Array]::Copy($split,$zStart,$localZBytes,0,$zOriginal.Length)
+    Assert (-not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($localGBytes,$gOriginal)) 'fragmented G-code cannot be claimed byte-identical from a contiguous slice'
+    Assert (-not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($localZBytes,$zOriginal)) 'fragmented 3MF cannot be claimed byte-identical from a contiguous slice'
+    $truthG=New-Object byte[] $gOriginal.Length
+    $truthZ=New-Object byte[] $zOriginal.Length
+    [Array]::Copy($split,$gStart,$truthG,0,512)
+    [Array]::Copy($split,$gTail,$truthG,512,($gOriginal.Length-512))
+    [Array]::Copy($split,$zStart,$truthZ,0,512)
+    [Array]::Copy($split,$zTail,$truthZ,512,($zOriginal.Length-512))
+    Assert ([Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($truthG,$gOriginal) -and [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($truthZ,$zOriginal)) 'independent artificial FAT chain ground truth has both complete files, but C must not guess fragments'
+    Assert ($splitBefore -eq (Get-FileHash -LiteralPath $splitPath -Algorithm SHA256).Hash) 'discontiguous synthetic IMG source unchanged'
+    Write-Host 'PASS: R4 split-cluster G-code partial, 3MF signature-only, decoy nonverified, no guessed file content'
+
+    # A ZIP with the EOCD signature but an incomplete/damaged EOCD record is
+    # not structurally valid. Source bytes beyond its original end are irrelevant.
+    $badEocd=New-R4FAT32LikeImage $false
+    [Array]::Copy($zOriginal,0,$badEocd,$zStart,$zOriginal.Length)
+    $eocdIndex=$zOriginal.Length-22
+    Assert ($zOriginal[$eocdIndex] -eq 0x50 -and $zOriginal[$eocdIndex+1] -eq 0x4b -and $zOriginal[$eocdIndex+2] -eq 5 -and $zOriginal[$eocdIndex+3] -eq 6) 'synthetic 3MF EOCD marker known'
+    for($i=8;$i -lt 22;$i++) {$badEocd[$zStart+$eocdIndex+$i]=0xff}
+    $badEocdPath=Join-Path $fixtureRoot 'r4_damaged_eocd.img'
+    WriteSynthetic $badEocdPath $badEocd
+    $brokenScan=Scan $badEocdPath
+    $brokenZ=@($brokenScan.items | Where-Object {$_.offsetBytes -eq $zStart -and $_.format -eq 'zip'})
+    Assert ($brokenZ.Count -eq 1 -and $brokenZ[0].confidence -eq 'partial' -and $brokenZ[0].lengthBytes -eq 0) 'partial EOCD never proves 3MF container'
+    Assert ($brokenZ[0].integrityScope -eq 'signature_only_not_validated') 'partial EOCD integrity remains unverified'
+    Write-Host 'PASS: R4 damaged EOCD and decoy do not certify a complete 3MF'
+
+    $boundedSource=[ChappyCountingReadStream]::new([IO.File]::OpenRead($splitPath))
+    try {
+        $bounded=Get-ChappyCarvingCandidates -Stream $boundedSource -StartOffset 0 -MaxScanBytes 65536 -MaxFileBytes 1048576 -MaxProbes 32 -MaxCandidates 16
+        Assert ($bounded.scanIncomplete -and $bounded.status -eq 'partial') 'limited scan-window reports incomplete coverage'
+        Assert ($boundedSource.BytesRead -eq $bounded.metrics.bytesRead -and $bounded.metrics.bytesRead -le 65536) 'fragmented scan honors no-reread default source-byte cap'
+    } finally {$boundedSource.Dispose()}
+    Write-Host 'PASS: R4 bounded incomplete scan remains separate from fragmented candidate integrity'
 
     # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
     $f7=Join-Path $fixtureRoot 'fixture_bounded.img'
