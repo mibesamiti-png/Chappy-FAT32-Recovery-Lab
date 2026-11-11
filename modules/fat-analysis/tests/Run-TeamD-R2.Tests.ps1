@@ -58,7 +58,7 @@ $b=[pscustomobject]@{FatIndex=1;EntryIndex=0;ExpectedValue=$bad;ProposedValue=$e
 $plan=New-ChappySyntheticFatPatchPlan -ImageBytes $source -Proposals @($b,$a) -ReasonCode FAT_RESERVED
 Assert-R2 ($plan.Schema -eq 'chappy.teamD.synthetic.plan.v1' -and $plan.WritePermitted -eq $false) 'Plan can never authorize writes'
 Assert-R2 ($plan.Patches.Count -eq 2 -and $plan.Patches[0].OffsetBytes -eq (32*512)) 'Patches sorted by real FAT offset'
-Assert-R2 ($plan.Patches[0].BeforeHex -eq '58-EB-58-EB') 'Hex payload is little-endian'
+Assert-R2 ($plan.Patches[0].BeforeHex -eq '58EB58EB') 'Hex payload is little-endian'
 Assert-R2 ($plan.Patches[0].Confidence -eq 'unknown') 'Repair confidence remains unknown'
 $sim=Invoke-ChappySyntheticFatPatchSimulation -ImageBytes $source -Plan $plan
 Assert-R2 ($sim.Mode -eq 'SYNTHETIC_MEMORY_ONLY' -and $sim.WritePermitted -eq $false) 'Simulation strictly in-memory'
