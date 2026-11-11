@@ -178,6 +178,24 @@ try {
         $bad=Get-ChappyDirectoryCandidates -Stream $truncRead -MaxScanBytes 4096
         Assert-B ($bad.status -eq 'error' -and $bad.scanIncomplete) 'Truncated IMG reports error'
     } finally {$truncRead.Dispose()}
+    # Exercise the standalone metadata-only CLI, including non-overwrite guarantees.
+    $cli=Join-Path (Join-Path $PSScriptRoot '..\modules\directory') 'Invoke-ChappyDirectoryScan.ps1'
+    $outPath=Join-Path $temp 'synthetic-directory-metadata.json'
+    $cliResult=& $cli -ImagePath $imagePath -OutputJsonPath $outPath -MaxScanBytes 1024 -IncludeNames
+    Assert-B ([IO.File]::Exists($outPath) -and $cliResult.team -eq 'B') 'CLI produces separate JSON output'
+    $parsedJson=[IO.File]::ReadAllText($outPath,[Text.Encoding]::UTF8) | ConvertFrom-Json
+    Assert-B ($parsedJson.schemaVersion -eq '1' -and $parsedJson.items.Count -ge 1 -and $parsedJson.items[0].name) 'CLI JSON round-trip with opt-in names'
+    $sizeBefore=(Get-Item -LiteralPath $outPath).Length
+    $refusedExisting=$false
+    try { $null=& $cli -ImagePath $imagePath -OutputJsonPath $outPath -MaxScanBytes 1024 } catch { $refusedExisting=$true }
+    Assert-B ($refusedExisting -and (Get-Item -LiteralPath $outPath).Length -eq $sizeBefore) 'CLI refuses overwriting an existing report'
+    $refusedSource=$false
+    try { $null=& $cli -ImagePath $imagePath -OutputJsonPath $imagePath -MaxScanBytes 1024 } catch { $refusedSource=$true }
+    Assert-B ($refusedSource -and (Hash-B $imagePath) -eq $before) 'CLI refuses output equal to source IMG'
+    $refusedDevice=$false
+    try { $null=& $cli -ImagePath '\\.\PhysicalDrive9' -MaxScanBytes 1024 } catch { $refusedDevice=$true }
+    Assert-B $refusedDevice 'CLI refuses raw device path'
+    Assert-B ((Hash-B $imagePath) -eq $before) 'CLI source SHA-256 unchanged'
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
