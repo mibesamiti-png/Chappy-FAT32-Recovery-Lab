@@ -171,6 +171,9 @@ function Read-ChappyBDirectoryCluster {
     $segments = New-Object System.Collections.ArrayList
     $validCount = 0
     $dotSeen = $false
+    $dotdotSeen = $false
+    $dotdotParent = $null
+    $malformedDotHeader = $false
     $parentHint = $null
     $hasValidLfn = $false
     $hasEndMarker = $false
@@ -196,8 +199,18 @@ function Read-ChappyBDirectoryCluster {
         $size = [long][BitConverter]::ToUInt32($e, 28)
         $directory = (($attr -band 0x10) -ne 0)
         if ($short -eq '.' -or $short -eq '..') {
-            if ($directory -and $short -eq '.' -and $start -eq $Cluster) { $dotSeen = $true }
-            if ($directory -and $short -eq '..' -and $start -le $MaxCluster) { $parentHint = $start }
+            # Dot records are structural evidence only when they form an ordered,
+            # size-zero pair in the first two slots. Never trust a lone dot record.
+            $validHeaderRecord = ($directory -and $size -eq 0 -and $segments.Count -eq 0 -and $first -ne 0xE5)
+            if ($short -eq '.' -and $j -eq 0 -and $validHeaderRecord -and $start -eq $Cluster) {
+                $dotSeen = $true
+            } elseif ($short -eq '..' -and $j -eq 32 -and $validHeaderRecord -and
+                      ($start -eq 0 -or ($start -ge 2 -and $start -le $MaxCluster))) {
+                $dotdotSeen = $true
+                $dotdotParent = $start
+            } else {
+                $malformedDotHeader = $true
+            }
             $segments.Clear(); continue
         }
         if (($start -eq 1) -or ($start -gt $MaxCluster) -or
@@ -242,13 +255,41 @@ function Read-ChappyBDirectoryCluster {
             parentClusterHint = $null
         })
     }
-    # Avoid one plausible 32-byte string in file content becoming a recovered directory.
-    $accepted = ($validCount -ge 2 -or $dotSeen -or ($IsRoot -and $validCount -ge 1) -or $hasValidLfn)
+    # Classify the *container*, not just its individual 32-byte records.
+    # A lone dot record or an isolated valid LFN can occur inside arbitrary file data.
+    # This deliberately favors precision: a partially overwritten one-entry orphan
+    # with no consistent header may be missed, rather than called a proven directory.
+    $validDotPair = ($dotSeen -and $dotdotSeen -and -not $malformedDotHeader)
+    if ($validDotPair) { $parentHint = $dotdotParent }
+    $accepted = $false
+    $decisionReason = 'insufficient_directory_evidence'
+    if ($IsRoot -and $validCount -ge 1) {
+        $accepted = $true
+        $decisionReason = 'root_valid_entry'
+    } elseif ($validDotPair) {
+        $accepted = $true
+        $decisionReason = 'ordered_dot_pair'
+    } elseif ($validCount -ge 2 -and $hasEndMarker) {
+        $accepted = $true
+        $decisionReason = 'multiple_entries_with_end_marker'
+    } elseif ($dotSeen -or $dotdotSeen -or $malformedDotHeader) {
+        $decisionReason = 'unpaired_or_malformed_dot_header'
+    } elseif ($validCount -eq 1 -and $hasValidLfn) {
+        $decisionReason = 'isolated_lfn_without_directory_header'
+    }
+    if ($accepted) {
+        foreach ($item in $candidateItems) {
+            $item.parentClusterHint = $parentHint
+            $item.evidence = @($item.evidence) + @('container_' + $decisionReason)
+        }
+    }
     return [pscustomobject]@{
         accepted = $accepted
+        decisionReason = $decisionReason
         entries = @($candidateItems.ToArray())
         validCount = $validCount
         hasDotHeader = $dotSeen
+        hasConsistentDotPair = $validDotPair
         parentClusterHint = $parentHint
         hasEndMarker = $hasEndMarker
     }
@@ -280,6 +321,11 @@ function Get-ChappyDirectoryCandidates {
     $bytesRead = 0L
     $checked = 0L
     $directoriesAccepted = 0L
+    $rejectedReasons = [ordered]@{
+        insufficient_directory_evidence = 0L
+        unpaired_or_malformed_dot_header = 0L
+        isolated_lfn_without_directory_header = 0L
+    }
     $incomplete = $false
     $geo = $null
     try {
@@ -322,10 +368,12 @@ function Get-ChappyDirectoryCandidates {
                     $directoriesAccepted++
                     foreach ($item in $parsed.entries) {
                         if ($items.Count -ge $MaxCandidates) { $incomplete = $true; break }
-                        $item.parentClusterHint = $parsed.parentClusterHint
                         [void]$items.Add($item)
                     }
-                } else { [void]$warnings.Add('root_cluster_not_recognized_as_directory') }
+                } else {
+                    $rejectedReasons[$parsed.decisionReason] = [long]$rejectedReasons[$parsed.decisionReason] + 1L
+                    [void]$warnings.Add('root_cluster_not_recognized_as_directory')
+                }
             }
             $completeCoverage = ($StartCluster -le 2 -and $MaxScanBytes -ge ([long]$geo.clusterCount * $clusterSize))
             if (-not $completeCoverage) { $incomplete = $true }
@@ -342,11 +390,13 @@ function Get-ChappyDirectoryCandidates {
                 $bytesRead += $clusterSize
                 $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -IsRoot $false
                 $checked += [long]$parsed.validCount
-                if (-not $parsed.accepted) { continue }
+                if (-not $parsed.accepted) {
+                    $rejectedReasons[$parsed.decisionReason] = [long]$rejectedReasons[$parsed.decisionReason] + 1L
+                    continue
+                }
                 $directoriesAccepted++
                 foreach ($item in $parsed.entries) {
                     if ($items.Count -ge $MaxCandidates) { $incomplete = $true; break }
-                    $item.parentClusterHint = $parsed.parentClusterHint
                     [void]$items.Add($item)
                 }
                 if ($items.Count -ge $MaxCandidates) { $incomplete = $true; break }
@@ -369,6 +419,7 @@ function Get-ChappyDirectoryCandidates {
             bytesRead = $bytesRead
             entriesChecked = $checked
             directoriesAccepted = $directoriesAccepted
+            directoryRejectReasons = [pscustomobject]$rejectedReasons
             candidateCount = $items.Count
         }
         geometry = $geo
