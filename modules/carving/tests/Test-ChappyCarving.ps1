@@ -243,6 +243,48 @@ try {
     try {$bad=Get-ChappyCarvingCandidates -Stream $s -StartOffset ($s.Length+1); Assert ($bad.status -eq 'error') 'invalid offset rejected'}finally{$s.Dispose()}
     Write-Host 'PASS: false signatures and out-of-range scan'
 
+    # Malicious caller-controlled metadata must not leak paths, names or free-form text to JSON.
+    $privateMarker='PRIVATE_SYNTHETIC_SENTINEL_NEVER_SERIALIZE_731'
+    $poisoned=[pscustomobject]@{
+        status=$privateMarker
+        scanIncomplete=$true
+        items=@([pscustomobject]@{
+            offsetBytes="../$privateMarker"; lengthBytes=$privateMarker
+            format=$privateMarker; confidence=$privateMarker
+            evidence=@('zip.local_header',"C:\private\$privateMarker",'gcode.command_count_7','gcode.command_count_999999')
+            checks=$privateMarker; crc32Status=$privateMarker
+            crc32CheckedEntries=$privateMarker; crc32UncheckedEntries=-7
+            truncated=$privateMarker; extraRawFilename="secret_$privateMarker.3mf"
+        })
+        warnings=@('scan.bounds_reached',"D:\secret\$privateMarker")
+        errors=@('stream.not_seekable_readable',"error:$privateMarker")
+        metrics=[pscustomobject]@{
+            bytesRead=$privateMarker; entriesChecked=-99; readRequests='9'
+            scannedBytes=1024; scanWindowBytes=2048; elapsedMilliseconds=12
+            rawUserPath="C:\work\$privateMarker"
+        }
+        privateMessage=$privateMarker
+    }
+    $poisonPath=Join-Path $fixtureRoot 'synthetic_injection_report.json'
+    [void](Write-ChappyCarvingReport -Result $poisoned -ReportPath $poisonPath)
+    $poisonText=Get-Content -LiteralPath $poisonPath -Raw
+    $poisonJson=$poisonText | ConvertFrom-Json
+    Assert (-not $poisonText.Contains($privateMarker)) 'private marker not serialized anywhere'
+    Assert ($poisonJson.status -eq 'error') 'arbitrary result status sanitized'
+    Assert ($poisonJson.items[0].format -eq 'unknown' -and $poisonJson.items[0].confidence -eq 'unknown') 'untrusted enum fields sanitized'
+    Assert ($poisonJson.items[0].checks -eq 'not_validated' -and $poisonJson.items[0].crc32Status -eq 'not_applicable') 'untrusted check/CRC strings sanitized'
+    Assert ($poisonJson.items[0].offsetBytes -eq 0 -and $poisonJson.items[0].lengthBytes -eq 0) 'untrusted numeric strings sanitized'
+    Assert ($poisonJson.items[0].crc32CheckedEntries -eq 0 -and $poisonJson.items[0].crc32UncheckedEntries -eq 0) 'untrusted counts sanitized'
+    Assert ($poisonJson.items[0].evidence.Count -eq 2) 'only allowed evidence and bounded G-code count retained'
+    Assert ($poisonJson.items[0].evidence -contains 'gcode.command_count_7') 'numeric G-code reason preserved safely'
+    Assert ($poisonJson.warnings.Count -eq 1 -and $poisonJson.warnings[0] -eq 'scan.bounds_reached') 'only allowlisted warning codes emitted'
+    Assert ($poisonJson.errors.Count -eq 1 -and $poisonJson.errors[0] -eq 'stream.not_seekable_readable') 'only allowlisted error codes emitted'
+    Assert ($poisonJson.metrics.bytesRead -eq 0 -and $poisonJson.metrics.entriesChecked -eq 0) 'metrics numeric sanitization'
+    Assert ($poisonJson.metrics.readRequests -eq 9) 'allowed numeric metrics preserved'
+    Assert ($null -eq $poisonJson.metrics.PSObject.Properties['rawUserPath']) 'unexpected metric key excluded'
+    Assert ($null -eq $poisonJson.items[0].PSObject.Properties['extraRawFilename']) 'unexpected candidate key excluded'
+    Write-Host 'PASS: hostile caller strings, paths, fields, diagnostic codes and metrics are sanitized'
+
     # Report cannot overwrite an existing file.
     $reportBlocked=$false
     try {Write-ChappyCarvingReport -Result $result -ReportPath $report | Out-Null} catch {$reportBlocked=$true}
