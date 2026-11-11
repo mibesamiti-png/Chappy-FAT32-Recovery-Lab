@@ -97,7 +97,7 @@ Write-R4Cluster $r4Image 11 $records
 # followed by its short alias in unrelated cluster 21. Even though they
 # are physically adjacent, the scanner cannot join their records.
 $shortAfterBoundary = New-ShortB 'SPLIT~1 TXT' 0x20 24 28
-$lfnSegments = @(New-LfnB 'SplitAcrossClusters.txt' $shortAfterBoundary)
+$lfnSegments = (New-LfnB 'SplitAcrossClusters.txt' $shortAfterBoundary)
 $records = New-R4Records
 [void]$records.Add((New-ShortB '.          ' 0x10 20 0))
 [void]$records.Add((New-ShortB '..         ' 0x10 0 0))
