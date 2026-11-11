@@ -699,6 +699,119 @@ try {
     } finally {$boundedSource.Dispose()}
     Write-Host 'PASS: R4 bounded incomplete scan remains separate from fragmented candidate integrity'
 
+    # R5 Issue #46 — finite/oracle-offset two-fragment feasibility, NOT
+    # production recovery. Original bytes are constructed independently.
+    $r5GRest=$gOriginal.Length-512
+    $r5ZRest=$zOriginal.Length-512
+    $r5GDecoyAt=43008; $r5ZDecoyAt=92160
+    $hasher=[Security.Cryptography.SHA256]::Create()
+    try {
+        $r5GOriginalHash=[BitConverter]::ToString($hasher.ComputeHash($gOriginal)).Replace('-','').ToLowerInvariant()
+        $r5ZOriginalHash=[BitConverter]::ToString($hasher.ComputeHash($zOriginal)).Replace('-','').ToLowerInvariant()
+    } finally {$hasher.Dispose()}
+    $r5Observed=@()
+    # All sources are temporary, artificial, read-only memory streams.
+    $r5UniqueGStream=[IO.MemoryStream]::new($split,$false)
+    try {
+        $r5UniqueG=Test-R5FiniteSyntheticPairs -Source $r5UniqueGStream -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -SecondOffsets ([long[]]@($r5GDecoyAt,$gTail)) -ExpectedFormat gcode
+        Assert ($r5UniqueG.decision -eq 'one_possible' -and @($r5UniqueG.items | Where-Object {$_.possible}).Count -eq 1) 'G-code one valid synthetic continuation'
+        Assert (@($r5UniqueG.items | Where-Object {$_.possible -and $_.sha256 -eq $r5GOriginalHash}).Count -eq 1) 'independent G-code original hash matches exact artificial bytes'
+        Assert ($r5UniqueG.metrics.sourceBytesRead -le 8192 -and $r5UniqueG.metrics.pairsEvaluated -le 8) 'G-code pair source and probe caps'
+        Assert (-not $r5UniqueGStream.CanWrite) 'R5 source stream has no write capability'
+        $r5Observed+=@($r5UniqueG.items)
+    } finally {$r5UniqueGStream.Dispose()}
+    Write-Host 'PASS: R5 finite G-code two-fragment unique candidate against independent artificial original bytes'
+
+    # A syntactically plausible different continuation yields TWO candidates.
+    # The helper must report ambiguity, never pick the true original.
+    $r5AmbiguousG=[byte[]]$split.Clone()
+    $r5OtherG=[Text.Encoding]::ASCII.GetBytes(([Text.Encoding]::ASCII.GetString($gOriginal,512,$r5GRest)).Replace('X99','X88'))
+    Assert ($r5OtherG.Length -eq $r5GRest) 'G-code alternative has equal invented length'
+    [Array]::Copy($r5OtherG,0,$r5AmbiguousG,$r5GDecoyAt,$r5OtherG.Length)
+    $r5AmbiguousGStream=[IO.MemoryStream]::new($r5AmbiguousG,$false)
+    try {
+        $r5GAlternatives=Test-R5FiniteSyntheticPairs -Source $r5AmbiguousGStream -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -SecondOffsets ([long[]]@($r5GDecoyAt,$gTail)) -ExpectedFormat gcode
+        Assert ($r5GAlternatives.decision -eq 'ambiguous' -and @($r5GAlternatives.items | Where-Object {$_.possible}).Count -eq 2) 'two equally plausible G-code continuations remain ambiguous'
+        Assert (@($r5GAlternatives.items | Where-Object {$_.possible -and $_.sha256 -eq $r5GOriginalHash}).Count -eq 1) 'G-code validation has a false positive distinct from known original'
+        $r5Observed+=@($r5GAlternatives.items)
+    } finally {$r5AmbiguousGStream.Dispose()}
+    Write-Host 'PASS: R5 misleading G-code continuation is possible but never called original'
+
+    # ZIP/3MF structural evidence excludes a zero-filled tail even if that gap
+    # candidate appears before the actual known second synthetic cluster.
+    $r5UniqueZStream=[IO.MemoryStream]::new($split,$false)
+    try {
+        $r5UniqueZ=Test-R5FiniteSyntheticPairs -Source $r5UniqueZStream -FirstOffset $zStart -FirstBytes 512 -SecondBytes $r5ZRest -SecondOffsets ([long[]]@($r5ZDecoyAt,$zTail)) -ExpectedFormat 3mf
+        Assert ($r5UniqueZ.decision -eq 'one_possible') 'ZIP/3MF correct continuation structurally unique'
+        Assert (@($r5UniqueZ.items | Where-Object {$_.possible -and $_.sha256 -eq $r5ZOriginalHash}).Count -eq 1) 'independent 3MF original bytes match'
+        Assert (@($r5UniqueZ.items | Where-Object {$_.possible -and $_.sha256 -ne $r5ZOriginalHash}).Count -eq 0) 'zero-filled ZIP tail rejected'
+        $r5Observed+=@($r5UniqueZ.items)
+    } finally {$r5UniqueZStream.Dispose()}
+    Write-Host 'PASS: R5 finite ZIP/3MF validation rejects wrong continuation and matches known original'
+
+    # Metadata-only central directory difference can keep a ZIP *structurally*
+    # valid while making its total raw bytes NOT equal the known original.
+    $r5AmbiguousZ=[byte[]]$split.Clone()
+    $r5Modified=[byte[]]$zOriginal.Clone()
+    $r5SafeChange=-1
+    for($k=512;$k -le $r5Modified.Length-46;$k++){
+        if($r5Modified[$k] -eq 0x50 -and $r5Modified[$k+1] -eq 0x4b -and
+           $r5Modified[$k+2] -eq 0x01 -and $r5Modified[$k+3] -eq 0x02){
+            $r5SafeChange=$k+4;break
+        }
+    }
+    Assert ($r5SafeChange -ge 512) 'synthetic 3MF has a central-directory version-made-by field inside second fragment'
+    $r5Modified[$r5SafeChange]=[byte]($r5Modified[$r5SafeChange] -bxor 1)
+    [Array]::Copy($r5Modified,512,$r5AmbiguousZ,$r5ZDecoyAt,$r5ZRest)
+    $r5AmbiguousZStream=[IO.MemoryStream]::new($r5AmbiguousZ,$false)
+    try {
+        $r5ZAlternatives=Test-R5FiniteSyntheticPairs -Source $r5AmbiguousZStream -FirstOffset $zStart -FirstBytes 512 -SecondBytes $r5ZRest -SecondOffsets ([long[]]@($r5ZDecoyAt,$zTail)) -ExpectedFormat 3mf
+        Assert ($r5ZAlternatives.decision -eq 'ambiguous' -and @($r5ZAlternatives.items | Where-Object {$_.possible}).Count -eq 2) 'two structurally valid ZIP continuations remain ambiguous'
+        Assert (@($r5ZAlternatives.items | Where-Object {$_.possible -and $_.sha256 -eq $r5ZOriginalHash}).Count -eq 1) 'ZIP structure does not prove original byte identity'
+        $r5Observed+=@($r5ZAlternatives.items)
+    } finally {$r5AmbiguousZStream.Dispose()}
+    Write-Host 'PASS: R5 ZIP structural false match versus independent known original remains ambiguous'
+
+    $r5OnlyBad=[IO.MemoryStream]::new($split,$false)
+    try {
+        $r5Miss=Test-R5FiniteSyntheticPairs -Source $r5OnlyBad -FirstOffset $zStart -FirstBytes 512 -SecondBytes $r5ZRest -SecondOffsets ([long[]]@($r5ZDecoyAt)) -ExpectedFormat 3mf
+        Assert ($r5Miss.decision -eq 'unknown' -and @($r5Miss.items | Where-Object {$_.possible}).Count -eq 0) 'wrong-only ZIP continuation stays unknown'
+        $r5Observed+=@($r5Miss.items)
+    } finally {$r5OnlyBad.Dispose()}
+
+    # Fail-closed guard tests: writable source, >8 candidates, oversized
+    # synthetic fragment or off-window offset cannot bypass explicit limits.
+    $r5BadStream=[IO.MemoryStream]::new($split,$true)
+    $r5RejectedWritable=$false
+    try {Test-R5FiniteSyntheticPairs -Source $r5BadStream -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -SecondOffsets ([long[]]@($gTail)) -ExpectedFormat gcode | Out-Null} catch {$r5RejectedWritable=$true}
+    finally {$r5BadStream.Dispose()}
+    Assert $r5RejectedWritable 'R5 research helper refuses writable stream'
+    $r5Bounded=[IO.MemoryStream]::new($split,$false)
+    try {
+        $r5TooMany=$false
+        try {Test-R5FiniteSyntheticPairs -Source $r5Bounded -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -SecondOffsets ([long[]](0..8)) -ExpectedFormat gcode | Out-Null} catch {$r5TooMany=$true}
+        Assert $r5TooMany 'R5 research refuses more than 8 candidate pairs'
+        $r5Outside=Test-R5FiniteSyntheticPairs -Source $r5Bounded -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -SecondOffsets ([long[]]@(($split.Length+1024))) -ExpectedFormat gcode
+        Assert ($r5Outside.decision -eq 'unknown' -and $r5Outside.items[0].code -eq 'pair.outside_window') 'R5 outside-window never read or accepted'
+    } finally {$r5Bounded.Dispose()}
+    Write-Host 'PASS: R5 bounded candidate enumerator refuses writable source, pair overflow and offset escapes'
+
+    # Explicitly report sample-level A/B and source-read metrics without
+    # conflating known-artificial-byte truth with real-world recovery success.
+    $r5TP=0;$r5FP=0;$r5TN=0
+    foreach($record in $r5Observed){
+        if($record.possible) {
+            if($record.sha256 -eq $r5GOriginalHash -or $record.sha256 -eq $r5ZOriginalHash) {$r5TP++}
+            else {$r5FP++}
+        } else {$r5TN++}
+    }
+    Assert ($r5TP -eq 4 -and $r5FP -eq 2 -and $r5TN -eq 3) 'R5 deterministic pair truth confusion table: TP4 FP2 FN1 TN3'
+    Assert ($r5UniqueG.metrics.sourceBytesRead -le 8192 -and $r5UniqueZ.metrics.sourceBytesRead -le 8192) 'R5 candidate source bytes bounded'
+    Assert (@($fragmented.items | Where-Object {$_.offsetBytes -eq $zStart -and $_.format -eq '3mf' -and $_.lengthBytes -eq $zOriginal.Length}).Count -eq 0) 'baseline contiguous-only scanner cannot certify the fragmented 3MF'
+    Assert (@($fragmented.items | Where-Object {$_.offsetBytes -eq $gStart -and $_.format -eq 'gcode' -and $_.lengthBytes -eq $gOriginal.Length}).Count -eq 0) 'baseline contiguous-only scanner cannot certify the fragmented G-code'
+    Assert ($splitBefore -eq (Get-FileHash -LiteralPath $splitPath -Algorithm SHA256).Hash) 'R5 experiment left original synthetic test image unchanged'
+    Write-Host 'PASS: R5 artificial pair A/B: baseline full-byte match 0/5, possible candidate pairs TP4 FP2 FN1 TN3; ambiguous matches not chosen'
+
     # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
     $f7=Join-Path $fixtureRoot 'fixture_bounded.img'
     WriteSynthetic $f7 (New-Object byte[] 0) 2097152
