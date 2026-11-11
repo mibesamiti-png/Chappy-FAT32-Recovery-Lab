@@ -1,5 +1,7 @@
 # Recovery Lab roadmap (as of 2026-11-11)
 
+**Current program:** [ABCD synthetic recovery roadmap](ABCD_SYNTHETIC_ROADMAP.md). The checkpoints below record earlier rounds.
+
 **Important:** Development progress percentages are planning estimates, **not recovered-data percentages** or guarantees. Actual recovery rate unknown until real files are recovered and verified.
 
 | Stage | Deliverable | State |
@@ -173,3 +175,4 @@ R0–R4 research-first protocol and R4 decisions: [Protocol](ALGORITHM_RESEARCH_
 | D | [PR #57](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/57) independent default-off additive FAT evidence 6/6 anomaly positives in selected corpus, but more reads than R7; **research_only** | [Issue #62](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/62): longer cyclic chains, remote anomaly tradeoffs, distinct coverage |
 
 **Not real file recovery accuracy:** selected artificial seven-case IMG byte match still 10/14, which is not an estimated probability of recovering the user's files. No actual 31GB master IMG test performed or authorized. Reference: [R8 adoption decisions](R8_ALGORITHM_AB_DECISIONS.md) and [local-only approval gate](LOCAL_READONLY_APPROVAL_GATE.md).
+
