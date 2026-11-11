@@ -72,7 +72,9 @@ function Make-Fixture([string]$path,[bool]$corrupt) {
 }
 function Assert-Probe([string]$path,[bool]$corrupt) {
     $before=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
-    $out=(& $probe -ImagePath $path 2>&1 | Out-String)
+    # Windows PowerShell 5.1 Write-Host uses stream 6 (Information).
+    # 6>&1 captures the diagnostic text; 2>&1 captures errors.
+    $out=(& $probe -ImagePath $path 6>&1 2>&1 | Out-String)
     if ($out -match 'STOPPED:' -or $out -notmatch 'DONE\. No image writes') {
         throw "Probe failed on synthetic input: $out"
     }
