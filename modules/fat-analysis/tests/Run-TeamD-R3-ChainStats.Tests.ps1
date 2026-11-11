@@ -23,7 +23,7 @@ function New-DChainImage {
     $bytes=New-Object 'byte[]' 32768
     foreach($fatOffset in @(512,4096)){
         Set-DChainEntry $bytes $fatOffset 2 3
-        Set-DChainEntry $bytes $fatOffset 3 ([uint32]0xFFFFFFFF)
+        Set-DChainEntry $bytes $fatOffset 3 ([Convert]::ToUInt32('FFFFFFFF',16))
         Set-DChainEntry $bytes $fatOffset 10 0
         Set-DChainEntry $bytes $fatOffset 20 ([uint32]0x0FFFFFF0)
         Set-DChainEntry $bytes $fatOffset 30 ([uint32]0x0FFFFFF7)
@@ -127,7 +127,7 @@ try {
     $r=Get-ChappyFatChainAnomalyStats -Stream $s -Fat1OffsetBytes 512 -Fat2OffsetBytes 4096 -FatLengthBytes 1024 -MaxDataCluster 100 -StartClusters ([long[]]@(10))
     Check-DChain ($r.copies[0].terminalCounts.reserved -eq 1 -and $r.copies[1].terminalCounts.reserved -eq 1) 'Both reserved entry classes detected'
     $v2=New-DChainImage
-    Set-DChainEntry $v2 512 10 ([uint32]0xF0000000)
+    Set-DChainEntry $v2 512 10 ([Convert]::ToUInt32('F0000000',16))
     $s.Dispose();$s=Open-DChainRO $v2
     $r=Get-ChappyFatChainAnomalyStats -Stream $s -Fat1OffsetBytes 512 -Fat2OffsetBytes 4096 -FatLengthBytes 1024 -MaxDataCluster 100 -StartClusters ([long[]]@(10))
     Check-DChain ($r.copies[0].terminalCounts.free -eq 1) 'Reserved upper nibble masked before classification'
