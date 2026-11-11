@@ -9,12 +9,14 @@ function Get-ChappyDirectoryHierarchyEvidence {
         [int]$MaxNodes = 1000,
         [int]$MaxEdges = 10000,
         [int]$MaxMetadataItems = 200000,
-        [int]$MaxAncestorDepth = 64
+        [int]$MaxAncestorDepth = 64,
+        [int]$MaxAncestorSteps = 200000
     )
     if ($MaxNodes -lt 1 -or $MaxNodes -gt 100000 -or
         $MaxEdges -lt 1 -or $MaxEdges -gt 200000 -or
         $MaxMetadataItems -lt 1 -or $MaxMetadataItems -gt 200000 -or
-        $MaxAncestorDepth -lt 1 -or $MaxAncestorDepth -gt 256) {
+        $MaxAncestorDepth -lt 1 -or $MaxAncestorDepth -gt 256 -or
+        $MaxAncestorSteps -lt 1 -or $MaxAncestorSteps -gt 2000000) {
         throw 'Invalid hierarchy analysis limits'
     }
     if ($null -eq $DirectoryResult.PSObject.Properties['directoryContainers'] -or
@@ -166,6 +168,8 @@ function Get-ChappyDirectoryHierarchyEvidence {
     # Follow only unique observed parent assertions. Bound each ancestor walk;
     # cycles and depth cutoffs are NOT converted into reconstructed paths.
     $depthLimited = 0L
+    $ancestorSteps = 0L
+    $ancestorWorkLimited = $false
     foreach ($edge in $edges) {
         if ($edge.relationStatus -eq 'self_reference') {
             $edge.relationStatus = 'cycle_detected'
@@ -177,6 +181,14 @@ function Get-ChappyDirectoryHierarchyEvidence {
         $cursor = [long]$edge.parentCluster
         $seen = @{}
         for ($depth = 0; $depth -lt $MaxAncestorDepth; $depth++) {
+            if ($ancestorSteps -ge $MaxAncestorSteps) {
+                $edge.relationStatus = 'ancestor_work_limit'
+                $edge.confidence = 'partial'
+                $ancestorWorkLimited = $true
+                $incomplete = $true
+                break
+            }
+            $ancestorSteps++
             if ($cursor -eq $edge.childCluster) {
                 $edge.relationStatus = 'cycle_detected'
                 $edge.confidence = 'partial'
@@ -195,17 +207,20 @@ function Get-ChappyDirectoryHierarchyEvidence {
         }
     }
     if ($depthLimited -gt 0) { [void]$warnings.Add('hierarchy_ancestor_depth_limit') }
+    if ($ancestorWorkLimited) { [void]$warnings.Add('hierarchy_ancestor_work_limit') }
+
+    # Build a set of conflicted children once. O(nodes+edges), not O(nodes*edges).
+    $conflictedChildren = @{}
+    foreach ($edge in $edges) {
+        if (@('cycle_detected', 'parent_hint_conflict', 'ancestor_depth_limit',
+              'ancestor_work_limit', 'duplicate_parent_assertion') -contains $edge.relationStatus) {
+            $conflictedChildren[[string]$edge.childCluster] = $true
+        }
+    }
     foreach ($node in $nodes) {
-        if ($node.linkStatus -ne 'referenced_candidate') { continue }
-        foreach ($edge in $edges) {
-            if ($edge.childCluster -eq $node.cluster -and
-                ($edge.relationStatus -eq 'cycle_detected' -or
-                 $edge.relationStatus -eq 'parent_hint_conflict' -or
-                 $edge.relationStatus -eq 'ancestor_depth_limit' -or
-                 $edge.relationStatus -eq 'duplicate_parent_assertion')) {
-                $node.linkStatus = 'conflicted_candidate'
-                break
-            }
+        if ($node.linkStatus -eq 'referenced_candidate' -and
+            $conflictedChildren.ContainsKey([string]$node.cluster)) {
+            $node.linkStatus = 'conflicted_candidate'
         }
     }
 
@@ -225,6 +240,7 @@ function Get-ChappyDirectoryHierarchyEvidence {
             unresolvedTargetReferences = $unobservedTargets
             metadataItemsVisited = $metadataSeen
             ancestorDepthCutoffs = $depthLimited
+            ancestorSteps = $ancestorSteps
         }
         notes = @('candidate graph only', 'no path reconstruction', 'no FAT reads', 'no file content validation')
     }
