@@ -85,7 +85,7 @@ try {
     Write-Host 'PASS: contiguous G-code and end estimation'
 
     # A non-text interruption after valid commands means at most a partial segment.
-    $fragBytes=[Text.Encoding]::ASCII.GetBytes($gcode + "BROKEN_BINARY_FRAGMENT\u0060nG28\u0060n")
+    $fragBytes=[Text.Encoding]::ASCII.GetBytes($gcode + "BROKEN_BINARY_FRAGMENT`nG28`n")
     $f6=Join-Path $fixtureRoot 'fixture_fragmented.img'
     $fragImage=New-Object byte[] (256+$fragBytes.Length+8192)
     [Array]::Copy($fragBytes,0,$fragImage,256,$fragBytes.Length)
