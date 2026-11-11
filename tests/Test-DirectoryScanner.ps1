@@ -248,6 +248,8 @@ try {
         . (Join-Path $PSScriptRoot 'Test-DirectoryR3Validation.ps1')
         # R4 noncontiguous/orphaned artificial directory and untrusted FAT test.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR4Fragmented.ps1')
+        # R5 confidence precision / fake directory classification matrix.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR5FalsePositive.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
