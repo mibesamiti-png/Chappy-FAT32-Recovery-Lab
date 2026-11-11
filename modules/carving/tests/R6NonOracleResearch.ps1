@@ -180,4 +180,24 @@ try{
     Assert ($partial.status -eq 'partial' -and $partial.decision -eq 'incomplete' -and $partial.metrics.stopCode -eq 'search.offset_limit') 'R6 incomplete grid never called a unique source'
     Assert ($partial.metrics.sampledOffsets -eq 4 -and $partial.metrics.evaluatedPairs -eq 0) 'R6 offset guard stops before extra validations'
 }finally{$r6ProbeLimited.Dispose()}
-Write-Host 'PASS: R6 writable source rejected, incomplete scan never claims a unique original'
+# Nine printable artificial decoy command starts exceed the eight-pair cap.
+# Search must not return a spurious unique decision after dropping the rest.
+$r6Flood=[byte[]]$split.Clone()
+$r6FloodToken=[Text.Encoding]::ASCII.GetBytes(('G1 X0'+[char]10))
+for($j=0;$j -lt 9;$j++){
+    [Array]::Copy($r6FloodToken,0,$r6Flood,(49152+$j*512),$r6FloodToken.Length)
+}
+$r6FloodRead=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($r6Flood,$false))
+try {
+    $flood=Test-R6NonOracleSyntheticTailSearch -Source $r6FloodRead -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -ExpectedFormat gcode -MaxPairs 8
+    Assert ($flood.status -eq 'partial' -and $flood.decision -eq 'incomplete' -and $flood.metrics.stopCode -eq 'search.pair_limit') 'R6 >8 plausible tails fail closed with no original claim'
+    Assert ($flood.metrics.prefilteredCandidates -eq 8 -and $flood.metrics.evaluatedPairs -eq 0) 'R6 candidate flood never silently trims and validates as unique'
+    Assert ($flood.metrics.sourceBytesRead -eq $r6FloodRead.BytesRead -and $r6FloodRead.BytesRead -le 135168) 'R6 flood stays within actual stream read budget'
+} finally {$r6FloodRead.Dispose()}
+$r6TinyBudget=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($split,$false))
+try {
+    $tiny=Test-R6NonOracleSyntheticTailSearch -Source $r6TinyBudget -FirstOffset $gStart -FirstBytes 512 -SecondBytes $r5GRest -ExpectedFormat gcode -MaxSourceBytes 1024
+    Assert ($tiny.decision -eq 'incomplete' -and $tiny.metrics.stopCode -eq 'search.source_byte_limit') 'R6 exhausted source budget returns incomplete'
+    Assert ($tiny.metrics.sourceBytesRead -eq $r6TinyBudget.BytesRead -and $r6TinyBudget.BytesRead -le 1024) 'R6 1024B source guard independently measured'
+} finally {$r6TinyBudget.Dispose()}
+Write-Host 'PASS: R6 writable input, truncated coverage, nine decoy tails and tiny source-byte limit fail closed'
