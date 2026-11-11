@@ -420,6 +420,18 @@ function Export-ChappyCarvingCandidate {
 }
 Export-ModuleMember -Function Get-ChappyCarvingCandidates,Export-ChappyCarvingCandidate
 
+function Get-CReportField {
+    param([object]$Object,[string]$Name)
+    if ($null -eq $Object) { return $null }
+    if ($Object -is [Collections.IDictionary]) {
+        if ($Object.Contains($Name)) { return $Object[$Name] }
+        return $null
+    }
+    $property=$Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return $property.Value
+}
+
 # Report values are untrusted (including metadata added by callers).
 # Never serialize arbitrary strings or arbitrary metric keys into a "safe" report.
 function Convert-CReportEnum {
@@ -479,40 +491,40 @@ function Write-ChappyCarvingReport {
         'stream.not_seekable_readable'
     )
     $safeItems=New-Object 'System.Collections.Generic.List[object]'
-    foreach($candidate in $Result.items) {
+    foreach($candidate in (Get-CReportField $Result 'items')) {
         if ($safeItems.Count -ge 10000) { break }
         if ($null -eq $candidate) { continue }
-        $safeEvidence=@(Convert-CReportCodes -Values @($candidate.evidence) -Allowed $evidenceCodes -GcodeCounts -MaxCodes 32)
+        $safeEvidence=@(Convert-CReportCodes -Values @((Get-CReportField $candidate 'evidence')) -Allowed $evidenceCodes -GcodeCounts -MaxCodes 32)
         $safeItems.Add([pscustomobject]@{
-            offsetBytes=(Convert-CReportUnsigned $candidate.offsetBytes)
-            lengthBytes=(Convert-CReportUnsigned $candidate.lengthBytes)
-            format=(Convert-CReportEnum $candidate.format @('zip','3mf','gcode'))
-            confidence=(Convert-CReportEnum $candidate.confidence @('verified','probable','partial','unknown'))
+            offsetBytes=(Convert-CReportUnsigned (Get-CReportField $candidate 'offsetBytes'))
+            lengthBytes=(Convert-CReportUnsigned (Get-CReportField $candidate 'lengthBytes'))
+            format=(Convert-CReportEnum (Get-CReportField $candidate 'format') @('zip','3mf','gcode'))
+            confidence=(Convert-CReportEnum (Get-CReportField $candidate 'confidence') @('verified','probable','partial','unknown'))
             evidence=$safeEvidence
-            checks=(Convert-CReportEnum $candidate.checks $checkCodes 'not_validated')
-            crc32Status=(Convert-CReportEnum $candidate.crc32Status @('match','mismatch','partial','not_checked','not_applicable') 'not_applicable')
-            crc32CheckedEntries=(Convert-CReportUnsigned $candidate.crc32CheckedEntries 4096)
-            crc32UncheckedEntries=(Convert-CReportUnsigned $candidate.crc32UncheckedEntries 4096)
-            truncated=($candidate.truncated -eq $true)
+            checks=(Convert-CReportEnum (Get-CReportField $candidate 'checks') $checkCodes 'not_validated')
+            crc32Status=(Convert-CReportEnum (Get-CReportField $candidate 'crc32Status') @('match','mismatch','partial','not_checked','not_applicable') 'not_applicable')
+            crc32CheckedEntries=(Convert-CReportUnsigned (Get-CReportField $candidate 'crc32CheckedEntries') 4096)
+            crc32UncheckedEntries=(Convert-CReportUnsigned (Get-CReportField $candidate 'crc32UncheckedEntries') 4096)
+            truncated=((Get-CReportField $candidate 'truncated') -eq $true)
         })
     }
     # Fixed schema with numeric-only metrics. Unexpected properties cannot reach JSON.
-    $rawMetrics=$Result.metrics
+    $rawMetrics=(Get-CReportField $Result 'metrics')
     $safeMetrics=[ordered]@{
-        bytesRead=(Convert-CReportUnsigned $rawMetrics.bytesRead 2147483648L)
-        entriesChecked=(Convert-CReportUnsigned $rawMetrics.entriesChecked 4096)
-        readRequests=(Convert-CReportUnsigned $rawMetrics.readRequests 2147483647L)
-        scannedBytes=(Convert-CReportUnsigned $rawMetrics.scannedBytes 1073741824L)
-        scanWindowBytes=(Convert-CReportUnsigned $rawMetrics.scanWindowBytes 1073741824L)
-        elapsedMilliseconds=(Convert-CReportUnsigned $rawMetrics.elapsedMilliseconds 120000)
+        bytesRead=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'bytesRead') 2147483648L)
+        entriesChecked=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'entriesChecked') 4096)
+        readRequests=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'readRequests') 2147483647L)
+        scannedBytes=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'scannedBytes') 1073741824L)
+        scanWindowBytes=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'scanWindowBytes') 1073741824L)
+        elapsedMilliseconds=(Convert-CReportUnsigned (Get-CReportField $rawMetrics 'elapsedMilliseconds') 120000)
     }
     $safe=[ordered]@{
         schemaVersion='1'; team='C'
-        status=(Convert-CReportEnum $Result.status @('ok','partial','error') 'error')
-        scanIncomplete=($Result.scanIncomplete -eq $true)
+        status=(Convert-CReportEnum (Get-CReportField $Result 'status') @('ok','partial','error') 'error')
+        scanIncomplete=((Get-CReportField $Result 'scanIncomplete') -eq $true)
         items=@($safeItems.ToArray())
-        warnings=@(Convert-CReportCodes -Values @($Result.warnings) -Allowed $diagnosticCodes -MaxCodes 32)
-        errors=@(Convert-CReportCodes -Values @($Result.errors) -Allowed $diagnosticCodes -MaxCodes 32)
+        warnings=@(Convert-CReportCodes -Values @((Get-CReportField $Result 'warnings')) -Allowed $diagnosticCodes -MaxCodes 32)
+        errors=@(Convert-CReportCodes -Values @((Get-CReportField $Result 'errors')) -Allowed $diagnosticCodes -MaxCodes 32)
         metrics=$safeMetrics
     }
     $json=ConvertTo-Json -InputObject $safe -Depth 8
