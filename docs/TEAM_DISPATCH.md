@@ -4,10 +4,10 @@
 
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
-| A | Coordinator (this original conversation) | [#1](../issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#2](../issues/2) | `feature/b-directory-r1` | `modules/directory/` | assigned |
-| C | Existing Team C chat | [#3](../issues/3) | `feature/c-carving-r1` | `modules/carving/` | assigned |
-| D | Existing Team D chat | [#4](../issues/4) | `research/d-fat-r1` | `modules/fat-analysis/` | assigned |
+| A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
+| B | Existing Team B chat | [#2](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/2) | `feature/b-directory-r1` | `modules/directory/` | assigned |
+| C | Existing Team C chat | [#3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3) | `feature/c-carving-r1` | `modules/carving/` | assigned |
+| D | Existing Team D chat | [#4](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/4) | `research/d-fat-r1` | `modules/fat-analysis/` | assigned |
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
