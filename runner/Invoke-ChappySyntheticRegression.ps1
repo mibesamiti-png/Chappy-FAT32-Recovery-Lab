@@ -37,6 +37,7 @@ $tests=@(
     'tests\Test-A3DCleanFixture.ps1',
     'tests\Test-A3DDamagedFixture.ps1',
     'tests\Test-A3DStandardFixture.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-P02Evidence.Tests.ps1',
     'tests\Test-A3DEvidenceBaseline.ps1'
 )
 $passed=0
