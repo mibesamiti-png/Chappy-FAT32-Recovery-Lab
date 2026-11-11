@@ -101,8 +101,6 @@ Assert-A3D ($first.image.Length -eq 2097152 -and
             $first.oracle.Count -eq 3 -and
             $first.layout.kind -eq 'synthetic_FAT32_like_not_standards_volume') 'bounded_fixture_schema'
 Assert-A3D ((Get-A3DSha256 $first.image) -ceq (Get-A3DSha256 $again.image)) 'deterministic_full_image'
-Assert-A3D (@($first.oracle | Where-Object { $_.sha256 -cne
-            (@($again.oracle | Where-Object { $_.artificialId -ceq $($_.artificialId) })[0]).sha256 }).Count -eq 0) 'deterministic_oracle'
 # Re-check deterministic oracle directly using stable indices (no source-image data provided to validator).
 for ($i = 0; $i -lt 3; $i++) {
     Assert-A3D ($first.oracle[$i].sha256 -ceq $again.oracle[$i].sha256) 'stable_oracle_entry_hash'
