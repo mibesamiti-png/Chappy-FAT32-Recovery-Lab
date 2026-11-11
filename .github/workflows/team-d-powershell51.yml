@@ -44,3 +44,6 @@ jobs:
       - name: Run R7 stratified FAT anomaly research same-fixture R6 A B tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R7-StratifiedAB.Tests.ps1
+      - name: Run R8 additive FAT anomaly summed-budget synthetic A/B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R8-AdditiveAB.Tests.ps1
