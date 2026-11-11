@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 function Assert-A3D([bool]$Ok, [string]$Code) {
     if (-not $Ok) { throw ('A3D_SYNTHETIC_FAIL: ' + $Code) }
 }
-function Read-A3DRecord([byte[]]$Image, [string]$Alias) {
+function Read-A3DRecord([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes = 2048) {
     # Independent *test-only* FAT chain reader. It receives the damaged/clean
     # image, never the oracle extent list or oracle original bytes.
     $partitionStart = [int][BitConverter]::ToUInt32($Image, 454) * 512
@@ -31,6 +31,7 @@ function Read-A3DRecord([byte[]]$Image, [string]$Alias) {
     $size = [int][BitConverter]::ToUInt32($Image, ([int]$record + 28))
     $cluster = [int][BitConverter]::ToUInt16($Image, ([int]$record + 26))
     Assert-A3D ($size -ge 1 -and $size -le 2048) 'known_clean_file_size_budget'
+    Assert-A3D ($size -le $MaxPayloadBytes) 'test_payload_budget_exhausted'
     $seen = New-Object 'System.Collections.Generic.HashSet[int]'
     $ms = New-Object IO.MemoryStream
     try {

@@ -32,7 +32,7 @@ function Get-A3DModelPayloadOffset([byte[]]$Image, $Truth) {
 function New-ChappyA3DDamagedFixture {
     [CmdletBinding(PositionalBinding = $false)]
     param(
-        [Parameter(Mandatory)][ValidateSet('M00', 'M01', 'M02', 'P02', 'P03')][string]$Case,
+        [Parameter(Mandatory)][ValidateSet('M00', 'M01', 'M02', 'M04', 'P01', 'P02', 'P03', 'X02')][string]$Case,
         [ValidateRange(1, 999999)][int]$Seed = 202611
     )
 
@@ -44,6 +44,7 @@ function New-ChappyA3DDamagedFixture {
         $sourceHash = Get-A3DSha256 $clean.image
         [byte[]]$image = $source.ToArray()
         $changes = @()
+        $removedRange = $null
         $affectedId = $null
         $layer = 'none'
         $caseId = $Case.ToUpperInvariant()
@@ -71,6 +72,23 @@ function New-ChappyA3DDamagedFixture {
                 # Mark the first 3MF chain link free in FAT1 only.
                 $replacement = [byte[]]@(0, 0, 0, 0)
             }
+            'M04' {
+                $truth = $clean.oracle[1]
+                $layer = 'directory_file_size'
+                # Second root entry, four-byte size field.
+                $offset = $clean.layout.rootOffsetBytes + 32 + 28
+                $replacement = [byte[]]::new(4)
+            }
+            'P01' {
+                $truth = $clean.oracle[1]
+                $layer = '3mf_zip_eocd'
+                # This generated ZIP has no comment. Erase its EOCD record.
+                $offset = $truth.extents[0].offsetBytes + $truth.lengthBytes - 22
+                if ([BitConverter]::ToUInt32($image, $offset) -ne 0x06054B50) {
+                    throw 'Unexpected end record in generated 3MF'
+                }
+                $replacement = [byte[]]::new(22)
+            }
             'P02' {
                 $truth = $clean.oracle[1]
                 $layer = '3mf_model_payload'
@@ -84,8 +102,21 @@ function New-ChappyA3DDamagedFixture {
                 $offset = $truth.extents[0].offsetBytes + 84 + 12
                 $replacement = [byte[]]@($image[$offset] -bxor 1)
             }
+            'X02' {
+                $truth = $clean.oracle[1]
+                $layer = 'image_truncation'
+                # Keep the directory and FATs, but end inside the 3MF payload.
+                $end = $truth.extents[0].offsetBytes + 512 + 128
+                $removedRange = [pscustomobject]@{
+                    offsetBytes = $end
+                    lengthBytes = $image.Length - $end
+                }
+                [Array]::Resize([ref]$image, $end)
+            }
         }
-        if ($caseId -ne 'M00') {
+        if ($caseId -eq 'X02') {
+            $affectedId = $truth.artificialId
+        } elseif ($caseId -ne 'M00') {
             $affectedId = $truth.artificialId
             $changes = @(for ($i = 0; $i -lt $replacement.Length; $i++) {
                 $at = $offset + $i
@@ -116,6 +147,7 @@ function New-ChappyA3DDamagedFixture {
                 sourceSha256After = $sourceHashAfter
                 imageSha256 = Get-A3DSha256 $image
                 changes = $changes
+                removedRange = $removedRange
             }
         }
     } finally { $source.Dispose() }

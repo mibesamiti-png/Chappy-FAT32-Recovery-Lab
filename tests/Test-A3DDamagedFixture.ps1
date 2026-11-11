@@ -155,3 +155,75 @@ Assert-Damage ((Get-A3DSha256 $contiguous) -cne $original.oracle[1].sha256) 'con
 Assert-Damage ((Get-A3DSha256 $fragmented.image) -ceq $before -and
     $fragmented.manifest.sourceSha256Before -ceq $fragmented.manifest.sourceSha256After) 'fragment_source_unchanged'
 Write-Host 'PASS: M01 fragmented 3MF chain 4->7, full-file SHA 3/3, ZIP/XML valid, contiguous negative, complete mutation manifest.'
+
+function Assert-A3DReadStops([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes, [string]$Reason) {
+    try { $null = Read-A3DRecord $Image $Alias $MaxPayloadBytes }
+    catch {
+        if ($_.Exception.Message -ceq "A3D_SYNTHETIC_FAIL: $Reason") { return }
+        throw
+    }
+    throw "A3D_DAMAGE_FAIL: expected $Reason"
+}
+
+$modelTruth = $original.oracle[1]
+$directoryDamage = New-ChappyA3DDamagedFixture -Case M04
+$eocdDamage = New-ChappyA3DDamagedFixture -Case P01
+$truncated = New-ChappyA3DDamagedFixture -Case X02
+$eocdOffset = 58880 + $modelTruth.lengthBytes - 22
+foreach ($scenario in @(
+    @{ result = $directoryDamage; offset = 57916; length = 4 },
+    @{ result = $eocdDamage; offset = $eocdOffset; length = 22 }
+)) {
+    $result = $scenario.result
+    $expectedOffsets = @($scenario.offset..($scenario.offset + $scenario.length - 1) |
+        Where-Object { $original.image[$_] -ne 0 })
+    Assert-Damage ($expectedOffsets.Count -gt 0 -and
+        ($expectedOffsets -join ',') -ceq ($result.manifest.changes.offsetBytes -join ',')) 'expected_zeroed_offsets'
+    [byte[]]$reversed = $result.image.Clone()
+    foreach ($change in $result.manifest.changes) {
+        Assert-Damage ($change.afterByte -eq 0 -and $result.image[$change.offsetBytes] -eq 0) 'zeroed_byte'
+        $reversed[$change.offsetBytes] = $change.beforeByte
+    }
+    Assert-Damage ((Get-A3DSha256 $reversed) -ceq (Get-A3DSha256 $original.image)) 'only_recorded_zeroed_bytes'
+}
+Assert-A3DReadStops $directoryDamage.image $modelTruth.shortName 2048 'known_clean_file_size_budget'
+$source = [IO.MemoryStream]::new($directoryDamage.image, $false)
+try {
+    foreach ($truth in $original.oracle) {
+        [byte[]]$bytes = Read-DamageOracleBytes $source $truth
+        Assert-Damage ((Get-A3DSha256 $bytes) -ceq $truth.sha256) 'M04_payload_intact'
+    }
+} finally { $source.Dispose() }
+[byte[]]$brokenZip = Read-A3DRecord $eocdDamage.image $modelTruth.shortName
+Assert-Damage ((Get-A3DSha256 $brokenZip) -cne $modelTruth.sha256) 'P01_sha_mismatch'
+$source = [IO.MemoryStream]::new($brokenZip, $false)
+$zipRejected = $false
+try {
+    $zip = [IO.Compression.ZipArchive]::new($source, [IO.Compression.ZipArchiveMode]::Read)
+    $zip.Dispose()
+} catch {
+    $zipRejected = $_.Exception.InnerException -is [IO.InvalidDataException]
+    if (-not $zipRejected) { throw }
+} finally { $source.Dispose() }
+Assert-Damage $zipRejected 'P01_missing_end_record_rejected'
+
+$removed = $truncated.manifest.removedRange
+Assert-Damage ($removed.offsetBytes -eq 59520 -and $truncated.image.Length -eq $removed.offsetBytes -and
+    ($removed.offsetBytes + $removed.lengthBytes) -eq $original.image.Length -and
+    $truncated.manifest.changes.Count -eq 0) 'X02_removed_range'
+[byte[]]$prefix = $original.image[0..($removed.offsetBytes - 1)]
+Assert-Damage ((Get-A3DSha256 $prefix) -ceq $truncated.manifest.imageSha256) 'X02_retained_prefix'
+
+# Compare identical payload budgets on clean, fragmented and truncated media.
+foreach ($image in @($original.image, $fragmented.image, $truncated.image)) {
+    Assert-A3DReadStops $image $modelTruth.shortName 512 'test_payload_budget_exhausted'
+}
+Assert-A3DReadStops $truncated.image $modelTruth.shortName 2048 'test_extent_outside_image'
+foreach ($result in @($directoryDamage, $eocdDamage, $truncated)) {
+    $repeat = New-ChappyA3DDamagedFixture -Case $result.manifest.caseId
+    Assert-Damage ((ConvertTo-Json $result.manifest -Depth 4 -Compress) -ceq
+        (ConvertTo-Json $repeat.manifest -Depth 4 -Compress)) 'repeat_manifest'
+    Assert-Damage ((Get-A3DSha256 $result.image) -ceq $result.manifest.imageSha256 -and
+        $result.manifest.sourceSha256Before -ceq $result.manifest.sourceSha256After) 'source_sha_unchanged'
+}
+Write-Host 'PASS: M04 zero directory size, original payload SHA 3/3; P01 missing ZIP end record rejected; X02 truncated extent rejected with 2048-byte budget and clean/fragmented/truncated payload budget stops at 512.'
