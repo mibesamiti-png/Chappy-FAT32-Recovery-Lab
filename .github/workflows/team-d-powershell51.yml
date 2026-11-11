@@ -23,3 +23,6 @@ jobs:
       - name: Run R3 bounded FAT mirror comparison synthetic tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1
+      - name: Run R3 bounded EB58 pattern and offset hypotheses synthetic tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R3-Eb58.Tests.ps1
