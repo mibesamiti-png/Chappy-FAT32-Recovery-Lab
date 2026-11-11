@@ -26,6 +26,7 @@ function Invoke-R5SyntheticFormatEvidence {
     $baseMatches=0
     $candidateMatches=0
     $falseOriginalClaims=0
+    $verifiedItems=0
     foreach($case in @('M00','P01','P02','P03')) {
         $fixture=New-ChappyA3DDamagedFixture -Seed $seed -Case $case
         $before=Get-A3DSha256 $fixture.image
@@ -51,9 +52,13 @@ function Invoke-R5SyntheticFormatEvidence {
         if($base3mf.Count -eq 1 -and (Get-R5OracleCandidateHash $fixture.image $base3mf[0]) -ceq $truth3mf.sha256) { $baseMatches++ }
         if($oracleMatch) { $candidateMatches++ }
 
-        foreach($item in @($base3mf)+@($candidate3mf)) {
-            if($item.confidence -eq 'verified' -and $item.integrityScope -cne 'structural_only_not_original_file_integrity') {
-                $falseOriginalClaims++
+        foreach($item in @($base.items)+@($candidate.items)) {
+            if($item.confidence -eq 'verified') {
+                $verifiedItems++
+                $allowedScope=@('structural_only_not_original_file_integrity','heuristic_text_only_not_original_file_integrity')
+                if(-not $item.PSObject.Properties['integrityScope'] -or $item.integrityScope -cnotin $allowedScope) {
+                    $falseOriginalClaims++
+                }
             }
         }
         switch($case) {
@@ -79,12 +84,12 @@ function Invoke-R5SyntheticFormatEvidence {
                 Assert-R5FormatEvidence (@($candidate.items | Where-Object {$_.format -eq 'stl'}).Count -eq 0) 'current module makes no unsupported STL claim'
             }
         }
-        Write-Host ('R5 {0}: baselineBytes={1} optInBytes={2} probes={3}/{4} 3mfDetected={5}/{6} candidate3mfExact={7}' -f
+        Write-Host ('R5 {0}: baselineBytes={1} optInBytes={2} requests={3}/{4} 3mfDetected={5}/{6} candidate3mfExact={7}' -f
             $case,$base.metrics.bytesRead,$candidate.metrics.bytesRead,$base.metrics.readRequests,$candidate.metrics.readRequests,
             ($base3mf.Count -gt 0),($candidate3mf.Count -gt 0),$oracleMatch)
     }
     Assert-R5FormatEvidence ($falseOriginalClaims -eq 0) 'no verified original-byte claims'
     Assert-R5FormatEvidence ($baseMatches -eq 2 -and $candidateMatches -eq 2) 'only clean M00 and unaffected 3MF in P03 match original'
-    Write-Host ('PASS: R5 baseline/opt-in format evidence; exact 3MF matches={0}/4, false original claims={1}, PowerShell={2}.' -f
-        $candidateMatches,$falseOriginalClaims,$PSVersionTable.PSVersion.ToString())
+    Write-Host ('PASS: R5 baseline/opt-in format evidence; exact 3MF matches={0}/4, verified items={1}, false original claims={2}, PowerShell={3}.' -f
+        $candidateMatches,$verifiedItems,$falseOriginalClaims,$PSVersionTable.PSVersion.ToString())
 }
