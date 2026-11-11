@@ -256,6 +256,8 @@ try {
         . (Join-Path $PSScriptRoot 'Test-DirectoryR7HierarchyEvidence.ps1')
         # R8 opt-in numeric coverage versus same synthetic R7 baseline.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR8CoverageEvidence.ps1')
+        # R9 scanner-observed interval provenance, same-corpus R8/R9 A/B.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR9CoverageProvenance.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
