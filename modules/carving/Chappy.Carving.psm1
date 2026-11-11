@@ -184,6 +184,9 @@ function Test-CZip {
             offsetBytes=$Offset; lengthBytes=($endOffset-$Offset)
             format=$(if($is3mf){'3mf'}else{'zip'})
             confidence=$(if($crcMismatch){'partial'}else{'verified'})
+            # ZIP references may be structurally valid while payload CRC/deflate is unverified.
+            # CRC match on selected STORED entries is not proof of the original file integrity.
+            integrityScope='structural_only_not_original_file_integrity'
             evidence=$evidence
             checks=$(if($crcMismatch){'zip_stored_crc_mismatch'}elseif($crcStatus -eq 'match'){'zip_structure_and_stored_crc32'}else{'zip_structure_with_crc_unchecked'})
             crc32Status=$crcStatus; crc32CheckedEntries=$crcChecked; crc32UncheckedEntries=$crcUnchecked
@@ -192,6 +195,7 @@ function Test-CZip {
     }
     return [pscustomobject]@{
         offsetBytes=$Offset; lengthBytes=0L; format='zip'; confidence='partial'
+        integrityScope='signature_only_not_validated'
         evidence=@('zip.local_header','zip.central_directory_not_validated')
         checks='signature_only'; truncated=$true
     }
@@ -244,7 +248,8 @@ function Test-CGcode {
         offsetBytes=$Offset; lengthBytes=($lastGood-$Offset); format='gcode'
         confidence=$(if($incomplete){'partial'}else{'probable'})
         evidence=@('gcode.printable_lines','gcode.command_sequence',"gcode.command_count_$commands")
-        checks='text_syntax_only'; truncated=$incomplete; fragmentationSuspected=$fragmentationSuspected
+        checks='text_syntax_only'; integrityScope='heuristic_text_only_not_original_file_integrity'
+        truncated=$incomplete; fragmentationSuspected=$fragmentationSuspected
     }
 }
 
@@ -453,7 +458,9 @@ function Export-ChappyCarvingCandidate {
             $hash=([BitConverter]::ToString($sha.Hash)).Replace('-','').ToLowerInvariant()
         } finally {$sha.Dispose()}
         $output.Dispose(); $output=$null
-        return [pscustomobject]@{schemaVersion='1';team='C';status='ok';fileName=$name;group=$group;offsetBytes=$start;lengthBytes=$length;sha256=$hash;confidence=$Candidate.confidence;format=$Candidate.format;integrity='extracted_bytes_only_not_original_integrity'}
+        # The SHA-256 identifies copied output bytes only. Neither the folder name nor hash
+        # certifies that those bytes match the original pre-damage file.
+        return [pscustomobject]@{schemaVersion='1';team='C';status='ok';fileName=$name;group=$group;offsetBytes=$start;lengthBytes=$length;sha256=$hash;confidence=$Candidate.confidence;format=$Candidate.format;integrity='extracted_bytes_only_not_original_integrity';integrityScope='copied_bytes_sha256_only_not_original_file_integrity'}
     } catch {
         if ($null -ne $output) {$output.Dispose();$output=$null}
         if ($created -and [IO.File]::Exists($target)) {[IO.File]::Delete($target)}
@@ -545,6 +552,7 @@ function Write-ChappyCarvingReport {
             lengthBytes=(Convert-CReportUnsigned (Get-CReportField $candidate 'lengthBytes'))
             format=(Convert-CReportEnum (Get-CReportField $candidate 'format') @('zip','3mf','gcode'))
             confidence=(Convert-CReportEnum (Get-CReportField $candidate 'confidence') @('verified','probable','partial','unknown'))
+            integrityScope=(Convert-CReportEnum (Get-CReportField $candidate 'integrityScope') @('structural_only_not_original_file_integrity','signature_only_not_validated','heuristic_text_only_not_original_file_integrity'))
             evidence=$safeEvidence
             checks=(Convert-CReportEnum (Get-CReportField $candidate 'checks') $checkCodes 'not_validated')
             crc32Status=(Convert-CReportEnum (Get-CReportField $candidate 'crc32Status') @('match','mismatch','partial','not_checked','not_applicable') 'not_applicable')
