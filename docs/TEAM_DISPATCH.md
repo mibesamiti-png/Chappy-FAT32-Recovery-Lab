@@ -5,11 +5,13 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#60](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/60) **R9 OPEN**; [#53](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/53) R8 closed | `feature/b-r9-coverage-provenance-20261111` | `modules/directory/` | **NEXT: spoofed full read-count FP1; independently observed cluster interval/coverage evidence, R0 then one bounded Draft PR** |
-| C | Existing Team C chat | [#61](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/61) **R7 OPEN**; [#54](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/54) R6 closed | `feature/c-r7-fragment-hint-ablation-20261111` | `modules/carving/` | **NEXT: remove one artificial privileged fragment hint, measure FP/resource costs, R0 then bounded Draft PR** |
-| D | Existing Team D chat | [#62](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/62) **R9 OPEN**; [#55](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/55) R8 closed | `research/d-r9-longer-cycle-quota-20261111` | `modules/fat-analysis/` | **NEXT: longer root cycle vs distant FAT anomaly/unique coverage quota tradeoff, R0 then bounded Draft PR** |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-synthetic-directory-evidence-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-synthetic-format-evidence-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-synthetic-fat-evidence-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
+
+The previous active round B #60 / C #61 / D #62 was integrated through #64 / #63 / #65 respectively. See [the current program checkpoint](STATE.md) for decisions and verified CI. The table above records the next assignments.
 
 ## Next-round execution method: source research + independent A/B trials (2026-11-11)
 
