@@ -34,7 +34,8 @@ $tests=@(
     'modules\fat-analysis\tests\Run-TeamD-R8-AdditiveAB.Tests.ps1',
     'tests\Test-LocalReadOnlyPreflight.ps1',
     'tests\Test-SyntheticDamageBenchmark.ps1',
-    'tests\Test-A3DCleanFixture.ps1'
+    'tests\Test-A3DCleanFixture.ps1',
+    'tests\Test-A3DDamagedFixture.ps1'
 )
 $passed=0
 Push-Location $root
