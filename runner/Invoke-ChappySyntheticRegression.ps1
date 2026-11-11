@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-Runs the current synthetic-only QuickProbe, B and D regression suites in isolated
+Runs all current synthetic-only QuickProbe, B, C, D and A regression suites in isolated
 Windows PowerShell 5.1 processes. Never accepts an IMG path or scans real media.
 .DESCRIPTION
 Each child test creates its own artificial fixture and cleans up. This runner
@@ -28,6 +28,7 @@ $tests=@(
     'modules\fat-analysis\tests\Run-TeamD-R3-ChainStats.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-Consistency.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R4-Geometry.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R5-Disagreement.Tests.ps1',
     'tests\Test-LocalReadOnlyPreflight.ps1',
     'tests\Test-SyntheticDamageBenchmark.ps1'
 )
