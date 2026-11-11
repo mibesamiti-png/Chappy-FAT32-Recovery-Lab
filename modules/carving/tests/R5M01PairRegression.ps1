@@ -80,7 +80,7 @@ function Invoke-R5M01FragmentEvidence {
         $r=Get-ChappyCarvingCandidates -Stream $rev -MaxScanBytes $wrong.Length -MaxFileBytes 4096 -ExtraValidationReadBytes 4096 -MaxCandidates 4 -MaxProbes 8 -MaxProbeBytes 4096 -EnableSmallDeflateCrc
         Assert-CM01 (@($r.items | Where-Object {$_.format -eq '3mf' -and $_.offsetBytes -eq 0 -and $_.lengthBytes -eq $wrong.Length}).Count -eq 0) 'reversed logical order never creates an intact original 3MF'
     }finally{$rev.Dispose()}
-    $TN++ # Explicit reversed-order negative comparison, not a searched pair.
+    $reverseOrderRejected=1 # Separate control, NOT part of candidate-pair TN.
 
     $tooSmall=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($m01.image,$false))
     try{
@@ -98,7 +98,28 @@ function Invoke-R5M01FragmentEvidence {
         $r=Test-CM01FiniteZipPairs -Source $shortStream
         Assert-CM01 ($r.status -eq 'partial' -and $r.decision -eq 'incomplete' -and $r.metrics.sourceBytesRead -eq 0) 'short synthetic source never satisfies scan window'
     }finally{$shortStream.Dispose()}
-    Assert-CM01 ($TP -eq 3 -and $FP -eq 0 -and $FN -eq 0 -and $TN -eq 2) 'external scorer TP3 FP0 FN0 TN2 across selected pair and reverse-order opportunities'
-    Write-Host ('R5 M01 SYNTHETIC METRICS TP={0} FP={1} FN={2} TN={3} baseline_source_bytes={4} experiment_source_bytes={5} in_memory_bytes={6} artificial_trials=3' -f $TP,$FP,$FN,$TN,$baseTotal,$candidateTotal,$validatorTotal)
+    # Adversarial false ZIP local headers: never select just the first four
+    # signatures if the complete 64KiB grid offers more than the allowed cap.
+    [byte[]]$fakeStarts=[byte[]]$m01.image.Clone()
+    foreach($fakeHeaderAt in @(61440,61952,62464,62976)){
+        [Array]::Copy([byte[]]@(0x50,0x4b,0x03,0x04),0,$fakeStarts,$fakeHeaderAt,4)
+    }
+    $fakeStartsInput=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($fakeStarts,$false))
+    try{
+        $overflow=Test-CM01FiniteZipPairs -Source $fakeStartsInput -MaxStarts 4
+        Assert-CM01 ($overflow.status -eq 'partial' -and $overflow.decision -eq 'incomplete' -and
+            $overflow.metrics.stopCode -eq 'search.start_limit' -and $overflow.metrics.pairsEvaluated -eq 0) 'five ZIP starts never cause arbitrary choice of real start'
+        Assert-CM01 ($fakeStartsInput.BytesRead -eq $overflow.metrics.sourceBytesRead -and $fakeStartsInput.BytesRead -le 73728) 'fake header flood remains source-bound'
+    }finally{$fakeStartsInput.Dispose()}
+    $limitedWindowInput=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($m01.image,$false))
+    try{
+        $missing=Test-CM01FiniteZipPairs -Source $limitedWindowInput -WindowBytes 57344
+        Assert-CM01 ($missing.status -eq 'ok' -and $missing.decision -eq 'unknown' -and
+            $missing.metrics.startCandidates -eq 0) 'complete small window with no observed header yields unknown, not recovered'
+        Assert-CM01 ($limitedWindowInput.BytesRead -eq $missing.metrics.sourceBytesRead -and $missing.metrics.sourceBytesRead -eq 57344) 'small-window actual scan bytes measured'
+    }finally{$limitedWindowInput.Dispose()}
+    Write-Host 'PASS: R5 M01 fake local-header flood fails closed; uncovered first-fragment location stays unknown'
+    Assert-CM01 ($TP -eq 3 -and $FP -eq 0 -and $FN -eq 0 -and $TN -eq 1 -and $reverseOrderRejected -eq 1) 'candidate-pair TP3 FP0 FN0 TN1; reversed trial is separate and rejected'
+    Write-Host ('R5 M01 SYNTHETIC METRICS TP={0} FP={1} FN={2} TN={3} reverse_rejected={7} baseline_source_bytes={4} experiment_source_bytes={5} in_memory_bytes={6} artificial_trials=3' -f $TP,$FP,$FN,$TN,$baseTotal,$candidateTotal,$validatorTotal,$reverseOrderRejected)
     Write-Host 'PASS: R5 M01 unhinted sector-grid two-piece 3MF research and conservative failure controls'
 }
