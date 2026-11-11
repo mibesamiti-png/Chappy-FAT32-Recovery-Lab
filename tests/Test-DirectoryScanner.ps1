@@ -151,6 +151,29 @@ try {
         $falsePositive=New-Object System.Collections.ArrayList
         [void]$falsePositive.Add((New-ShortB 'FAKE    TXT' 0x20 77 17))
         Write-DirectoryB $s (ClusterAt 20) $falsePositive # isolated random-like hit
+
+        # Adversarial: R1 trusted a lone dot marker even with an invalid dotdot.
+        $badPair=New-Object System.Collections.ArrayList
+        [void]$badPair.Add((New-ShortB '.          ' 0x10 21 0))
+        [void]$badPair.Add((New-ShortB '..         ' 0x10 99999 0))
+        [void]$badPair.Add((New-ShortB 'DOTLURE TXT' 0x20 78 17))
+        Write-DirectoryB $s (ClusterAt 21) $badPair
+
+        # Adversarial: a single valid short+LFN sequence is not itself proof
+        # that the surrounding arbitrary data is a directory cluster.
+        $loneLfn=New-Object System.Collections.ArrayList
+        $loneShort=New-ShortB 'ONLYLFN TXT' 0x20 79 15
+        foreach($e in (New-LfnB 'Artificial_Lonely_LFN.txt' $loneShort)){[void]$loneLfn.Add($e)}
+        [void]$loneLfn.Add($loneShort)
+        Write-DirectoryB $s (ClusterAt 22) $loneLfn
+
+        # Positive: a complete ordered dot+dotdot pair supports a directory
+        # with exactly one ordinary entry, even when its parent is only a hint.
+        $validPair=New-Object System.Collections.ArrayList
+        [void]$validPair.Add((New-ShortB '.          ' 0x10 23 0))
+        [void]$validPair.Add((New-ShortB '..         ' 0x10 2 0))
+        [void]$validPair.Add((New-ShortB 'PAIRED  TXT' 0x20 80 10))
+        Write-DirectoryB $s (ClusterAt 23) $validPair
     } finally {$s.Dispose()}
     $before=Hash-B $imagePath
     $read=[IO.File]::Open($imagePath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
@@ -167,6 +190,14 @@ try {
         Assert-B (@($all.items|Where-Object {$_.name -eq 'BROKEN.TXT' -and $_.confidence -eq 'partial'}).Count -eq 1) 'Broken LFN falls back to short name'
         Assert-B (@($all.items|Where-Object {$_.name -eq '../ESCAPE.txt'}).Count -eq 0) 'Traversal name rejected'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'FAKE.TXT'}).Count -eq 0) 'Single-entry false-positive guarded'
+        Assert-B (@($all.items|Where-Object {$_.name -eq 'DOTLURE.TXT'}).Count -eq 0) 'Malformed dotdot cannot justify lone entry'
+        Assert-B (@($all.items|Where-Object {$_.name -eq 'ONLYLFN.TXT'}).Count -eq 0) 'Single valid LFN cannot prove orphan directory'
+        Assert-B (@($all.items|Where-Object {$_.name -eq 'PAIRED.TXT' -and $_.containerCluster -eq 23 -and $_.parentClusterHint -eq 2 -and $_.evidence -contains 'container_ordered_dot_pair'}).Count -eq 1) 'Ordered dot pair accepts one-entry subdirectory as candidate'
+        Assert-B ($all.metrics.directoryRejectReasons.unpaired_or_malformed_dot_header -ge 1 -and $all.metrics.directoryRejectReasons.isolated_lfn_without_directory_header -ge 1) 'Aggregated fixed-code rejection evidence'
+        [byte[]]$rootOne=New-Object byte[] 1024
+        [Array]::Copy((New-ShortB 'ONEONLY TXT' 0x20 24 12),0,$rootOne,0,32)
+        $rootParsed=Read-ChappyBDirectoryCluster -Buffer $rootOne -Cluster 2 -OffsetBytes 0 -MaxCluster $geo.maxCluster -IsRoot $true
+        Assert-B ($rootParsed.accepted -and $rootParsed.decisionReason -eq 'root_valid_entry' -and $rootParsed.entries.Count -eq 1) 'Legitimate one-entry root remains accepted'
         Assert-B (@($all.items|Where-Object {$_.deleted -and $_.name -eq '?ELETED.TXT'}).Count -eq 1) 'Deleted first-character marked unknown'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'BIGFILE.BIN' -and $_.confidence -eq 'partial'}).Count -eq 1) 'Huge size warning evidence'
         $redacted=Get-ChappyDirectoryCandidates -Stream $read -Geometry $geo -MaxScanBytes 1024
