@@ -36,7 +36,8 @@ $tests=@(
     'tests\Test-SyntheticDamageBenchmark.ps1',
     'tests\Test-A3DCleanFixture.ps1',
     'tests\Test-A3DDamagedFixture.ps1',
-    'tests\Test-A3DStandardFixture.ps1'
+    'tests\Test-A3DStandardFixture.ps1',
+    'tests\Test-A3DEvidenceBaseline.ps1'
 )
 $passed=0
 Push-Location $root
