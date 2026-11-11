@@ -50,6 +50,38 @@ function Find-CSignature {
     return $hits.ToArray()
 }
 
+
+# Bounded CRC32 for ZIP STORED (method 0) entries only.
+# This is content evidence, never proof of the original filesystem's integrity.
+function Get-CStoredCrc32 {
+    param([IO.Stream]$Stream,[long]$Offset,[long]$Length)
+    if ($Length -lt 0 -or $Length -gt 65536L -or $Offset -lt 0 -or $Offset -gt ($Stream.Length-$Length)) { return $null }
+    if ($null -eq $script:CStoredCrcTable) {
+        $script:CStoredCrcTable = New-Object 'uint32[]' 256
+        for ($n=0; $n -lt 256; $n++) {
+            $c=[uint32]$n
+            for ($k=0; $k -lt 8; $k++) {
+                if (($c -band 1) -ne 0) { $c=[uint32](($c -shr 1) -bxor 3988292384L) }
+                else { $c=[uint32]($c -shr 1) }
+            }
+            $script:CStoredCrcTable[$n]=$c
+        }
+    }
+    $crc=[uint32]4294967295L
+    $cursor=$Offset; $remaining=$Length
+    while ($remaining -gt 0) {
+        $take=[int][Math]::Min(16384L,$remaining)
+        $bytes=Read-CBytes $Stream $cursor $take
+        if ($null -eq $bytes) { return $null }
+        foreach ($b in $bytes) {
+            $index=[int](($crc -bxor [uint32]$b) -band 255L)
+            $crc=[uint32](($crc -shr 8) -bxor $script:CStoredCrcTable[$index])
+        }
+        $cursor+=$take; $remaining-=$take
+    }
+    return [uint32]($crc -bxor 4294967295L)
+}
+
 function Test-CZip {
     param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes)
     $first = Read-CBytes $Stream $Offset 30
@@ -77,6 +109,7 @@ function Test-CZip {
         $pos = $Offset + $cdRel
         $cdEnd = $pos + $cdSize
         $valid = $true
+        $crcChecked=0; $crcUnchecked=0; $crcMismatch=$false; $crcBudget=65536L
         $names = New-Object 'System.Collections.Generic.List[string]'
         for ($j=0; $j -lt $entries; $j++) {
             $entry = Read-CBytes $Stream $pos 46
@@ -84,6 +117,8 @@ function Test-CZip {
             $eflags = Get-CU16 $entry 8
             $emode = Get-CU16 $entry 10
             $comp = [long](Get-CU32 $entry 20)
+            $uncomp = [long](Get-CU32 $entry 24)
+            $expectedCrc = [uint32](Get-CU32 $entry 16)
             $nameLen = [long](Get-CU16 $entry 28)
             $extraLen = [long](Get-CU16 $entry 30)
             $cmtLen = [long](Get-CU16 $entry 32)
@@ -97,11 +132,20 @@ function Test-CZip {
             if ($null -eq $nameBytes -or $null -eq $local -or (Get-CU32 $local 0) -ne 0x04034b50) { $valid=$false; break }
             $localNameLen = [long](Get-CU16 $local 26)
             $localExtraLen = [long](Get-CU16 $local 28)
-            $dataEnd = $Offset+$localRel+30L+$localNameLen+$localExtraLen+$comp
+            $dataStart = $Offset+$localRel+30L+$localNameLen+$localExtraLen
+            $dataEnd = $dataStart+$comp
             if ($localNameLen -ne $nameLen -or (Get-CU16 $local 8) -ne $emode -or
                 $dataEnd -gt ($Offset+$cdRel) -or $dataEnd -lt ($Offset+$localRel)) { $valid=$false; break }
             $localName = Read-CBytes $Stream ($Offset+$localRel+30) ([int]$localNameLen)
             if ($null -eq $localName -or -not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($nameBytes,$localName)) { $valid=$false; break }
+            # CRC budget is per archive, 64 KiB maximum; deflate and oversized entries are NOT checked.
+            if ($emode -eq 0 -and $comp -eq $uncomp -and $comp -le $crcBudget) {
+                $actualCrc = Get-CStoredCrc32 $Stream $dataStart $comp
+                if ($null -eq $actualCrc) { $valid=$false; break }
+                $crcChecked++
+                $crcBudget-=$comp
+                if ([uint32]$actualCrc -ne $expectedCrc) { $crcMismatch=$true }
+            } else { $crcUnchecked++ }
             # Names are used for *classification only* and never returned or logged.
             $names.Add([Text.Encoding]::UTF8.GetString($nameBytes))
             $pos += $recordLen
@@ -114,11 +158,18 @@ function Test-CZip {
             if ($entryName -match '(?i)^3D/[^/]+\.model$') { $model = $true }
         }
         $is3mf = $contentTypes -and $model -and $relationships
+        $crcStatus=if($crcMismatch){'mismatch'}elseif($crcChecked -eq 0){'not_checked'}elseif($crcUnchecked -gt 0){'partial'}else{'match'}
+        $evidence=@('zip.local_header','zip.eocd','zip.central_directory','zip.local_references')
+        if($crcChecked -gt 0){$evidence+= 'zip.stored_crc_checked'}
+        if($crcMismatch){$evidence+= 'zip.stored_crc_mismatch'}
         return [pscustomobject]@{
             offsetBytes=$Offset; lengthBytes=($endOffset-$Offset)
             format=$(if($is3mf){'3mf'}else{'zip'})
-            confidence='verified'; evidence=@('zip.local_header','zip.eocd','zip.central_directory','zip.local_references')
-            checks='zip_structure_only_no_crc'; truncated=$false
+            confidence=$(if($crcMismatch){'partial'}else{'verified'})
+            evidence=$evidence
+            checks=$(if($crcMismatch){'zip_stored_crc_mismatch'}elseif($crcStatus -eq 'match'){'zip_structure_and_stored_crc32'}else{'zip_structure_with_crc_unchecked'})
+            crc32Status=$crcStatus; crc32CheckedEntries=$crcChecked; crc32UncheckedEntries=$crcUnchecked
+            truncated=$false
         }
     }
     return [pscustomobject]@{
@@ -311,6 +362,9 @@ function Write-ChappyCarvingReport {
             confidence=[string]$candidate.confidence
             evidence=@($candidate.evidence)
             checks=[string]$candidate.checks
+            crc32Status=$(if($null -ne $candidate.PSObject.Properties['crc32Status']){[string]$candidate.crc32Status}else{'not_applicable'})
+            crc32CheckedEntries=$(if($null -ne $candidate.PSObject.Properties['crc32CheckedEntries']){[int]$candidate.crc32CheckedEntries}else{0})
+            crc32UncheckedEntries=$(if($null -ne $candidate.PSObject.Properties['crc32UncheckedEntries']){[int]$candidate.crc32UncheckedEntries}else{0})
             truncated=[bool]$candidate.truncated
         }
     })
