@@ -21,6 +21,45 @@ function MakeZip([bool]$is3mf) {
     $bytes=$ms.ToArray();$ms.Dispose()
     return ,$bytes
 }
+# Deterministic single-entry STORED ZIP, with standard CRC32 test vector "123456789".
+function MakeStoredZip([bool]$Corrupt) {
+    $mem=New-Object IO.MemoryStream
+    $writer=New-Object IO.BinaryWriter($mem)
+    try {
+        $fileName=[Text.Encoding]::ASCII.GetBytes('synthetic.txt')
+        $data=[Text.Encoding]::ASCII.GetBytes('123456789')
+        if ($Corrupt) { $data[3]=[byte][char]'X' }
+        $knownCrc=[uint32]3421780262L
+        $writer.Write([uint32]0x04034b50)
+        $writer.Write([uint16]20); $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write($knownCrc)
+        $writer.Write([uint32]$data.Length); $writer.Write([uint32]$data.Length)
+        $writer.Write([uint16]$fileName.Length); $writer.Write([uint16]0)
+        $writer.Write([byte[]]$fileName); $writer.Write([byte[]]$data)
+        $centralStart=[uint32]$mem.Position
+        $writer.Write([uint32]0x02014b50)
+        $writer.Write([uint16]20); $writer.Write([uint16]20)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write($knownCrc)
+        $writer.Write([uint32]$data.Length); $writer.Write([uint32]$data.Length)
+        $writer.Write([uint16]$fileName.Length)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write([uint32]0); $writer.Write([uint32]0)
+        $writer.Write([byte[]]$fileName)
+        $centralLength=[uint32]($mem.Position-$centralStart)
+        $writer.Write([uint32]0x06054b50)
+        $writer.Write([uint16]0); $writer.Write([uint16]0)
+        $writer.Write([uint16]1); $writer.Write([uint16]1)
+        $writer.Write([uint32]$centralLength); $writer.Write([uint32]$centralStart)
+        $writer.Write([uint16]0)
+        $writer.Flush()
+        return ,$mem.ToArray()
+    } finally { $writer.Dispose();$mem.Dispose() }
+}
+
 function WriteSynthetic([string]$path,[byte[]]$content,[int]$size=0) {
     $s=[IO.File]::Open($path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
     try {$s.Write($content,0,$content.Length);if($size -gt $content.Length){$s.SetLength($size)}} finally {$s.Dispose()}
@@ -42,7 +81,7 @@ try {
     Assert ($three.Count -eq 1) '3MF should have exactly one structurally valid candidate'
     Assert ($three[0].offsetBytes -eq 65534) 'precise offset across 64 KiB boundary'
     Assert ($three[0].lengthBytes -eq $zip.Length) '3MF length from EOCD'
-    Assert (($three[0].checks -eq 'zip_structure_only_no_crc')) 'CRC limitation clearly identified'
+    Assert ($three[0].crc32Status -in @('match','partial','not_checked')) 'CRC status explicitly classified'
     $dest=Join-Path $fixtureRoot 'restore';[void][IO.Directory]::CreateDirectory($dest)
     $saved=Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest
     $restored=Join-Path (Join-Path $dest $saved.group) $saved.fileName
@@ -63,6 +102,35 @@ try {
     $z=MakeZip $false; $f2=Join-Path $fixtureRoot 'fixture_b.img';WriteSynthetic $f2 $z
     $r2=Scan $f2;Assert (@($r2.items | Where-Object {$_.format -eq 'zip' -and $_.confidence -eq 'verified'}).Count -eq 1) 'ordinary ZIP classification'
     Write-Host 'PASS: ordinary ZIP classification'
+
+    # CRC32 of a known synthetic STORED ZIP: CRC(123456789) = CBF43926.
+    $stored=MakeStoredZip $false
+    $storedPath=Join-Path $fixtureRoot 'stored_good.img'
+    WriteSynthetic $storedPath $stored
+    $storedBefore=(Get-FileHash -LiteralPath $storedPath -Algorithm SHA256).Hash
+    $storedScan=Scan $storedPath
+    $storedHits=@($storedScan.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($storedHits.Count -eq 1) 'deterministic stored ZIP candidate found'
+    Assert ($storedHits[0].confidence -eq 'verified' -and $storedHits[0].crc32Status -eq 'match') 'valid stored ZIP CRC32 matches'
+    Assert ($storedHits[0].crc32CheckedEntries -eq 1 -and $storedHits[0].crc32UncheckedEntries -eq 0) 'stored CRC checked entry count'
+    Assert ($storedHits[0].checks -eq 'zip_structure_and_stored_crc32') 'ZIP checks record CRC coverage'
+    Assert ($storedBefore -eq (Get-FileHash -LiteralPath $storedPath -Algorithm SHA256).Hash) 'CRC check is source-read-only'
+
+    $corruptStored=MakeStoredZip $true
+    $corruptPath=Join-Path $fixtureRoot 'stored_corrupt.img'
+    WriteSynthetic $corruptPath $corruptStored
+    $corruptScan=Scan $corruptPath
+    $corruptHits=@($corruptScan.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($corruptHits.Count -eq 1) 'damaged stored ZIP candidate found'
+    Assert ($corruptHits[0].confidence -eq 'partial' -and $corruptHits[0].crc32Status -eq 'mismatch') 'corrupted body is not verified'
+    Assert ($corruptHits[0].evidence -contains 'zip.stored_crc_mismatch') 'CRC failure reason code'
+    Assert (@($corruptScan.items | Where-Object {$_.confidence -eq 'verified'}).Count -eq 0) 'known corrupt ZIP never verified'
+    $crcReport=Join-Path $fixtureRoot 'crc-check-report.json'
+    [void](Write-ChappyCarvingReport -Result $corruptScan -ReportPath $crcReport)
+    $crcJson=Get-Content -LiteralPath $crcReport -Raw | ConvertFrom-Json
+    Assert ($crcJson.items[0].crc32Status -eq 'mismatch') 'sanitized JSON retains CRC mismatch status'
+    Assert (-not ((Get-Content -LiteralPath $crcReport -Raw) -match 'synthetic.txt')) 'report never includes inner filename'
+    Write-Host 'PASS: ZIP STORED CRC-32 known vector, mismatch and sanitized JSON'
 
     # Truncated central directory is not verified.
     $broken=New-Object byte[] ($z.Length-9)
