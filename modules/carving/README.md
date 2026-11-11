@@ -23,7 +23,17 @@ $found | Select-Object status,scanIncomplete,metrics
 # Write-ChappyCarvingReport -Result $found -ReportPath 'D:\local-output\scan-0001.json'
 ```
 
-The original IMG path above is *illustrative only*, not a user path. The scanner visits a bounded 64 MiB range; it does **not** analyze the full 31 GiB by default. To proceed, increase `StartOffset` in batches. ZIP validation may read ahead outside the scan range up to `MaxFileBytes` to find the archive end; `metrics.bytesRead` is the **nominal scan range, not the actual I/O count**.
+The IMG path above is *illustrative only*, not a user path; **do not execute this example on the 31GB master IMG until Team A approves a local-only test plan**. By default the scanner stays inside its `StartOffset + MaxScanBytes` read window. **All nested ZIP/CRC/G-code reads count toward the same cumulative byte budget**, including rereads; `metrics.bytesRead` is measured source-stream I/O, not nominal scan length. As a consequence, a default-limited scan can stop before covering the whole window and return `status=partial`, with a bounded reason code.
+
+## Global work budgets (Team A review P1)
+
+- `MaxScanBytes`: scan window and **default cumulative byte-read cap**. ZIP/CRC/G-code validators may not read outside this logical window, even when `MaxFileBytes` is larger.
+- `ExtraValidationReadBytes=0` by default: a **separately named opt-in** allowance for *rereading within the same scan window*, not permission to read outside it. Choose deliberately on synthetic data only.
+- `MaxProbes=128` and `MaxCandidates=128` defaults: explicit combined cap on ZIP/G-code signature probes and returned candidates; dense fake signatures cannot multiply validation indefinitely.
+- `MaxWorkMilliseconds=30000` default: elapsed-time **cooperative** stop check (not a real-time guarantee for stalled I/O). ZIP/G-code validation additionally capped at 128 KiB of input per probe, and ZIP CRC-32 to 64 KiB of stored data per candidate.
+- The single 16 KiB chunk scanner searches ZIP and G-code anchors together. Result `metrics.bytesRead` counts **actual** bytes read, `readRequests` counts .NET Stream.Read calls, `entriesChecked` counts attempted candidate probes, `scannedBytes` counts bytes traversed by the first-pass scanner, and `scanWindowBytes` is the logical requested range.
+- On caps/time/window-limited validation, return `status=partial` and `scanIncomplete=true` with codes such as `scan.read_budget_exhausted`, `scan.probe_budget_exhausted`, `scan.time_budget_exhausted`, `scan.validation_window_limit`, and `scan.bounds_reached`. A partial candidate is **not** evidence of intact original file data.
+- CI uses synthetic dense ZIP local headers and malformed ZIP EOCD scans with a separate counting stream, verifying that cumulative I/O metrics match actual Read calls and stay within the default byte limit.
 
 ## Opt-in extraction
 
@@ -56,6 +66,6 @@ A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xm
 
 - G-code start anchors require a recognized command/header at the beginning of a block or after a newline/zero byte; some valid G-code may be missed. Encodings other than printable ASCII are not supported yet.
 - A ZIP containing internal `PK\x03\x04` strings may create additional `partial` candidates. A valid ZIP's subsequent local headers are skipped once the archive is recognized.
-- ZIP signature candidate validation may repeatedly scan up to `MaxFileBytes`; performance on adversarial images remains an open issue. Candidate counts, scan bytes, entry counts, and line counts are capped.
+- Validation probes stay within the current scan window and its shared read/probe budget. Under dense adversarial input, the scanner may stop early and **not** find later files. This is intentional, and callers must not infer absence of files from partial results.
 - Returned offsets are logical offsets in the input stream, not clusters or partition-relative addresses.
 - Never send real recovered files, unredacted reports, or source IMG data to GitHub.
