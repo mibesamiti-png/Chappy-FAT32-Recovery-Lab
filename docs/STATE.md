@@ -30,3 +30,10 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - Draft interface: docs/INTERFACE_V1.md; roadmap: docs/ROADMAP.md.
 - Main v0.5 legacy program and test script are NOT YET imported into the repo. Do not claim otherwise.
 - No real IMG or real reports committed. Recovery success remains unconfirmed.
+
+## Universal continuation / team dispatch
+- Shared prompt: `docs/UNIVERSAL_BOOTSTRAP_PROMPT.md`
+- Canonical work policy: `docs/UNIVERSAL_WORK_INSTRUCTION.md`
+- Role/branch roster: `docs/TEAM_DISPATCH.md`
+- Existing B/C/D chats use identical prompts while preserving their prior team identity. New chat without role requires one-time explicit assignment.
+- Actual 31GB image remains local; synthetic-only CI verified separately from real recovery.
