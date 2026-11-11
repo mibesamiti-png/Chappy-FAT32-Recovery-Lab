@@ -1,6 +1,6 @@
 # Windows setup
 
-The repository is created as PRIVATE at:
+The repository is PUBLIC. The data is local-only. Repository URL:
 https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab
 
 Use a working copy **outside** `C:\SD_Backups`. Do not copy the 31GB master IMG or recovery output into the repo directory.
