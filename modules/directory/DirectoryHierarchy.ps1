@@ -18,13 +18,16 @@ function Get-ChappyDirectoryHierarchyEvidence {
         [int]$MaxEdges = 10000,
         [int]$MaxMetadataItems = 200000,
         [int]$MaxAncestorDepth = 64,
-        [int]$MaxAncestorSteps = 200000
+        [int]$MaxAncestorSteps = 200000,
+        [switch]$DetectConflictingContainerObservations,
+        [int]$MaxContainerObservations = 200000
     )
     if ($MaxNodes -lt 1 -or $MaxNodes -gt 100000 -or
         $MaxEdges -lt 1 -or $MaxEdges -gt 200000 -or
         $MaxMetadataItems -lt 1 -or $MaxMetadataItems -gt 200000 -or
         $MaxAncestorDepth -lt 1 -or $MaxAncestorDepth -gt 256 -or
-        $MaxAncestorSteps -lt 1 -or $MaxAncestorSteps -gt 2000000) {
+        $MaxAncestorSteps -lt 1 -or $MaxAncestorSteps -gt 2000000 -or
+        $MaxContainerObservations -lt 1 -or $MaxContainerObservations -gt 200000) {
         throw 'Invalid hierarchy analysis limits'
     }
     if ($null -eq $DirectoryResult.PSObject.Properties['directoryContainers'] -or
@@ -38,6 +41,11 @@ function Get-ChappyDirectoryHierarchyEvidence {
     $warnings = New-Object System.Collections.ArrayList
     $nodeMap = @{}
     $parentsByChild = @{}
+    # Opt-in R7 experiment: preserve the FIRST candidate's evidence but
+    # record contradictions in repeated container observations. No file IO.
+    $firstContainerEvidence = @{}
+    $conflictingContainerKeys = @{}
+    $containerObservationsVisited = 0L
     $incomplete = [bool]$DirectoryResult.scanIncomplete
     $unobservedTargets = 0L
     $metadataSeen = 0L
@@ -46,6 +54,14 @@ function Get-ChappyDirectoryHierarchyEvidence {
     # directory with no ordinary file records; never infer unscanned nodes.
     foreach ($c in @($DirectoryResult.directoryContainers)) {
         if ($null -eq $c) { continue }
+        if ($DetectConflictingContainerObservations) {
+            if ($containerObservationsVisited -ge $MaxContainerObservations) {
+                $incomplete = $true
+                [void]$warnings.Add('hierarchy_container_observation_limit')
+                break
+            }
+            $containerObservationsVisited++
+        }
         if ($nodes.Count -ge $MaxNodes) {
             $incomplete = $true
             [void]$warnings.Add('hierarchy_node_limit')
@@ -54,7 +70,22 @@ function Get-ChappyDirectoryHierarchyEvidence {
         $cluster = [long]$c.cluster
         if ($cluster -lt 2) { continue }
         $key = [string]$cluster
-        if ($nodeMap.ContainsKey($key)) { continue }
+        if ($nodeMap.ContainsKey($key)) {
+            if ($DetectConflictingContainerObservations) {
+                $first = $firstContainerEvidence[$key]
+                $observedGrade = Get-ChappyBHierarchyEvidenceGrade $c.confidence
+                if ($first.isRoot -ne [bool]$c.isRoot -or
+                    $first.parentHint -cne [string]$c.parentClusterHint -or
+                    $first.confidence -cne $observedGrade) {
+                    $nodeMap[$key].confidence = 'partial'
+                    $nodeMap[$key].observationConflict = $true
+                    $nodeMap[$key].evidence = @('accepted_directory_container',
+                                                'conflicting_container_observation')
+                    $conflictingContainerKeys[$key] = $true
+                }
+            }
+            continue
+        }
         $nodeGrade = Get-ChappyBHierarchyEvidenceGrade $c.confidence
         $node = [pscustomobject]@{
             cluster = $cluster
@@ -63,6 +94,15 @@ function Get-ChappyDirectoryHierarchyEvidence {
             confidence = $nodeGrade
             parentClusterHint = $c.parentClusterHint
             linkStatus = 'unclassified_candidate'
+        }
+        if ($DetectConflictingContainerObservations) {
+            $firstContainerEvidence[$key] = [pscustomobject]@{
+                isRoot = [bool]$c.isRoot
+                parentHint = [string]$c.parentClusterHint
+                confidence = $nodeGrade
+            }
+            $node | Add-Member -NotePropertyName observationConflict -NotePropertyValue $false
+            $node | Add-Member -NotePropertyName evidence -NotePropertyValue @('accepted_directory_container')
         }
         $nodeMap[$key] = $node
         [void]$nodes.Add($node)
@@ -101,6 +141,11 @@ function Get-ChappyDirectoryHierarchyEvidence {
         if ($parentGrade -ne 'probable') { $edgeEvidence += 'parent_container_weak_or_ungraded' }
         if ($childGrade -ne 'probable') { $edgeEvidence += 'child_container_weak_or_ungraded' }
         if ($entryGrade -ne 'probable') { $edgeEvidence += 'directory_entry_weak_or_ungraded' }
+        if ($DetectConflictingContainerObservations -and
+            ($conflictingContainerKeys.ContainsKey($parentKey) -or
+             $conflictingContainerKeys.ContainsKey($childKey))) {
+            $edgeEvidence += 'conflicting_container_observation'
+        }
         $edge = [pscustomobject]@{
             parentCluster = $parent
             childCluster = $child
@@ -248,6 +293,14 @@ function Get-ChappyDirectoryHierarchyEvidence {
         else { $partialEdges++ }
     }
 
+    if ($DetectConflictingContainerObservations) {
+        foreach ($node in $nodes) {
+            if ($node.observationConflict -and $node.linkStatus -eq 'referenced_candidate') {
+                $node.linkStatus = 'conflicted_candidate'
+            }
+        }
+    }
+
     # Build a set of conflicted children once. O(nodes+edges), not O(nodes*edges).
     $conflictedChildren = @{}
     foreach ($edge in $edges) {
@@ -282,6 +335,8 @@ function Get-ChappyDirectoryHierarchyEvidence {
             metadataItemsVisited = $metadataSeen
             ancestorDepthCutoffs = $depthLimited
             ancestorSteps = $ancestorSteps
+            containerObservationsVisited = $containerObservationsVisited
+            conflictingContainerClusters = $conflictingContainerKeys.Count
         }
         notes = @('candidate graph only', 'no path reconstruction', 'no FAT reads', 'no file content validation')
     }
