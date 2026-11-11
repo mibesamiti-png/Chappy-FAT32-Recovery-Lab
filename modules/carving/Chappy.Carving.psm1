@@ -100,14 +100,14 @@ function Get-CStoredCrc32 {
 }
 
 function Test-CZip {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null)
+    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null,[long]$MaxProbeBytes=16777216)
     $first = Read-CBytes $Stream $Offset 30 $Budget
     if ($null -eq $first -or (Get-CU32 $first 0) -ne 0x04034b50) { return $null }
     $flags = Get-CU16 $first 6
     $method = Get-CU16 $first 8
     $firstNameLength = Get-CU16 $first 26
     if (($flags -band 1) -ne 0 -or $method -notin @(0,8) -or $firstNameLength -eq 0) { return $null }
-    $limit=[Math]::Min(131072L,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
+    $limit=[Math]::Min($MaxProbeBytes,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
     if ($null -ne $Budget) { $limit=[Math]::Min($limit,$Budget.End-$Offset) }
     if ($limit -lt 52) { return $null }
     $endMarkers = @(Find-CSignature $Stream ($Offset+30) ($limit-30) ([byte[]](0x50,0x4b,0x05,0x06)) 128 $Budget)
@@ -198,8 +198,8 @@ function Test-CZip {
 }
 
 function Test-CGcode {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null)
-    $limit=[Math]::Min(131072L,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
+    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null,[long]$MaxProbeBytes=16777216)
+    $limit=[Math]::Min($MaxProbeBytes,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
     if ($null -ne $Budget) { $limit=[Math]::Min($limit,$Budget.End-$Offset) }
     if ($limit -lt 48) { return $null }
     [void]$Stream.Seek($Offset,[IO.SeekOrigin]::Begin)
@@ -257,6 +257,7 @@ function Get-ChappyCarvingCandidates {
         [ValidateRange(1024,1073741824)][long]$MaxFileBytes=134217728,
         [ValidateRange(1,10000)][int]$MaxCandidates=128,
         [ValidateRange(1,4096)][int]$MaxProbes=128,
+        [ValidateRange(1024,268435456)][long]$MaxProbeBytes=16777216,
         [ValidateRange(0,1073741824)][long]$ExtraValidationReadBytes=0,
         [ValidateRange(100,120000)][int]$MaxWorkMilliseconds=30000
     )
@@ -311,7 +312,7 @@ function Get-ChappyCarvingCandidates {
                 $budget.StopCode='scan.time_budget_exhausted'; break
             }
             $lastZipProbed=$at; $budget.Probes++
-            $item=Test-CZip $Stream $at $MaxFileBytes $budget
+            $item=Test-CZip $Stream $at $MaxFileBytes $budget $MaxProbeBytes
             if ($null -ne $item) {
                 $candidates.Add($item)
                 if ($item.lengthBytes -gt 0) { $skipZip=$at+$item.lengthBytes }
@@ -329,7 +330,7 @@ function Get-ChappyCarvingCandidates {
                 $budget.StopCode='scan.time_budget_exhausted'; break
             }
             $lastGcodeProbed=$at; $budget.Probes++
-            $gc=Test-CGcode $Stream $at $MaxFileBytes $budget
+            $gc=Test-CGcode $Stream $at $MaxFileBytes $budget $MaxProbeBytes
             if ($null -ne $gc) {
                 $candidates.Add($gc)
                 $skipGcode=$at+[Math]::Max(1L,[long]$gc.lengthBytes)
