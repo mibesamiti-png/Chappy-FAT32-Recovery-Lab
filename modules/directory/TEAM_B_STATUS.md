@@ -1,15 +1,18 @@
-# Team B handoff (2026-11-11)
+# Team B handoff (2026-11-11) — R1 draft PR #7
 
 | Item | State | Evidence |
 | --- | --- | --- |
-| FAT-chain-free geometry/cluster reading | implemented | Source review only |
-| 8.3 + Unicode LFN validation and short fallback | implemented | Source review only |
-| Root candidate + independent subfolder/orphan scan | implemented | Source review only |
-| Metadata JSON with bounds and privacy opt-in | implemented | Source review only |
-| Synthetic fixture and regression tests | authored | Windows PowerShell 5.1 NOT executed |
-| Real 31 GB IMG | not scanned | Local only, requires A review |
-| End-to-end recovery, fragmentation handling | unimplemented | Out of scope Team B R1 |
+| FAT-chain-free geometry and cluster reading | implemented | Windows PS 5.1 synthetic PASS |
+| 8.3 + Japanese UTF-16LE LFN checksum and fallback | implemented | Windows PS 5.1 synthetic PASS |
+| Root, nested subfolder, orphan directory discovery | implemented | Windows PS 5.1 synthetic PASS; candidate linkage unproven |
+| Metadata-only JSON, explicit name opt-in, bounded scan | implemented | Windows PS 5.1 synthetic PASS |
+| CLI refuses overwrite, source collision, device paths | implemented | Windows PS 5.1 synthetic PASS |
+| Source image SHA-256 unchanged | verified on synthetic fixture | Windows PS 5.1 synthetic PASS |
+| Full synthetic regression suite | **21/21 PASS** | GitHub Actions run [42966996085](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42966996085) |
+| Repository privacy gate | PASS | GitHub Actions run 42966996061 |
+| Real ~31GB IMG | **NOT SCANNED** | User-local only, pending review |
+| Data extraction, fragmented chains, verified folder tree | unimplemented | Out of scope B R1 |
 
-**Safety:** no source writes; output JSON is `CreateNew` only. All names redacted unless `-IncludeNames`. Explicit result fields differentiate probable structure from confirmed recovery.
+**Safety:** Input opened FileAccess.Read only; JSON output is CreateNew only, so no overwrite. No original device access. Names are redacted unless `-IncludeNames`. Output records are probabilistic metadata candidates, never verified original file data.
 
-**Next:** Windows PowerShell 5.1 synthetic run, manual review of any failures, CI with synthetic only, integrator A review, then user-local bounded diagnostic. No PR integration until review.
+**Next:** A should review code and Windows CI. Later follow-up: additional malformed metadata tests, safe bounded local user diagnostic, false-positive ranking, potentially more targeted scanning. No PR integration until A approves. Do not upload real IMG, names, or unredacted JSON to the public repository.
