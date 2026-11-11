@@ -101,14 +101,17 @@ function Get-ChappyBLfnName {
     if ($Segments.Count -lt 1 -or $Segments.Count -gt 20) { return $null }
     $firstOrd = [int]$Segments[0][0]
     $count = $firstOrd -band 0x1F
-    if (($firstOrd -band 0x40) -eq 0 -or $count -ne $Segments.Count) { return $null }
+    # Bits 0x20 and 0x80 are reserved in a live LFN ordinal.
+    if (($firstOrd -band 0x40) -eq 0 -or ($firstOrd -band 0xA0) -ne 0 -or
+        $count -ne $Segments.Count) { return $null }
     $units = New-Object 'System.Collections.Generic.List[byte]'
     $positions = @(1,3,5,7,9,14,16,18,20,22,24,28,30)
     for ($i=$Segments.Count-1; $i -ge 0; $i--) {
         [byte[]]$s = $Segments[$i]
+        if ($null -eq $s -or $s.Length -ne 32) { return $null }
         $expectedOrd = $Segments.Count - $i
         if ((($s[0] -band 0x1F) -ne $expectedOrd) -or
-            (($s[0] -band 0x80) -ne 0) -or
+            (($s[0] -band 0xA0) -ne 0) -or
             (($i -ne 0) -and (($s[0] -band 0x40) -ne 0)) -or
             $s[11] -ne 0x0F -or $s[12] -ne 0 -or $s[13] -ne $Checksum -or
             $s[26] -ne 0 -or $s[27] -ne 0) { return $null }
@@ -117,11 +120,20 @@ function Get-ChappyBLfnName {
         }
     }
     $textBytes = New-Object 'System.Collections.Generic.List[byte]'
-    $done = $false
+    $sawNullTerminator = $false
     for ($j=0; $j -lt $units.Count; $j+=2) {
         $u = [int]$units[$j] + 256*[int]$units[$j+1]
-        if ($u -eq 0 -or $u -eq 65535) { $done = $true; continue }
-        if ($done) { return $null } # Non-padding after terminator.
+        if ($u -eq 0) {
+            if ($sawNullTerminator) { return $null }
+            $sawNullTerminator = $true
+            continue
+        }
+        if ($u -eq 65535) {
+            # 0xFFFF is filler, never a substitute for the 0x0000 terminator.
+            if (-not $sawNullTerminator) { return $null }
+            continue
+        }
+        if ($sawNullTerminator) { return $null }
         $textBytes.Add($units[$j]); $textBytes.Add($units[$j+1])
     }
     try {
