@@ -281,7 +281,7 @@ function Get-ChappyCarvingCandidates {
         Timer=[Diagnostics.Stopwatch]::StartNew(); MaxElapsedMilliseconds=$MaxWorkMilliseconds
     }
     $candidates=New-Object 'System.Collections.Generic.List[object]'
-    $cursor=$StartOffset; $tail=New-Object byte[] 0
+    $cursor=$StartOffset; $scanAdvanced=$StartOffset; $tail=New-Object byte[] 0
     $skipZip=$StartOffset; $skipGcode=$StartOffset
     $lastZipProbed=-1L; $lastGcodeProbed=-1L
     $sig=[byte[]](0x50,0x4b,0x03,0x04)
@@ -293,6 +293,7 @@ function Get-ChappyCarvingCandidates {
         $want=[int][Math]::Min(16384L,$limit-$cursor)
         $buf=Read-CBytes $Stream $cursor $want $budget
         if ($null -eq $buf) { break }
+        $scanAdvanced=$cursor+$want
         $combined=New-Object byte[] ($tail.Length+$buf.Length)
         [Array]::Copy($tail,0,$combined,0,$tail.Length)
         [Array]::Copy($buf,0,$combined,$tail.Length,$buf.Length)
@@ -347,7 +348,7 @@ function Get-ChappyCarvingCandidates {
     $out.metrics.bytesRead=[long]$budget.BytesRead
     $out.metrics.entriesChecked=[int]$budget.Probes
     $out.metrics.readRequests=[int]$budget.ReadRequests
-    $out.metrics.scannedBytes=[long]($cursor-$StartOffset)
+    $out.metrics.scannedBytes=[long]($scanAdvanced-$StartOffset)
     $out.metrics.scanWindowBytes=[long]$range
     $out.metrics.elapsedMilliseconds=[int]$budget.Timer.ElapsedMilliseconds
     $warnings=New-Object 'System.Collections.Generic.List[string]'
