@@ -337,7 +337,12 @@ function Get-ChappyDirectoryCandidates {
           [int]$MaxCandidates = 10000,
           [int]$MaxDirectories = 1000,
           [switch]$IncludeNames,
-          [switch]$IncludeDeleted)
+          [switch]$IncludeDeleted,
+          # R9 experimental, default OFF: bounded read-event provenance.
+          # This reports scanner observations, not cryptographic authenticity.
+          [switch]$RecordClusterCoverage,
+          [int]$MaxCoverageClusters = 65536,
+          [int]$MaxCoverageIntervals = 128)
     $items = New-Object System.Collections.ArrayList
     $directoryContainers = New-Object System.Collections.ArrayList
     $warnings = New-Object System.Collections.ArrayList
@@ -345,6 +350,11 @@ function Get-ChappyDirectoryCandidates {
     $bytesRead = 0L
     $checked = 0L
     $directoriesAccepted = 0L
+    $coverageBitmap = $null
+    $coverageStatus = 'not_requested'
+    $coverageUnique = 0L
+    $coverageDuplicates = 0L
+    $coverageIntervals = New-Object System.Collections.ArrayList
     $rejectedReasons = [ordered]@{
         insufficient_directory_evidence = 0L
         unpaired_or_malformed_dot_header = 0L
@@ -355,7 +365,9 @@ function Get-ChappyDirectoryCandidates {
     try {
         if ($MaxScanBytes -lt 0 -or $StartCluster -lt 2 -or
             $MaxCandidates -lt 1 -or $MaxCandidates -gt 200000 -or
-            $MaxDirectories -lt 1 -or $MaxDirectories -gt 100000) {
+            $MaxDirectories -lt 1 -or $MaxDirectories -gt 100000 -or
+            $MaxCoverageClusters -lt 1 -or $MaxCoverageClusters -gt 65536 -or
+            $MaxCoverageIntervals -lt 1 -or $MaxCoverageIntervals -gt 128) {
             throw 'Invalid scan limits'
         }
         if ($null -eq $Geometry) {
@@ -373,6 +385,18 @@ function Get-ChappyDirectoryCandidates {
             ($dataOffset + ($maxCluster-1L)*$clusterSize) -gt $partitionEnd) {
             throw 'Unsafe or inconsistent supplied geometry'
         }
+        if ($RecordClusterCoverage) {
+            $declaredCount = [long]$geo.clusterCount
+            if ($declaredCount -gt 0 -and $declaredCount -le $MaxCoverageClusters -and
+                $maxCluster -eq ($declaredCount + 1L)) {
+                $coverageBitmap = New-Object byte[] ([int]$declaredCount)
+                $coverageStatus = 'recorded'
+            } else {
+                # Never allocate a whole-volume bitmap for a large volume.
+                # Candidate scanning continues; independent coverage is unknown.
+                $coverageStatus = 'cluster_limit'
+            }
+        }
         if ($root -lt 2 -or $root -gt $maxCluster) {
             [void]$warnings.Add('root_cluster_out_of_range')
         }
@@ -385,6 +409,13 @@ function Get-ChappyDirectoryCandidates {
                 $rootOffset = $dataOffset + ($root-2L)*$clusterSize
                 $rootBuf = Read-ChappyBBytes $Stream $rootOffset ([int]$clusterSize)
                 $bytesRead += $clusterSize
+                if ($null -ne $coverageBitmap) {
+                    $readIndex = [int]($root - 2L)
+                    if ($coverageBitmap[$readIndex] -eq 0) {
+                        $coverageBitmap[$readIndex] = 1
+                        $coverageUnique++
+                    } else { $coverageDuplicates++ }
+                }
                 $rootRead = $true
                 $parsed = Read-ChappyBDirectoryCluster -Buffer $rootBuf -Cluster $root -OffsetBytes $rootOffset -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -IsRoot $true
                 $checked += [long]$parsed.validCount
@@ -420,6 +451,13 @@ function Get-ChappyDirectoryCandidates {
                 $at = $dataOffset + ($c-2L)*$clusterSize
                 $buf = Read-ChappyBBytes $Stream $at ([int]$clusterSize)
                 $bytesRead += $clusterSize
+                if ($null -ne $coverageBitmap) {
+                    $readIndex = [int]($c - 2L)
+                    if ($coverageBitmap[$readIndex] -eq 0) {
+                        $coverageBitmap[$readIndex] = 1
+                        $coverageUnique++
+                    } else { $coverageDuplicates++ }
+                }
                 $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -IsRoot $false
                 $checked += [long]$parsed.validCount
                 if (-not $parsed.accepted) {
@@ -446,6 +484,47 @@ function Get-ChappyDirectoryCandidates {
         [void]$errors.Add('directory_scan_error: ' + $_.Exception.Message)
         $incomplete = $true
     }
+    # Convert the bounded observed-cluster bitmap to disjoint ascending
+    # intervals. A full scan yields one interval, irrespective of root order.
+    if ($RecordClusterCoverage -and $null -ne $coverageBitmap) {
+        $openAt = -1
+        for ($k=0; $k -lt $coverageBitmap.Length; $k++) {
+            if ($coverageBitmap[$k] -ne 0 -and $openAt -lt 0) {
+                $openAt = $k
+            } elseif ($coverageBitmap[$k] -eq 0 -and $openAt -ge 0) {
+                if ($coverageIntervals.Count -ge $MaxCoverageIntervals) {
+                    $coverageStatus = 'interval_limit'
+                    break
+                }
+                [void]$coverageIntervals.Add([pscustomobject]@{
+                    firstCluster = [long]($openAt + 2)
+                    lastCluster = [long]($k + 1)
+                })
+                $openAt = -1
+            }
+        }
+        if ($coverageStatus -eq 'recorded' -and $openAt -ge 0) {
+            if ($coverageIntervals.Count -ge $MaxCoverageIntervals) {
+                $coverageStatus = 'interval_limit'
+            } else {
+                [void]$coverageIntervals.Add([pscustomobject]@{
+                    firstCluster = [long]($openAt + 2)
+                    lastCluster = [long]($coverageBitmap.Length + 1)
+                })
+            }
+        }
+    }
+    $coverageReport = $null
+    if ($RecordClusterCoverage) {
+        $coverageReport = [pscustomobject]@{
+            source = 'scanner_read_events_v1'
+            status = $coverageStatus
+            uniqueClusters = $coverageUnique
+            duplicateReadEvents = $coverageDuplicates
+            readEvents = ($coverageUnique + $coverageDuplicates)
+            intervals = @($coverageIntervals.ToArray())
+        }
+    }
     $status = if ($errors.Count) { 'error' } elseif ($incomplete -or $warnings.Count) { 'partial' } else { 'ok' }
     return [pscustomobject]@{
         schemaVersion = '1'
@@ -454,6 +533,7 @@ function Get-ChappyDirectoryCandidates {
         scanIncomplete = [bool]$incomplete
         items = @($items.ToArray())
         directoryContainers = @($directoryContainers.ToArray())
+        coverageProvenance = $coverageReport
         warnings = @($warnings.ToArray())
         errors = @($errors.ToArray())
         metrics = [pscustomobject]@{
