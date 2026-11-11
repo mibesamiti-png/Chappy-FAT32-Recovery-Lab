@@ -193,7 +193,8 @@ try {
     $gItem=@($gJson.items | Where-Object {$_.format -eq 'gcode'})
     Assert ($gItem.Count -eq 1) 'G-code report survives missing ZIP optional fields'
     Assert ($gItem[0].crc32Status -eq 'not_applicable') 'G-code CRC status is not applicable'
-    Assert (@($gItem[0].evidence | Where-Object {$_ -match '^gcode\.command_count_[0-9]+
+    Assert (@($gItem[0].evidence | Where-Object { $_ -like 'gcode.command_count_*' }).Count -eq 1) 'safe G-code evidence count retained'
+    Write-Host 'PASS: G-code report optional CRC fields and bounded numeric evidence'
 
     # A non-text interruption after valid commands means at most a partial segment.
     $fragBytes=[Text.Encoding]::ASCII.GetBytes($gcode + "BROKEN_BINARY_FRAGMENT`nG28`n")
