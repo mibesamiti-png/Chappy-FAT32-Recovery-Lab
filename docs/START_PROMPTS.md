@@ -1,6 +1,6 @@
 # Copy/paste start instructions for parallel ChatGPT teams
 
-The GitHub repository is PRIVATE: https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab
+The GitHub repository is PUBLIC. Code and synthetic fixtures only: https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab
 
 Every team must read README.md, AGENTS.md, docs/STATE.md and docs/TEAM_PROTOCOL.md first. The user's original 31GB IMG and unredacted data are strictly local; never request or publish them. Only synthetic data in GitHub. No real-image writes, no auto-repair, and no claims of passing Windows tests without actual evidence.
 
