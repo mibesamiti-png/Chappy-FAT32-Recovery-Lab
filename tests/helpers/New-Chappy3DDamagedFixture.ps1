@@ -32,13 +32,15 @@ function Get-A3DModelPayloadOffset([byte[]]$Image, $Truth) {
 function New-ChappyA3DDamagedFixture {
     [CmdletBinding(PositionalBinding = $false)]
     param(
-        [Parameter(Mandatory)][ValidateSet('M00', 'M01', 'M02', 'M04', 'P01', 'P02', 'P03', 'X02')][string]$Case,
+        [Parameter(Mandatory)]
+        [ValidateSet('M00', 'M01', 'M02', 'M03', 'M04', 'M04L', 'M05', 'M05L', 'P01', 'P02', 'P03', 'X02', 'M02-P02')]
+        [string]$Case,
         [ValidateRange(1, 999999)][int]$Seed = 202611
     )
 
     # Construct the source internally. No external image, stream, or offset
     # can reach the mutation code. ToArray returns an independent copy.
-    $clean = New-ChappyA3DCleanFixture -Seed $Seed
+    $clean = New-ChappyA3DCleanFixture -Seed $Seed -IncludeFormatControls:($Case -eq 'M04L')
     $source = [IO.MemoryStream]::new($clean.image, $false)
     try {
         $sourceHash = Get-A3DSha256 $clean.image
@@ -72,12 +74,47 @@ function New-ChappyA3DDamagedFixture {
                 # Mark the first 3MF chain link free in FAT1 only.
                 $replacement = [byte[]]@(0, 0, 0, 0)
             }
+            'M03' {
+                $truth = $clean.oracle[1]
+                if ($truth.extents.Count -ne 2) { throw 'M03 requires a two-cluster generated 3MF' }
+                $layer = 'both_fat_cycle'
+                # The second cluster points back to the first in each FAT.
+                $offset = $clean.layout.fat1OffsetBytes + 20
+                $last = $clean.layout.fat2OffsetBytes + 23
+                $replacement = [byte[]]$image[$offset..$last]
+                Set-A3DUint32 $replacement 0 4
+                Set-A3DUint32 $replacement ($last - $offset - 3) 4
+            }
             'M04' {
                 $truth = $clean.oracle[1]
                 $layer = 'directory_file_size'
                 # Second root entry, four-byte size field.
                 $offset = $clean.layout.rootOffsetBytes + 32 + 28
                 $replacement = [byte[]]::new(4)
+            }
+            'M04L' {
+                $truth = $clean.oracle[3]
+                $layer = 'directory_lfn_checksum'
+                $offset = $clean.layout.rootOffsetBytes + 3 * 32 + 13
+                $replacement = [byte[]]@($image[$offset] -bxor 1)
+            }
+            'M05' {
+                $truth = $clean.oracle[1]
+                if ($truth.extents.Count -ne 2) { throw 'M05 requires a two-cluster generated 3MF' }
+                $layer = 'both_fat_cross_link'
+                # Link the 3MF into the STL's first cluster in each FAT.
+                $offset = $clean.layout.fat1OffsetBytes + 16
+                $last = $clean.layout.fat2OffsetBytes + 19
+                $replacement = [byte[]]$image[$offset..$last]
+                Set-A3DUint32 $replacement 0 $clean.oracle[2].firstCluster
+                Set-A3DUint32 $replacement ($last - $offset - 3) $clean.oracle[2].firstCluster
+            }
+            'M05L' {
+                $truth = $clean.oracle[1]
+                if ($truth.extents.Count -ne 2) { throw 'M05L requires a two-cluster generated 3MF' }
+                $layer = '3mf_tail_erased'
+                $offset = $truth.extents[1].offsetBytes
+                $replacement = [byte[]]::new($truth.extents[1].lengthBytes)
             }
             'P01' {
                 $truth = $clean.oracle[1]
@@ -101,6 +138,15 @@ function New-ChappyA3DDamagedFixture {
                 # First facet begins at 84. Skip its 12-byte normal.
                 $offset = $truth.extents[0].offsetBytes + 84 + 12
                 $replacement = [byte[]]@($image[$offset] -bxor 1)
+            }
+            'M02-P02' {
+                $truth = $clean.oracle[1]
+                $layer = 'fat1_and_3mf_model_payload'
+                $offset = $clean.layout.fat1OffsetBytes + (4 * $truth.firstCluster)
+                $payloadOffset = Get-A3DModelPayloadOffset $image $truth
+                $replacement = [byte[]]$image[$offset..$payloadOffset]
+                [Array]::Clear($replacement, 0, 4)
+                $replacement[$payloadOffset - $offset] = $image[$payloadOffset] -bxor 1
             }
             'X02' {
                 $truth = $clean.oracle[1]

@@ -18,6 +18,20 @@ Use Windows PowerShell 5.1 and seed `202611` with `New-ChappyA3DDamagedFixture` 
 
 The A test reader rejects a 512-byte payload cap for the generated 3MF. At 2048 bytes it reads the full clean and fragmented 3MF and rejects the truncated extent. These caps describe the A fixture check. Each team records its own source-read and candidate limits and actual counts.
 
+## R2 corpus extensions
+
+The clean generator's `-IncludeFormatControls` mode adds an ASCII STL with a valid LFN, an ordinary ZIP and a ZIP signature decoy. All six files have independent length, extents and SHA-256. The original mode still generates the original three files for the first P0.2 cases.
+
+| Case | Synthetic observation |
+| --- | --- |
+| M03 | Identical FAT1/FAT2 cycle 4→5→4. A's bounded file reader rejects the missing end marker. |
+| M04L | ASCII STL LFN checksum flipped. B's LFN parser rejects the long name and the short alias still reads the original content. |
+| M05 | Both FATs link 3MF cluster 4 into the STL cluster 8. Readback at the advertised length produces the wrong SHA. |
+| M05L | Erase the original 3MF tail without changing its directory record or FAT. Readback differs from the original. |
+| M02-P02 | Combine the independently verified FAT1 and compressed-model changes. The recorded bytes equal the union of the two standalone cases. |
+
+Each new mutation has a deterministic offset manifest that restores the clean image SHA when reversed. M04L uses the expanded clean source. Freeze the accepted generator revision before adding any of these cases to a team comparison.
+
 ## Follow-up instructions for the existing teams
 
 | Team and current submission | First bounded follow-up | Acceptance evidence |
