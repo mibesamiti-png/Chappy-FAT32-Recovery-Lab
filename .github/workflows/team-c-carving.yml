@@ -1,0 +1,31 @@
+name: Team C synthetic carving tests
+
+on:
+  push:
+    branches:
+      - 'feature/c-carving-*'
+    paths:
+      - 'modules/carving/**'
+      - '.github/workflows/team-c-carving.yml'
+  pull_request:
+    paths:
+      - 'modules/carving/**'
+      - '.github/workflows/team-c-carving.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-windows-ps51:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Repository safety check
+        shell: powershell
+        run: .\tools\Check-RepoSafety.ps1 -CheckTracked
+      - name: Team C synthetic ZIP/3MF/G-code tests
+        shell: powershell
+        run: .\modules\carving\tests\Test-ChappyCarving.ps1
