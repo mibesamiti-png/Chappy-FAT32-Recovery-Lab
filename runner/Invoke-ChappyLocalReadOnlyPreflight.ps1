@@ -61,6 +61,7 @@ try {
     . (Join-Path $moduleRoot 'directory\DirectoryHierarchy.ps1')
     Import-Module (Join-Path $moduleRoot 'fat-analysis\Fat32MirrorWindows.psm1') -Force -ErrorAction Stop
     Import-Module (Join-Path $moduleRoot 'fat-analysis\Fat32Eb58Map.psm1') -Force -ErrorAction Stop
+    Import-Module (Join-Path $moduleRoot 'fat-analysis\Fat32ChainStats.psm1') -Force -ErrorAction Stop
 
     $geo=Get-ChappyFat32Geometry -Stream $stream -PartitionOffsetBytes $PartitionOffsetBytes
     if ([long]$geo.fatCount -ne 2) { throw 'TWO_FAT_COPIES_REQUIRED_FOR_COMPARISON' }
@@ -74,10 +75,17 @@ try {
     $mirrors=Get-ChappyFatMirrorWindows -Stream $stream -Fat1OffsetBytes $fat1 -Fat2OffsetBytes $fat2 -FatLengthBytes $fatLength -WindowEntries 128 -MaxWindows 16 -MaxReadBytes $MaxMirrorReadBytes
     $patterns=Get-ChappyFatEb58Map -Stream $stream -VolumeOffsetBytes ([long]$geo.partitionOffsetBytes) -Fat1OffsetBytes $fat1 -Fat2OffsetBytes $fat2 -FatLengthBytes $fatLength -ProbeBytesPerFat 4096 -MaxReadBytes $MaxEb58ReadBytes
 
+    # Start only from the BPB-declared root cluster, under a separate tiny
+    # global quota. A terminal code is a clue, not original file integrity.
+    $chains=Get-ChappyFatChainAnomalyStats -Stream $stream -Fat1OffsetBytes $fat1 -Fat2OffsetBytes $fat2 `
+        -FatLengthBytes $fatLength -MaxDataCluster ([long]$geo.maxCluster) `
+        -StartClusters ([long[]]@([long]$geo.rootCluster)) `
+        -MaxStepsPerChain 32 -MaxTotalEntries 64 -MaxReadBytes 256
+
     # Fixed-schema numeric aggregates only: no original names, source path,
     # raw bytes, arbitrary upstream strings, or local report files.
     $incomplete=($dir.scanIncomplete -or $hierarchy.scanIncomplete -or
-        $mirrors.scanIncomplete -or $patterns.scanIncomplete)
+        $mirrors.scanIncomplete -or $patterns.scanIncomplete -or $chains.scanIncomplete)
     [pscustomobject]@{
         schemaVersion='1';team='A';mode='local_read_only_preflight'
         status=$(if($incomplete){'partial'}else{'ok'})
@@ -118,6 +126,15 @@ try {
             observedPairs=[long]$patterns.metrics.totalObservedPatternPairs
             bytesRead=[long]$patterns.metrics.bytesRead
             bpbOffsetsDisagree=[bool]$patterns.geometryComparison.suppliedOffsetsDisagreeWithBpb
+        }
+        rootChain=[pscustomobject]@{
+            status=[string]$chains.status
+            sampledTraces=[long]$chains.metrics.requestedTraces
+            anomalousTraces=[long]$chains.metrics.anomalousResolvedTraces
+            incompleteTraces=[long]$chains.metrics.incompleteTraces
+            differingMirrorTerminals=[long]$chains.metrics.differentMirrorTerminals
+            bytesRead=[long]$chains.metrics.bytesRead
+            interpretation='root_chain_sample_only_not_original_data_integrity'
         }
         limitations=@('synthetic_ci_only_until_local_review','candidate_metadata_not_file_integrity',
             'no_repair_or_extraction','partial_scans_do_not_prove_absence')
