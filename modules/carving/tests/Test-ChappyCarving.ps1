@@ -106,6 +106,79 @@ function Make-R4Fragmentable3MF {
     $result=$memory.ToArray();$memory.Dispose()
     return ,$result
 }
+# Team C R5 research-only A/B candidate enumerator.
+# This is intentionally NOT exported by Chappy.Carving.psm1.
+# Exactly two explicitly provided <=512B synthetic segments; at most eight
+# candidate offsets, <=8192 source bytes, no file paths or writing.
+function Test-R5FiniteSyntheticPairs {
+    [CmdletBinding()]param(
+        [Parameter(Mandatory=$true)][IO.Stream]$Source,
+        [ValidateRange(0,9223372036854775807)][long]$FirstOffset,
+        [ValidateRange(1,512)][int]$FirstBytes,
+        [ValidateRange(1,512)][int]$SecondBytes,
+        [Parameter(Mandatory=$true)][long[]]$SecondOffsets,
+        [ValidateSet('gcode','3mf')][string]$ExpectedFormat,
+        [ValidateRange(1,8)][int]$MaxPairs=8,
+        [ValidateRange(1024,8192)][int]$MaxSourceBytes=8192,
+        [ValidateRange(100,10000)][int]$MaxMilliseconds=3000
+    )
+    if (-not $Source.CanRead -or -not $Source.CanSeek -or $Source.CanWrite) {
+        throw 'R5 research requires a non-writable seekable synthetic stream'
+    }
+    if ($SecondOffsets.Count -gt $MaxPairs) {throw 'R5 pair count exceeds bound'}
+    if ($FirstOffset -gt $Source.Length-$FirstBytes) {throw 'R5 first fragment outside artificial stream'}
+    if ($FirstBytes + $SecondBytes + $SecondOffsets.Count*$SecondBytes -gt $MaxSourceBytes) {
+        throw 'R5 source read budget exhausted before scanning'
+    }
+    $watch=[Diagnostics.Stopwatch]::StartNew()
+    $records=New-Object 'System.Collections.Generic.List[object]'
+    $base=New-Object byte[] $FirstBytes
+    [void]$Source.Seek($FirstOffset,[IO.SeekOrigin]::Begin)
+    if ($Source.Read($base,0,$base.Length) -ne $base.Length) {throw 'R5 short first read'}
+    $sourceBytes=[long]$base.Length
+    $validationBytes=0L
+    $seen=New-Object 'System.Collections.Generic.HashSet[long]'
+    foreach ($offset in $SecondOffsets) {
+        if ($watch.ElapsedMilliseconds -ge $MaxMilliseconds) {break}
+        if (-not $seen.Add([long]$offset)) {continue}
+        if ($offset -lt 0 -or $offset -gt $Source.Length-$SecondBytes) {
+            $records.Add([pscustomobject]@{offset=$offset; possible=$false; code='pair.outside_window'; sha256=$null})
+            continue
+        }
+        if (($sourceBytes+$SecondBytes) -gt $MaxSourceBytes) {break}
+        $tail=New-Object byte[] $SecondBytes
+        [void]$Source.Seek($offset,[IO.SeekOrigin]::Begin)
+        if ($Source.Read($tail,0,$tail.Length) -ne $tail.Length) {break}
+        $sourceBytes+=$tail.Length
+        $combined=New-Object byte[] ($FirstBytes+$SecondBytes)
+        [Array]::Copy($base,0,$combined,0,$base.Length)
+        [Array]::Copy($tail,0,$combined,$base.Length,$tail.Length)
+        $inMemory=[IO.MemoryStream]::new($combined,$false)
+        try {
+            # Same existing C file validator on a bounded, read-only synthetic
+            # candidate. Optional DEFLATE and live export are NOT enabled.
+            $check=Get-ChappyCarvingCandidates -Stream $inMemory -MaxScanBytes $combined.Length -MaxFileBytes 4096 -MaxProbeBytes 4096 -ExtraValidationReadBytes 8192 -MaxCandidates 4 -MaxProbes 8 -MaxWorkMilliseconds 1500
+            $validationBytes += [long]$check.metrics.bytesRead
+            $matches=@($check.items | Where-Object {$_.offsetBytes -eq 0 -and $_.lengthBytes -eq $combined.Length -and $_.format -eq $ExpectedFormat})
+            $possible=($matches.Count -eq 1)
+        } finally {$inMemory.Dispose()}
+        $hash=$null
+        if ($possible) {
+            $sha=[Security.Cryptography.SHA256]::Create()
+            try {$hash=[BitConverter]::ToString($sha.ComputeHash($combined)).Replace('-','').ToLowerInvariant()}
+            finally {$sha.Dispose()}
+        }
+        $records.Add([pscustomobject]@{offset=$offset; possible=$possible; code=$(if($possible){'pair.format_consistent'}else{'pair.format_rejected'}); sha256=$hash})
+    }
+    $watch.Stop()
+    $plausible=@($records.ToArray() | Where-Object {$_.possible}).Count
+    return [pscustomobject]@{
+        decision=$(if($plausible -eq 0){'unknown'}elseif($plausible -eq 1){'one_possible'}else{'ambiguous'})
+        items=@($records.ToArray())
+        metrics=[pscustomobject]@{sourceBytesRead=$sourceBytes;validationBytesRead=$validationBytes;pairsEvaluated=$records.Count;elapsedMilliseconds=$watch.ElapsedMilliseconds}
+        # Never contains 'recovered', 'verified-original', or an output path.
+    }
+}
 function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9,[byte[]]$Payload=$null) {
     $mem=New-Object IO.MemoryStream
     $writer=New-Object IO.BinaryWriter($mem)
