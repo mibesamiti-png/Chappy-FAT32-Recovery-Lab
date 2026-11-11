@@ -97,7 +97,9 @@ try {
     $prefix=New-Object byte[] 65534; $zip=MakeZip $true
     $image=New-Object byte[] ($prefix.Length+$zip.Length+1024)
     [Array]::Copy($zip,0,$image,$prefix.Length,$zip.Length)
-    $f=Join-Path $fixtureRoot 'fixture_a.img'
+    $sourceDir=Join-Path $fixtureRoot 'source'
+    [void][IO.Directory]::CreateDirectory($sourceDir)
+    $f=Join-Path $sourceDir 'fixture_a.img'
     WriteSynthetic $f $image
     $before=(Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash
     $result=Scan $f
@@ -107,12 +109,16 @@ try {
     Assert ($three[0].lengthBytes -eq $zip.Length) '3MF length from EOCD'
     Assert ($three[0].crc32Status -in @('match','partial','not_checked')) 'CRC status explicitly classified'
     $dest=Join-Path $fixtureRoot 'restore';[void][IO.Directory]::CreateDirectory($dest)
-    $saved=Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest
+    $defaultDenied=$false
+    try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest | Out-Null } catch {$defaultDenied=$true}
+    Assert $defaultDenied 'export remains disabled unless explicitly enabled'
+    Assert (-not [IO.Directory]::Exists((Join-Path $dest 'structurally_verified'))) 'default denial creates no output'
+    $saved=Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest -EnableFileExport
     $restored=Join-Path (Join-Path $dest $saved.group) $saved.fileName
     Assert ($saved.sha256 -eq (Get-FileHash -LiteralPath $restored -Algorithm SHA256).Hash.ToLowerInvariant()) 'SHA-256 on extraction'
     Assert ($before -eq (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash) 'source SHA unchanged'
     $againThrew=$false
-    try {Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest | Out-Null} catch {$againThrew=$true}
+    try {Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest -EnableFileExport | Out-Null} catch {$againThrew=$true}
     Assert $againThrew 'no-overwrite guard'
     Assert ([IO.File]::Exists($restored)) 'pre-existing output preserved after duplicate attempt'
     $report=Join-Path $fixtureRoot 'candidates.json'
@@ -121,6 +127,50 @@ try {
     Assert ($json.items[0].format -eq '3mf') 'JSON report contains format'
     Assert (-not ((Get-Content -LiteralPath $report -Raw) -match [regex]::Escape($f))) 'report does not include IMG path'
     Write-Host 'PASS: 3MF central directory, boundary offsets, read-only SHA, output no-overwrite and report'
+
+    # Explicit export must reject raw devices, UNC paths, drive-relative paths and ADS.
+    foreach($unsafeSource in @('\\.\PhysicalDrive0','\\?\C:\synthetic.img','\\server\share\synthetic.img','C:synthetic.img','C:\synthetic.img:ads')) {
+        $blocked=$false
+        try { Export-ChappyCarvingCandidate -ImagePath $unsafeSource -Candidate $three[0] -OutputDirectory $dest -EnableFileExport | Out-Null } catch { $blocked=$true }
+        Assert $blocked 'raw device/UNC/relative/alternate stream source path refused'
+    }
+    foreach($unsafeOutput in @('\\.\PhysicalDrive0','\\?\C:\','\\server\share','C:relative-folder')) {
+        $blocked=$false
+        try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $unsafeOutput -EnableFileExport | Out-Null } catch { $blocked=$true }
+        Assert $blocked 'raw device/UNC/drive-relative output path refused'
+    }
+    foreach($unsafeOutput in @($sourceDir,$fixtureRoot)) {
+        $blocked=$false
+        try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $unsafeOutput -EnableFileExport | Out-Null } catch { $blocked=$true }
+        Assert $blocked 'same/ancestor source directory tree refused'
+    }
+    $insideSource=Join-Path $sourceDir 'inner'
+    [void][IO.Directory]::CreateDirectory($insideSource)
+    $insideBlocked=$false
+    try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $insideSource -EnableFileExport | Out-Null } catch {$insideBlocked=$true}
+    Assert $insideBlocked 'descendant of source directory refused'
+    Assert ($before -eq (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash) 'source SHA after path denials unchanged'
+    Write-Host 'PASS: opt-in extraction rejects device/UNC/relative/ADS and overlapping paths'
+
+    # Real Windows junctions are tested only using synthetic temporary directories.
+    $outAlias=Join-Path $fixtureRoot 'output_junction'
+    $srcAlias=Join-Path $fixtureRoot 'source_junction'
+    try {
+        [void](New-Item -ItemType Junction -Path $outAlias -Target $dest -ErrorAction Stop)
+        [void](New-Item -ItemType Junction -Path $srcAlias -Target $sourceDir -ErrorAction Stop)
+        $jAliasImage=Join-Path $srcAlias 'fixture_a.img'
+        $junctionBlocked=$false
+        try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $outAlias -EnableFileExport | Out-Null } catch {$junctionBlocked=$true}
+        Assert $junctionBlocked 'junction output must be rejected'
+        $junctionBlocked=$false
+        try { Export-ChappyCarvingCandidate -ImagePath $jAliasImage -Candidate $three[0] -OutputDirectory $dest -EnableFileExport | Out-Null } catch {$junctionBlocked=$true}
+        Assert $junctionBlocked 'source path with junction parent must be rejected'
+        Write-Host 'PASS: Windows junction output and source-parent aliases refused'
+    } finally {
+        if ([IO.Directory]::Exists($outAlias)) { [IO.Directory]::Delete($outAlias) }
+        if ([IO.Directory]::Exists($srcAlias)) { [IO.Directory]::Delete($srcAlias) }
+    }
+
 
     # Non-3MF ZIP; required 3MF part missing.
     $z=MakeZip $false; $f2=Join-Path $fixtureRoot 'fixture_b.img';WriteSynthetic $f2 $z
