@@ -50,3 +50,7 @@ jobs:
       - name: Run R9 longer root cycles far FAT and unique coverage same-corpus synthetic A/B
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R9-LongCycleAB.Tests.ps1
+
+      - name: Run Team D P02 FAT evidence handoff on synthetic images
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-P02Evidence.Tests.ps1
