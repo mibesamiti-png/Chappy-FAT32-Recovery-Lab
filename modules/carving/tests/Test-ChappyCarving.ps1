@@ -45,14 +45,14 @@ function MakeZip([bool]$is3mf) {
     return ,$bytes
 }
 # Deterministic single-entry STORED ZIP, with standard CRC32 test vector "123456789".
-function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9) {
+function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9,[byte[]]$Payload=$null) {
     $mem=New-Object IO.MemoryStream
     $writer=New-Object IO.BinaryWriter($mem)
     try {
         $fileName=[Text.Encoding]::ASCII.GetBytes('synthetic.txt')
-        $data=if ($PayloadSize -eq 9) {[Text.Encoding]::ASCII.GetBytes('123456789')} else {New-Object byte[] $PayloadSize}
+        $data=if ($null -ne $Payload) {$Payload} elseif ($PayloadSize -eq 9) {[Text.Encoding]::ASCII.GetBytes('123456789')} else {New-Object byte[] $PayloadSize}
+        $knownCrc=if ($null -ne $Payload) {Get-SyntheticCrc32 $Payload} else {[uint32]3421780262L}
         if ($Corrupt) { $data[3]=[byte][char]'X' }
-        $knownCrc=[uint32]3421780262L
         $writer.Write([uint32]0x04034b50)
         $writer.Write([uint16]20); $writer.Write([uint16]0); $writer.Write([uint16]0)
         $writer.Write([uint16]0); $writer.Write([uint16]0)
@@ -81,6 +81,19 @@ function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9) {
         $writer.Flush()
         return ,$mem.ToArray()
     } finally { $writer.Dispose();$mem.Dispose() }
+}
+
+# Artificial ZIP payload CRC used only by the synthetic nested-signature fixture.
+function Get-SyntheticCrc32([byte[]]$Bytes) {
+    [long]$crc=4294967295L
+    foreach ($value in $Bytes) {
+        $crc=$crc -bxor [long]$value
+        for ($bit=0; $bit -lt 8; $bit++) {
+            if (($crc -band 1L) -ne 0) {$crc=($crc -shr 1) -bxor 3988292384L}
+            else {$crc=$crc -shr 1}
+        }
+    }
+    return [uint32]($crc -bxor 4294967295L)
 }
 
 function WriteSynthetic([string]$path,[byte[]]$content,[int]$size=0) {
@@ -259,6 +272,70 @@ try {
     Assert ($gItem[0].integrityScope -eq 'heuristic_text_only_not_original_file_integrity') 'G-code redacted report preserves only text heuristic scope'
     Assert (@($gItem[0].evidence | Where-Object { $_ -like 'gcode.command_count_*' }).Count -eq 1) 'safe G-code evidence count retained'
     Write-Host 'PASS: G-code report optional CRC fields and bounded numeric evidence'
+
+    # Multi-file order regression assigned in Issue #23. Every byte is invented.
+    # A later ZIP/3MF must not hide an earlier, non-overlapping G-code start.
+    $orderFixtures=@(
+        [pscustomobject]@{name='gcode_before_3mf_same_chunk';g=1024;z=2048},
+        [pscustomobject]@{name='3mf_before_gcode_same_chunk';g=2048;z=1024},
+        [pscustomobject]@{name='gcode_crosses_16k_then_3mf';g=16340;z=16520},
+        [pscustomobject]@{name='3mf_crosses_16k_then_gcode';g=17000;z=16280},
+        [pscustomobject]@{name='gcode_3mf_adjacent';g=3072;z=(3072+$data.Length)},
+        [pscustomobject]@{name='3mf_gcode_adjacent';g=(3072+$zip.Length);z=3072}
+    )
+    foreach ($case in $orderFixtures) {
+        $endOfBoth=[Math]::Max(($case.g+$data.Length),($case.z+$zip.Length))
+        $bytes=New-Object byte[] ($endOfBoth+256)
+        [Array]::Copy($data,0,$bytes,[int]$case.g,$data.Length)
+        [Array]::Copy($zip,0,$bytes,[int]$case.z,$zip.Length)
+        $fixture=Join-Path $fixtureRoot ($case.name+'.img')
+        WriteSynthetic $fixture $bytes
+        $checking=[ChappyCountingReadStream]::new([IO.File]::OpenRead($fixture))
+        try {
+            $both=Get-ChappyCarvingCandidates -Stream $checking -MaxScanBytes $bytes.Length -MaxFileBytes 1048576 -MaxProbeBytes 1048576 -MaxProbes 32 -MaxCandidates 8 -ExtraValidationReadBytes 131072
+            $gHits=@($both.items | Where-Object {$_.format -eq 'gcode'})
+            $zHits=@($both.items | Where-Object {$_.format -eq '3mf'})
+            Assert ($gHits.Count -eq 1 -and $zHits.Count -eq 1 -and $both.items.Count -eq 2) ($case.name+': exactly both non-overlapping candidates, no duplicates')
+            Assert ($gHits[0].offsetBytes -eq $case.g -and $gHits[0].lengthBytes -eq $data.Length) ($case.name+': G-code offsets and byte length')
+            Assert ($zHits[0].offsetBytes -eq $case.z -and $zHits[0].lengthBytes -eq $zip.Length) ($case.name+': 3MF offsets and byte length')
+            Assert ($both.items[0].offsetBytes -lt $both.items[1].offsetBytes) ($case.name+': ordered results')
+            Assert ($checking.BytesRead -eq $both.metrics.bytesRead -and $both.metrics.bytesRead -le ($bytes.Length+131072)) ($case.name+': cumulative actual read budget')
+            Assert ($both.metrics.entriesChecked -le 32) ($case.name+': global probe count')
+            Assert (-not $checking.CanWrite) ($case.name+': scan read-only stream')
+        } finally {$checking.Dispose()}
+    }
+    Write-Host 'PASS: G-code/3MF both orders, 16KiB boundaries, adjacency, no duplicate, bounded reads'
+
+    # A full structurally valid STORED ZIP containing literal G-code text and a
+    # nested PK local-header signature must not create secondary file candidates.
+    $nestedPayload=New-Object byte[] ($data.Length+16)
+    [Array]::Copy($data,0,$nestedPayload,0,$data.Length)
+    $nestedPayload[$data.Length+4]=0x50
+    $nestedPayload[$data.Length+5]=0x4b
+    $nestedPayload[$data.Length+6]=0x03
+    $nestedPayload[$data.Length+7]=0x04
+    $container=MakeStoredZip $false $nestedPayload.Length $nestedPayload
+    $outerOffset=2048
+    $outerBytes=New-Object byte[] ($outerOffset+$container.Length+256)
+    [Array]::Copy($container,0,$outerBytes,$outerOffset,$container.Length)
+    $nestedPath=Join-Path $fixtureRoot 'nested_signatures_in_real_synthetic_zip.img'
+    WriteSynthetic $nestedPath $outerBytes
+    $nestedScan=Scan $nestedPath
+    $nestedZip=@($nestedScan.items | Where-Object {$_.format -eq 'zip' -and $_.offsetBytes -eq $outerOffset})
+    Assert ($nestedZip.Count -eq 1 -and $nestedScan.items.Count -eq 1) 'nested G-code and PK inside actual stored ZIP are not separate candidates'
+    Assert ($nestedZip[0].lengthBytes -eq $container.Length -and $nestedZip[0].crc32Status -eq 'match') 'nested synthetic ZIP structure and payload CRC'
+    Write-Host 'PASS: nested G-code and PK signatures remain inside validated ZIP interval'
+
+    # With a single candidate slot, the first file by offset wins regardless of format.
+    $firstCase=Join-Path $fixtureRoot 'gcode_before_3mf_same_chunk.img'
+    $firstStream=[ChappyCountingReadStream]::new([IO.File]::OpenRead($firstCase))
+    try {
+        $firstResult=Get-ChappyCarvingCandidates -Stream $firstStream -MaxScanBytes 8192 -MaxFileBytes 8192 -MaxProbeBytes 8192 -MaxCandidates 1 -MaxProbes 8 -ExtraValidationReadBytes 32768
+        Assert ($firstResult.items.Count -eq 1 -and $firstResult.items[0].format -eq 'gcode') 'candidate cap respects earliest offset, not ZIP priority'
+        Assert ($firstResult.scanIncomplete -and $firstResult.status -eq 'partial') 'candidate cap reports incomplete coverage'
+        Assert ($firstStream.BytesRead -eq $firstResult.metrics.bytesRead -and $firstResult.metrics.entriesChecked -le 8) 'single-candidate global budgets'
+    } finally {$firstStream.Dispose()}
+    Write-Host 'PASS: capped result preserves earliest source-offset candidate'
 
     # A non-text interruption after valid commands means at most a partial segment.
     $fragBytes=[Text.Encoding]::ASCII.GetBytes($gcode + "BROKEN_BINARY_FRAGMENT`nG28`n")
