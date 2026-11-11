@@ -41,3 +41,6 @@ jobs:
       - name: Run R6 synthetic VBR hypothesis FAT mirror cross-evidence
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-MirrorVbr.Tests.ps1
+      - name: Run R7 stratified FAT anomaly research same-fixture R6 A B tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R7-StratifiedAB.Tests.ps1
