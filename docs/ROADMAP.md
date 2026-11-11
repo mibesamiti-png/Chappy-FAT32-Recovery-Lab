@@ -75,3 +75,24 @@ These are planning milestones, not actual recovery percentages. Do not test or c
 | A | [PR #18 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/18), root-chain aggregate in experimental local preflight and 8-suite central CI, [main PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42979036878) | Strengthen BPB/Windows-alias safety before any real master IMG trial |
 
 **Do not interpret passing synthetic assertions, calculated candidate counts or this roadmap as actual recovered-file percentages.** The user's 31GB master IMG has not been tested with the new integration runner.
+
+
+## Latest A checkpoint — synthetic damage evaluation R1 (2026-11-11)
+
+| Track | Latest completed delivery | Current remaining gate |
+| --- | --- | --- |
+| B | [PR #20](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/20) merged; synthetic directory 23-case confidence QA | New [Issue #24](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/24) noncontiguous/orphaned directory tests |
+| C | [PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) merged **experimental only**; bounded ZIP/3MF/G-code candidate scanning, default-off export | [Issue #23](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/23) fixes ZIP-after-Gcode ordering bug (synthetic Windows CI reproducible) |
+| D | [PR #21](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/21) merged; 211/211 artificial FAT+directory consistency assertions PASS | New [Issue #25](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/25) BPB/MBR/backup-VBR bounded trust checks |
+| A | Three module families in main; latest previous main synthetic Windows CI [42985195170](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42985195170) PASS; new [Draft PR #22](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/22) produces 7-case artificial damage corpus | **PR #22 CI failing**, correctly identifies C #23 bug; do not lower assertions, re-run after C fix |
+
+**Experimental corpus:** 2MiB FAT32-like research image with two invented contiguous sample files, no real media, no reconstruction of missing bytes. Expected 10/14 original-byte-identical candidate slices across the seven predetermined scenarios is a **target**, not an observed recovery rate. The initial clean-case scan missed a G-code candidate, so the new benchmark cannot be accepted yet. Real IMG and recovery percentage remain unverified.
+
+
+## Team A quality-gate status — synthetic damage benchmark branch
+
+**Complete and integrated:** [A PR #26](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/26) added D R3-P4 to central Windows PowerShell 5.1 integration CI, now 9 isolated artificial suites; main [CI success](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42987347212).
+
+**In progress, intentionally not merged:** [A Draft PR #22](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/22) tests seven artificial FAT32-like IMG damage scenarios and independently compares known original G-code / 3MF bytes. Current measured artificial result is **6/14 exact candidate slices**, target **10/14**, due to the C candidate scanning order bug [Issue #23](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/23). This is not a real user file recovery rate; do not expand inference beyond the tiny synthetic corpus. C fix -> A review/merge -> re-run A CI -> only then consider merging PR #22.
+
+Future corpus work: correctly formatted full-size synthetic FAT32 volumes, genuine fragmentation and reconstruction, controlled bit rot and metadata/data damage, size-bound performance and byte-for-byte verification. Real IMG remains local-only, read-only and NOT APPROVED for this experimental runner yet.

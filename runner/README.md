@@ -1,13 +1,13 @@
 # Team A — synthetic regression runner
 
-The Windows PowerShell 5.1 script `runner/Invoke-ChappySyntheticRegression.ps1` runs synthetic-only suites separately, including QuickProbe, Team B metadata scanning/hierarchy, Team D FAT diagnosis, Team D synthetic patch rollback, Team D R3 mirror windows and EB58, plus Team A local read-only preflight on a disposable artificial IMG.
+The Windows PowerShell 5.1 script `runner/Invoke-ChappySyntheticRegression.ps1` runs synthetic-only suites separately, including QuickProbe, Team B metadata scanning/hierarchy, Team D FAT diagnosis, Team D synthetic patch rollback, Team D R3 mirror windows, EB58, root-chain statistics and directory/FAT consistency, plus Team A local read-only preflight on a disposable artificial IMG.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\runner\Invoke-ChappySyntheticRegression.ps1
 ```
 
 - No arguments; **cannot accept a path to a real IMG**.
-- Runs exactly seven committed test programs; each generates artificial fixtures only.
+- Runs exactly nine committed test programs; each generates artificial fixtures only.
 - Launches a separate Windows PowerShell 5.1 process per suite to avoid leaked globals/functions and misleading pass counts.
 - Any nonzero exit code or missing test fails the entire job.
 - GitHub Actions uses this runner in the privacy gate.
@@ -24,7 +24,7 @@ New script: runner/Invoke-ChappyLocalReadOnlyPreflight.ps1.
 
 The command requires an explicit opt-in switch. It accepts a regular local .img file on an absolute drive path, rejects UNC/device/reparse path components and images placed inside this public Git repository. It opens its source only with FileAccess.Read / FileShare.Read. It has no output file argument, no extraction, no repair and no automatic upload.
 
-The script integrates Team B FAT-independent directory candidates and pure metadata hierarchy with Team D FAT mirror-window and EB58 observed-pattern statistics. All reads are bounded. Output is a fixed-schema **numeric-only aggregate**, not original filenames or recovered content. The result is usually partial due to deliberate sampling; it cannot establish file health.
+The script integrates Team B FAT-independent directory candidates and pure metadata hierarchy with Team D FAT mirror-window, EB58 and root-chain observed-pattern statistics. All reads are bounded. Output is a fixed-schema **numeric-only aggregate**, not original filenames or recovered content. The result is usually partial due to deliberate sampling; it cannot establish file health.
 
 Synthetic regression used in GitHub CI:
 

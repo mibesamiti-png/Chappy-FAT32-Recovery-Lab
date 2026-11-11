@@ -36,6 +36,25 @@ The IMG path above is *illustrative only*, not a user path; **do not execute thi
 - On caps/time/window-limited validation, return `status=partial` and `scanIncomplete=true` with codes such as `scan.read_budget_exhausted`, `scan.probe_budget_exhausted`, `scan.time_budget_exhausted`, `scan.validation_window_limit`, and `scan.bounds_reached`. A partial candidate is **not** evidence of intact original file data.
 - CI uses synthetic dense ZIP local headers and malformed ZIP EOCD scans with a separate counting stream, verifying that cumulative I/O metrics match actual Read calls and stay within the default byte limit.
 
+## R2: source-offset-ordered multi-file candidate scanning (Issue #23)
+
+The 16 KiB scanner collects ZIP-local-header and G-code anchors from the same chunk
+(with a 256-byte overlap tail), then **probes them in ascending input offset order**.
+Previously a later valid ZIP could wrongly exclude an earlier, separate G-code because
+the ZIP family was processed first. Now skipZip / skipGcode only suppress anchors
+inside **earlier recognized candidate intervals**, not unrelated earlier files.
+
+- Synthetic order tests cover **G-code → 3MF** and **3MF → G-code** in one chunk,
+  candidates spanning 16 KiB boundaries, and immediately adjacent non-overlapping files.
+- A synthetic STORED ZIP containing literal G-code and PK signatures still produces
+  **only its enclosing ZIP candidate**; nested signatures are not promoted to recovered files.
+- A one-candidate limit selects the earliest candidate by source byte offset, not ZIP-first.
+  Tail overlaps are deduplicated. Probe, byte-read, work-time and result-count budgets remain
+  global and may stop scanning early with status=partial and scanIncomplete=true.
+- All validation uses fabricated buffers and synthetic Windows CI only; positive classification
+  remains a **candidate**, not proof that a real corrupted disk's original bytes survived.
+  The separate Team A damage benchmark in Draft PR #22 is independently reviewed.
+
 ## Opt-in extraction
 
 `Export-ChappyCarvingCandidate` is **disabled by default** and throws without the explicit `-EnableFileExport` switch. It is for synthetic fixtures only until Team A independently approves a safe local recovery workflow. Only existing absolute local drive-letter source files and destination directories are accepted. Device/volume namespaces, UNC/drive-relative paths, alternate data streams and paths under reparse-point/symlink/junction ancestors are rejected. Output must be in a **separate directory tree** (not the source folder or its ancestor/descendant). No filename from source content is trusted: output names derive from offsets. The function writes into `structurally_verified`, `probable`, or `partial` subfolders with `FileMode.CreateNew`; no overwrite is allowed.

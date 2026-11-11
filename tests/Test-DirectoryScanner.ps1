@@ -246,6 +246,8 @@ try {
         Assert-B ((ConvertTo-Json -InputObject $all -Depth 9) -match '"startCluster"') 'JSON metadata serializes'
         # R3 synthetic calibration and bounded read-only stress suite.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR3Validation.ps1')
+        # R4 noncontiguous/orphaned artificial directory and untrusted FAT test.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR4Fragmented.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
