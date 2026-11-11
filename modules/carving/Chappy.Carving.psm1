@@ -3,14 +3,29 @@ Set-StrictMode -Version Latest
 $script:CStoredCrcTable = $null
 
 function Read-CBytes {
-    param([IO.Stream]$Stream, [long]$Offset, [int]$Count)
+    param([IO.Stream]$Stream, [long]$Offset, [int]$Count, [psobject]$Budget=$null)
     if ($Offset -lt 0 -or $Count -lt 0 -or $Offset -gt ($Stream.Length - [long]$Count)) { return $null }
+    if ($null -ne $Budget) {
+        if ($Budget.Timer.ElapsedMilliseconds -gt $Budget.MaxElapsedMilliseconds) {
+            $Budget.StopCode='scan.time_budget_exhausted'; return $null
+        }
+        if ($Offset -lt $Budget.Start -or $Offset -gt $Budget.End -or [long]$Count -gt ($Budget.End-$Offset)) {
+            $Budget.WindowLimited=$true; return $null
+        }
+        if ([long]$Count -gt ($Budget.MaxBytes-$Budget.BytesRead)) {
+            $Budget.StopCode='scan.read_budget_exhausted'; return $null
+        }
+    }
     [void]$Stream.Seek($Offset, [IO.SeekOrigin]::Begin)
     $bytes = New-Object byte[] $Count
     $n = 0
     while ($n -lt $Count) {
         $got = $Stream.Read($bytes, $n, $Count - $n)
         if ($got -le 0) { return $null }
+        if ($null -ne $Budget) {
+            $Budget.BytesRead += [long]$got
+            $Budget.ReadRequests++
+        }
         $n += $got
     }
     return ,$bytes
@@ -19,14 +34,14 @@ function Get-CU16 { param([byte[]]$Bytes,[int]$At) return [BitConverter]::ToUInt
 function Get-CU32 { param([byte[]]$Bytes,[int]$At) return [BitConverter]::ToUInt32($Bytes,$At) }
 
 function Find-CSignature {
-    param([IO.Stream]$Stream,[long]$Start,[long]$Length,[byte[]]$Signature,[int]$Limit=256)
+    param([IO.Stream]$Stream,[long]$Start,[long]$Length,[byte[]]$Signature,[int]$Limit=256,[psobject]$Budget=$null)
     $hits = New-Object 'System.Collections.Generic.List[long]'
     $end = [Math]::Min($Stream.Length, $Start + $Length)
     $cursor = $Start
     $tail = New-Object byte[] 0
     while ($cursor -lt $end -and $hits.Count -lt $Limit) {
         $want = [int][Math]::Min(65536L, $end - $cursor)
-        $block = Read-CBytes $Stream $cursor $want
+        $block = Read-CBytes $Stream $cursor $want $Budget
         if ($null -eq $block) { break }
         $combined = New-Object byte[] ($tail.Length + $block.Length)
         [Array]::Copy($tail,0,$combined,0,$tail.Length)
@@ -47,6 +62,7 @@ function Find-CSignature {
         $tail = New-Object byte[] $retain
         if ($retain -gt 0) { [Array]::Copy($combined,$combined.Length-$retain,$tail,0,$retain) }
         $cursor += $want
+        if ($null -ne $Budget -and $null -ne $Budget.StopCode) { break }
     }
     return $hits.ToArray()
 }
@@ -55,7 +71,7 @@ function Find-CSignature {
 # Bounded CRC32 for ZIP STORED (method 0) entries only.
 # This is content evidence, never proof of the original filesystem's integrity.
 function Get-CStoredCrc32 {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$Length)
+    param([IO.Stream]$Stream,[long]$Offset,[long]$Length,[psobject]$Budget=$null)
     if ($Length -lt 0 -or $Length -gt 65536L -or $Offset -lt 0 -or $Offset -gt ($Stream.Length-$Length)) { return $null }
     if ($null -eq $script:CStoredCrcTable) {
         $script:CStoredCrcTable = New-Object 'uint32[]' 256
@@ -72,7 +88,7 @@ function Get-CStoredCrc32 {
     $cursor=$Offset; $remaining=$Length
     while ($remaining -gt 0) {
         $take=[int][Math]::Min(16384L,$remaining)
-        $bytes=Read-CBytes $Stream $cursor $take
+        $bytes=Read-CBytes $Stream $cursor $take $Budget
         if ($null -eq $bytes) { return $null }
         foreach ($b in $bytes) {
             $index=[int](($crc -bxor [uint32]$b) -band 255L)
@@ -84,18 +100,19 @@ function Get-CStoredCrc32 {
 }
 
 function Test-CZip {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes)
-    $first = Read-CBytes $Stream $Offset 30
+    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null)
+    $first = Read-CBytes $Stream $Offset 30 $Budget
     if ($null -eq $first -or (Get-CU32 $first 0) -ne 0x04034b50) { return $null }
     $flags = Get-CU16 $first 6
     $method = Get-CU16 $first 8
     $firstNameLength = Get-CU16 $first 26
     if (($flags -band 1) -ne 0 -or $method -notin @(0,8) -or $firstNameLength -eq 0) { return $null }
-    $limit=[Math]::Min($MaxFileBytes,$Stream.Length-$Offset)
+    $limit=[Math]::Min(131072L,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
+    if ($null -ne $Budget) { $limit=[Math]::Min($limit,$Budget.End-$Offset) }
     if ($limit -lt 52) { return $null }
-    $endMarkers = @(Find-CSignature $Stream ($Offset+30) ($limit-30) ([byte[]](0x50,0x4b,0x05,0x06)) 128)
+    $endMarkers = @(Find-CSignature $Stream ($Offset+30) ($limit-30) ([byte[]](0x50,0x4b,0x05,0x06)) 128 $Budget)
     foreach ($eocd in $endMarkers) {
-        $endRec = Read-CBytes $Stream $eocd 22
+        $endRec = Read-CBytes $Stream $eocd 22 $Budget
         if ($null -eq $endRec) { continue }
         $commentSize = [long](Get-CU16 $endRec 20)
         $endOffset = $eocd + 22L + $commentSize
@@ -113,7 +130,7 @@ function Test-CZip {
         $crcChecked=0; $crcUnchecked=0; $crcMismatch=$false; $crcBudget=65536L
         $names = New-Object 'System.Collections.Generic.List[string]'
         for ($j=0; $j -lt $entries; $j++) {
-            $entry = Read-CBytes $Stream $pos 46
+            $entry = Read-CBytes $Stream $pos 46 $Budget
             if ($null -eq $entry -or (Get-CU32 $entry 0) -ne 0x02014b50) { $valid=$false; break }
             $eflags = Get-CU16 $entry 8
             $emode = Get-CU16 $entry 10
@@ -128,8 +145,8 @@ function Test-CZip {
             if ($recordLen -gt ($cdEnd-$pos) -or $nameLen -eq 0 -or
                 $localRel -eq 0xffffffffL -or $comp -eq 0xffffffffL -or
                 ($eflags -band 1) -ne 0 -or $emode -notin @(0,8)) { $valid=$false; break }
-            $nameBytes = Read-CBytes $Stream ($pos+46) ([int]$nameLen)
-            $local = Read-CBytes $Stream ($Offset+$localRel) 30
+            $nameBytes = Read-CBytes $Stream ($pos+46) ([int]$nameLen) $Budget
+            $local = Read-CBytes $Stream ($Offset+$localRel) 30 $Budget
             if ($null -eq $nameBytes -or $null -eq $local -or (Get-CU32 $local 0) -ne 0x04034b50) { $valid=$false; break }
             $localNameLen = [long](Get-CU16 $local 26)
             $localExtraLen = [long](Get-CU16 $local 28)
@@ -137,11 +154,11 @@ function Test-CZip {
             $dataEnd = $dataStart+$comp
             if ($localNameLen -ne $nameLen -or (Get-CU16 $local 8) -ne $emode -or
                 $dataEnd -gt ($Offset+$cdRel) -or $dataEnd -lt ($Offset+$localRel)) { $valid=$false; break }
-            $localName = Read-CBytes $Stream ($Offset+$localRel+30) ([int]$localNameLen)
+            $localName = Read-CBytes $Stream ($Offset+$localRel+30) ([int]$localNameLen) $Budget
             if ($null -eq $localName -or -not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($nameBytes,$localName)) { $valid=$false; break }
             # CRC budget is per archive, 64 KiB maximum; deflate and oversized entries are NOT checked.
             if ($emode -eq 0 -and $comp -eq $uncomp -and $comp -le $crcBudget) {
-                $actualCrc = Get-CStoredCrc32 $Stream $dataStart $comp
+                $actualCrc = Get-CStoredCrc32 $Stream $dataStart $comp $Budget
                 if ($null -eq $actualCrc) { $valid=$false; break }
                 $crcChecked++
                 $crcBudget-=$comp
@@ -181,8 +198,9 @@ function Test-CZip {
 }
 
 function Test-CGcode {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes)
-    $limit=[Math]::Min($MaxFileBytes,$Stream.Length-$Offset)
+    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null)
+    $limit=[Math]::Min(131072L,[Math]::Min($MaxFileBytes,$Stream.Length-$Offset))
+    if ($null -ne $Budget) { $limit=[Math]::Min($limit,$Budget.End-$Offset) }
     if ($limit -lt 48) { return $null }
     [void]$Stream.Seek($Offset,[IO.SeekOrigin]::Begin)
     $cursor=$Offset; $lineStart=$Offset; $lastGood=$Offset
@@ -191,7 +209,7 @@ function Test-CGcode {
     $badRun=0; $fragmentationSuspected=$false
     while ($cursor -lt ($Offset+$limit) -and $lines -lt 200000) {
         $want=[int][Math]::Min(32768L, ($Offset+$limit)-$cursor)
-        $data=Read-CBytes $Stream $cursor $want
+        $data=Read-CBytes $Stream $cursor $want $Budget
         if ($null -eq $data) { break }
         for ($i=0; $i -lt $data.Length; $i++) {
             $b=$data[$i]
@@ -237,60 +255,112 @@ function Get-ChappyCarvingCandidates {
         [ValidateRange(0,9223372036854775806)][long]$StartOffset=0,
         [ValidateRange(1,1073741824)][long]$MaxScanBytes=67108864,
         [ValidateRange(1024,1073741824)][long]$MaxFileBytes=134217728,
-        [ValidateRange(1,10000)][int]$MaxCandidates=128
+        [ValidateRange(1,10000)][int]$MaxCandidates=128,
+        [ValidateRange(1,4096)][int]$MaxProbes=128,
+        [ValidateRange(0,1073741824)][long]$ExtraValidationReadBytes=0,
+        [ValidateRange(100,120000)][int]$MaxWorkMilliseconds=30000
     )
-    $out=[ordered]@{schemaVersion='1';team='C';status='ok';scanIncomplete=$false;items=@();warnings=@();errors=@();metrics=@{bytesRead=0L;entriesChecked=0}}
+    $out=[ordered]@{
+        schemaVersion='1'; team='C'; status='ok'; scanIncomplete=$false; items=@(); warnings=@(); errors=@();
+        metrics=@{bytesRead=0L; entriesChecked=0; readRequests=0; scannedBytes=0L; scanWindowBytes=0L; elapsedMilliseconds=0}
+    }
     if (-not $Stream.CanRead -or -not $Stream.CanSeek) {
-        $out.status='error';$out.errors=@('stream.not_seekable_readable');return [pscustomobject]$out
+        $out.status='error'; $out.errors=@('stream.not_seekable_readable'); return [pscustomobject]$out
     }
     if ($StartOffset -gt $Stream.Length) {
-        $out.status='error';$out.errors=@('scan.offset_out_of_range');return [pscustomobject]$out
+        $out.status='error'; $out.errors=@('scan.offset_out_of_range'); return [pscustomobject]$out
     }
-    $range=[Math]::Min($MaxScanBytes,$Stream.Length-$StartOffset)
+    $range=[long][Math]::Min($MaxScanBytes,$Stream.Length-$StartOffset)
     $limit=$StartOffset+$range
-    $hits=@(Find-CSignature $Stream $StartOffset $range ([byte[]](0x50,0x4b,0x03,0x04)) ($MaxCandidates*8))
-    $candidates=New-Object 'System.Collections.Generic.List[object]'
-    $skipUntil=$StartOffset
-    foreach($hit in $hits) {
-        if ($hit -lt $skipUntil) { continue }
-        $item=Test-CZip $Stream $hit $MaxFileBytes
-        if ($null -ne $item) {
-            $candidates.Add($item)
-            if ($item.lengthBytes -gt 0) { $skipUntil=$hit+$item.lengthBytes }
-            if ($candidates.Count -ge $MaxCandidates) { break }
-        }
+    # By default all reads (including nested ZIP, CRC, G-code validation) share one byte budget
+    # no larger than the scan window. Extra rereads require an explicit named opt-in.
+    $budget=[pscustomobject]@{
+        Start=[long]$StartOffset; End=[long]$limit; MaxBytes=([long]$range+$ExtraValidationReadBytes)
+        BytesRead=0L; ReadRequests=0; Probes=0
+        StopCode=$null; WindowLimited=$false
+        Timer=[Diagnostics.Stopwatch]::StartNew(); MaxElapsedMilliseconds=$MaxWorkMilliseconds
     }
-    # G-code candidate anchors must be at line starts, not arbitrary parameter strings.
-    $cursor=$StartOffset; $overlap=''; $gskip=$StartOffset
+    $candidates=New-Object 'System.Collections.Generic.List[object]'
+    $cursor=$StartOffset; $tail=New-Object byte[] 0
+    $skipZip=$StartOffset; $skipGcode=$StartOffset
+    $lastZipProbed=-1L; $lastGcodeProbed=-1L
+    $sig=[byte[]](0x50,0x4b,0x03,0x04)
+    $rx='(?m)(?:^|[\x00\n])(?<anchor>;\s*(?:FLAVOR:|generated|HEADER_START|BambuStudio)|G28\b|M104\b|M140\b|M73\b)'
     while ($cursor -lt $limit -and $candidates.Count -lt $MaxCandidates) {
-        $want=[int][Math]::Min(65536L,$limit-$cursor)
-        $buf=Read-CBytes $Stream $cursor $want
-        if ($null -eq $buf) {break}
-        $text=$overlap+[Text.Encoding]::ASCII.GetString($buf)
-        $base=$cursor-$overlap.Length
-        $rx='(?m)(?:^|[\x00\n])(?<anchor>;\s*(?:FLAVOR:|generated|HEADER_START|BambuStudio)|G28\b|M104\b|M140\b|M73\b)'
+        if ($budget.Timer.ElapsedMilliseconds -gt $MaxWorkMilliseconds) {
+            $budget.StopCode='scan.time_budget_exhausted'; break
+        }
+        $want=[int][Math]::Min(16384L,$limit-$cursor)
+        $buf=Read-CBytes $Stream $cursor $want $budget
+        if ($null -eq $buf) { break }
+        $combined=New-Object byte[] ($tail.Length+$buf.Length)
+        [Array]::Copy($tail,0,$combined,0,$tail.Length)
+        [Array]::Copy($buf,0,$combined,$tail.Length,$buf.Length)
+        $base=$cursor-$tail.Length
+        $i=0
+        while ($i -le ($combined.Length - $sig.Length)) {
+            $hit=[Array]::IndexOf($combined,$sig[0],$i)
+            if ($hit -lt 0 -or $hit -gt ($combined.Length-$sig.Length)) { break }
+            $i=$hit+1
+            if ($combined[$hit+1] -ne 0x4b -or $combined[$hit+2] -ne 3 -or $combined[$hit+3] -ne 4) { continue }
+            $at=$base+$hit
+            if ($at -lt $StartOffset -or $at -le $lastZipProbed -or $at -lt $skipZip) { continue }
+            if ($budget.Probes -ge $MaxProbes) { $budget.StopCode='scan.probe_budget_exhausted'; break }
+            if ($budget.Timer.ElapsedMilliseconds -gt $MaxWorkMilliseconds) {
+                $budget.StopCode='scan.time_budget_exhausted'; break
+            }
+            $lastZipProbed=$at; $budget.Probes++
+            $item=Test-CZip $Stream $at $MaxFileBytes $budget
+            if ($null -ne $item) {
+                $candidates.Add($item)
+                if ($item.lengthBytes -gt 0) { $skipZip=$at+$item.lengthBytes }
+                if ($candidates.Count -ge $MaxCandidates) { break }
+            }
+            if ($null -ne $budget.StopCode) { break }
+        }
+        if ($null -ne $budget.StopCode -or $candidates.Count -ge $MaxCandidates) { break }
+        $text=[Text.Encoding]::ASCII.GetString($combined)
         foreach ($m in [regex]::Matches($text,$rx,[Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             $at=$base+[long]$m.Groups['anchor'].Index
-            if ($at -lt $StartOffset -or $at -ge $limit -or $at -lt $gskip) {continue}
-            $gc=Test-CGcode $Stream $at $MaxFileBytes
+            if ($at -lt $StartOffset -or $at -ge $limit -or $at -le $lastGcodeProbed -or $at -lt $skipGcode -or $at -lt $skipZip) { continue }
+            if ($budget.Probes -ge $MaxProbes) { $budget.StopCode='scan.probe_budget_exhausted'; break }
+            if ($budget.Timer.ElapsedMilliseconds -gt $MaxWorkMilliseconds) {
+                $budget.StopCode='scan.time_budget_exhausted'; break
+            }
+            $lastGcodeProbed=$at; $budget.Probes++
+            $gc=Test-CGcode $Stream $at $MaxFileBytes $budget
             if ($null -ne $gc) {
                 $candidates.Add($gc)
-                $gskip=$at+[Math]::Max(1L,[long]$gc.lengthBytes)
+                $skipGcode=$at+[Math]::Max(1L,[long]$gc.lengthBytes)
+                if ($candidates.Count -ge $MaxCandidates) { break }
             }
-            if ($candidates.Count -ge $MaxCandidates) {break}
+            if ($null -ne $budget.StopCode) { break }
         }
-        $overlap=$text.Substring([Math]::Max(0,$text.Length-256))
+        if ($null -ne $budget.StopCode -or $candidates.Count -ge $MaxCandidates) { break }
+        $keep=[Math]::Min(256,$combined.Length)
+        $tail=New-Object byte[] $keep
+        if ($keep -gt 0) { [Array]::Copy($combined,$combined.Length-$keep,$tail,0,$keep) }
         $cursor+=$want
     }
+    $budget.Timer.Stop()
     $out.items=@($candidates.ToArray() | Sort-Object offsetBytes)
-    $out.metrics.bytesRead=$range
-    $out.metrics.entriesChecked=$hits.Count
-    if ($range -lt ($Stream.Length-$StartOffset) -or $candidates.Count -ge $MaxCandidates -or $hits.Count -ge ($MaxCandidates*8)) {
-        $out.scanIncomplete=$true;$out.status='partial';$out.warnings=@('scan.bounds_reached')
+    $out.metrics.bytesRead=[long]$budget.BytesRead
+    $out.metrics.entriesChecked=[int]$budget.Probes
+    $out.metrics.readRequests=[int]$budget.ReadRequests
+    $out.metrics.scannedBytes=[long]($cursor-$StartOffset)
+    $out.metrics.scanWindowBytes=[long]$range
+    $out.metrics.elapsedMilliseconds=[int]$budget.Timer.ElapsedMilliseconds
+    $warnings=New-Object 'System.Collections.Generic.List[string]'
+    if ($null -ne $budget.StopCode) { $warnings.Add([string]$budget.StopCode) }
+    if ($budget.WindowLimited) { $warnings.Add('scan.validation_window_limit') }
+    if ($range -lt ($Stream.Length-$StartOffset) -or $cursor -lt $limit -or $candidates.Count -ge $MaxCandidates) {
+        $warnings.Add('scan.bounds_reached')
+    }
+    if ($warnings.Count -gt 0) {
+        $out.scanIncomplete=$true; $out.status='partial'; $out.warnings=@($warnings.ToArray())
     }
     return [pscustomobject]$out
 }
-
 function Export-ChappyCarvingCandidate {
     [CmdletBinding()]
     param(
