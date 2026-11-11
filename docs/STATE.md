@@ -37,3 +37,15 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - Role/branch roster: `docs/TEAM_DISPATCH.md`
 - Existing B/C/D chats use identical prompts while preserving their prior team identity. New chat without role requires one-time explicit assignment.
 - Actual 31GB image remains local; synthetic-only CI verified separately from real recovery.
+
+
+## Team A integration checkpoint — 2026-11-11 (latest)
+
+- B FAT-independent directory/LFN metadata-only R1: **merged**, PR #7, main squash `96d1a785`. Issue #2 closed. 22/22 synthetic Windows tests had passed on B's PR.
+- D read-only FAT32 independent diagnostics and synthetic in-memory patch/rollback simulation: **merged**, PR #6, main squash `512ca380`. Issue #4 closed. R1 25/25 and R2 29/29 synthetic Windows tests had passed on D's PR.
+- A combined GitHub Actions Windows PowerShell 5.1 suite (QuickProbe + B + D R1/R2 + privacy scan): **PASS** https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42968506751
+- C G-code/ZIP/3MF candidate carving: **Draft PR #5 NOT MERGED**. CI passed on C's head, but A requested P1 cumulative I/O/probe budget, dense malformed-signature stress tests, path/privacy hardening. See PR #5 review and Issue #3 update.
+- Full review record: `docs/INTEGRATION_REVIEW_R1.md`. Live ownership and branches: `docs/TEAM_DISPATCH.md`.
+- **Main integration state: 2/3 team PRs merged; C is pending**.
+- No real 31GB IMG was accessed by these GitHub tests; no recovery success or original file validation has been established. Do not use the new modules on the real IMG until A's local safety-validation workflow is reviewed.
+- Standalone A local runner remains pending. Import of legacy v0.5 is also pending and must not be assumed complete.
