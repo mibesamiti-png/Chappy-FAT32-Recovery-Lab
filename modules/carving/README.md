@@ -74,12 +74,12 @@ inside **earlier recognized candidate intervals**, not unrelated earlier files.
 
 ## Confidence semantics
 
-- `verified`: ZIP *container structure* (EOCD, central directory and local-header bounds/references) passed the checks; **never** means fully validated payloads or original file integrity. ZIP method 8 (DEFLATE) is not inflated or CRC-checked. STORED (method 0) CRC-32 checks use a 64 KiB total budget. Always read the separate `integrityScope` and `crc32Status` fields.
+- `verified`: ZIP *container structure* (EOCD, central directory and local-header bounds/references) passed the checks; **never** means proven original-file integrity. ZIP method 8 (DEFLATE) remains **unchecked by default**; explicit synthetic-only `-EnableSmallDeflateCrc` allows strict small-payload CRC checks. STORED (method 0) CRC-32 checks use a 64 KiB total budget. Always inspect separate `integrityScope` and `crc32Status` fields.
 - `probable`: G-code ASCII commands/comments form a plausible continuous segment; file start/end and completeness remain uncertain.
 - `partial`: ZIP local header without a validated central directory (length 0; extraction blocked), a structurally present ZIP whose checked STORED CRC mismatches, or bounded/truncated/discontinuous G-code.
 - `fragmentationSuspected`: optional heuristic for suspicious non-text break in G-code; does not reconstruct fragments.
 
-A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xml`, `_rels/.rels`, and `3D/*.model`. ZIP validation **does not** validate OPC/XML contents, relationships, ZIP64, encryption, deflate (method 8) decompression/CRC, or fragments. It targets single-disk ZIPs with stored/deflate entries; only small method 0 payloads receive CRC-32 checking.
+A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xml`, `_rels/.rels`, and `3D/*.model`. ZIP validation **does not** validate OPC/XML contents, relationships, ZIP64, encryption, or fragments. It targets single-disk ZIPs with STORED/DEFLATE entries. Small method 0 payloads get bounded CRC checks by default; method 8 payload checks are available *only* under the explicit experimental `-EnableSmallDeflateCrc` switch.
 
 ## Integrity scope: never mistake ZIP structure for recovered content
 
@@ -97,13 +97,30 @@ Every returned candidate has a **fixed, non-sensitive** `integrityScope` field; 
 - ZIP candidate fields: `crc32Status` is `match`, `mismatch`, `partial`, or `not_checked`; `crc32CheckedEntries` and `crc32UncheckedEntries` give anonymous counts. These fields are also included in redacted JSON reports, without entry names or content.
 - A STORED entry can be CRC-checked only when its compressed/uncompressed lengths match and the remaining **64 KiB per-ZIP budget** permits. CRC-32 uses constant-size streaming buffers, not whole-file memory reads.
 - `mismatch` means at least one checked entry does not match its central-directory CRC. The candidate is downgraded to `confidence=partial` with evidence `zip.stored_crc_mismatch`. `truncated=false` is possible for corrupt-but-complete ZIPs.
-- `partial` CRC status means some entries checked and others deliberately skipped. `not_checked` means zero entries checked. **Deflate entries are never CRC-checked in this round**, even though structural classification may still be `verified`.
+- `partial` CRC status means some entries checked and others deliberately skipped, or an attempted DEFLATE stream could not be decoded; `not_checked` means zero entries checked. **DEFLATE remains unchecked unless `-EnableSmallDeflateCrc` is explicitly supplied.**
 - `match` means all considered entries were STORED and verified against the central-directory CRC under the budget. This still does not validate 3MF model XML or guarantee pre-corruption filesystem data.
+
+## R3: bounded, opt-in DEFLATE CRC (synthetic-only)
+
+To evaluate only **artificial small ZIP/3MF test fixtures**, explicitly pass the optional `-EnableSmallDeflateCrc` switch to `Get-ChappyCarvingCandidates`. This changes validation behavior but **never exports or writes an output file**. Default is OFF, preserving existing structural-only scanning and previous method 0 checks.
+
+Strict *hardcoded* limits in Windows PowerShell 5.1 / built-in .NET:
+
+- Per method 8 entry: at most **32 KiB compressed input**, **64 KiB declared decompressed output**, expansion ratio at most **64:1**, and no encrypted/unsupported methods.
+- Across **all ZIP candidates in one scan**: at most **16 attempted DEFLATE entries**, **128 KiB total reserved compressed bytes** and **64 KiB total reserved decompressed bytes**. The per-archive 64 KiB CRC budget is shared by method 0 and 8 entries; all other entries remain `crc32UncheckedEntries`.
+- Compressed bytes are loaded with the existing globally bounded `Read-CBytes` stream operation, never an unaccounted read. A 4 KiB output buffer is used for streaming inflation; output beyond the ZIP header's declared size is rejected immediately, and no file contents, entry names or inflated buffers are exposed by the API.
+- Cooperative elapsed-time checks run on every output read. Underlying .NET decompression calls themselves cannot be forcibly interrupted in mid-call; this is a **bounded research verifier**, not hardened parsing of arbitrary attacker-controlled ZIP bombs.
+- A checked CRC mismatch yields `crc32Status=mismatch`, `confidence=partial` and `zip.deflate_crc_mismatch`. Invalid inflation/incorrect declared output size yields `crc32Status=partial`, `confidence=partial` and `zip.deflate_inflate_failed`. Skipped entries do **not** get a false-positive content claim. For a fully checked small ZIP, `crc32Status=match` remains a claim only about CRC against ZIP metadata, **never about the original undamaged file**.
+- Report `checks` and `evidence` use strict allowlists with new DEFLATE-specific reason codes and **do not include filenames or decompressed bytes**. `integrityScope='structural_only_not_original_file_integrity'` is unchanged, even for CRC matches.
+
+Synthetic negative tests cover CRC tampering, invalid DEFLATE, ZIP truncation, high declared expansion ratio, forged underdeclared output size, 18 independent ZIPs with a global 16-entry limit, and previous nested-signature cases. The entire suite retains global source I/O, probe, time and candidate bounds.
+
+**Not authorized for the real 31GB IMG.** Opt-in export remains separately disabled by default and is never invoked during real-media testing.
 
 ## Safe JSON reporting (Team A privacy review P1)
 
 - `Write-ChappyCarvingReport` is **explicit opt-in** and writes a new file only (`FileMode.CreateNew`). It produces a fixed `schemaVersion=1`/`team=C` schema; it never serializes arbitrary caller object properties.
-- `format`, `confidence`, `integrityScope`, `checks`, `crc32Status` and root `status` use strict, bounded string allowlists; unexpected values become `unknown`, `not_validated`, `not_applicable`, or `error` respectively.
+- `format`, `confidence`, `integrityScope`, `checks`, `crc32Status` and root `status` use strict, bounded string allowlists (including opt-in DEFLATE checks); unexpected values become `unknown`, `not_validated`, `not_applicable`, or `error` respectively.
 - `evidence`, `warnings`, and `errors` preserve only defined diagnostic reason codes (at most 32 per list). `gcode.command_count_N` is accepted only for bounded nonnegative numeric `N` up to 200000. Unknown strings, paths, filenames and free-form error messages are **dropped**.
 - Candidate byte offsets, lengths, CRC counts and six known metric fields accept nonnegative bounded decimal integers only; unexpected or malformed values become zero. Unknown metric keys are never serialized. Candidate results are capped at 10000 items.
 - Privacy regression deliberately injects synthetic Windows paths, sentinel filenames, arbitrary strings and invalid numbers into all report field categories. The synthetic CI confirms the private sentinel and extra keys are absent from the JSON output.
