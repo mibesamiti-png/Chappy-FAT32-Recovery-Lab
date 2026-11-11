@@ -107,8 +107,12 @@ foreach($case in $cases){
         'mid_eb58' {Set-D7Entry $img 4096 17 ([Convert]::ToUInt32('000058EB',16))}
         'root_free' {Set-D7Entry $img 4096 2 0}
         'root_cycle' {
-            Set-D7Entry $img 4096 2 3
-            Set-D7Entry $img 4096 3 2
+            # Put the same cycle in both mirrors. A mirror-only difference
+            # must NOT mask the loss of direct chain-cycle detection in R7.
+            foreach($base in @(4096,4608)){
+                Set-D7Entry $img $base 2 3
+                Set-D7Entry $img $base 3 2
+            }
         }
         'mid_free' {
             Set-D7Entry $img 4096 17 0
