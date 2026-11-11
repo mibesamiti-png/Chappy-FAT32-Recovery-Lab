@@ -70,3 +70,13 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - C [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) is still UNMERGED at last reviewed `6b4b3ab`; cumulative I/O safeguards now pass synthetic CI, but output alias/physical device path and free-form report sanitization and ZIP integrity semantics remain A blockers.
 - New B/D continuation branches and exact next tasks: `docs/TEAM_DISPATCH.md`. **Three of four current parallel stream deliverables integrated** (B/D/A); C is pending review hardening. That ratio is NOT a recovered data rate.
 - User's real 31GB microSD master IMG has not been scanned by this GitHub workflow and must never be modified or uploaded. Actual restored files verified: none confirmed. Legacy v0.5 import remains pending.
+
+
+## Current Team A checkpoint — 2026-11-11 (B14/D13/A15 integrated)
+
+- **B PR #14** hierarchy evidence graph merged into `main`, squash `5077d38f6a90013546b916b9aabac23ae7ac0fc9`. Exact-head B PowerShell 5.1 + privacy CI passed. It produces candidate graph metadata, not verified paths. Issue #8 still open.
+- **D PR #13** EB58-pattern mapping and FAT-offset hypotheses merged into `main`, squash `9fd8c9aa0e4fb4df937553c8679f220effbeb06f`. Exact-head D PowerShell 5.1 R1/R2/R3 P1/P2 and privacy CI passed. No cause of corruption established. Issue #9 still open.
+- **A PR #15** opt-in regular-local-IMG read-only *aggregate preflight* merged, squash `5fbb7be40e6cdd304806974f6b0526f667feb47d`. New synthetic FAT32 test fixture, explicit consent and source path/device/reparse checks, no extraction/writes/reports/private names. 7-suite isolated synthetic runner now covers B/D/A. Exact-head branch Windows CI and [main post-merge CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42975361336) PASS.
+- **C PR #5 still DRAFT/UNMERGED**, last A-reviewed `03786895`: global I/O bound and report sanitization fixed, but secure export path/device/reparse validation and explicit structural-only ZIP integrity caveats are P1 merge blockers.
+- **Real 31GB IMG must NOT be scanned yet**; local trial approval checklist: `docs/LOCAL_READONLY_APPROVAL_GATE.md`. No actual original user data has been accessed via GitHub, recovered or validated.
+- Next B/D continuation tasks and new branches in `docs/TEAM_DISPATCH.md`; A retains Issue #1 for local safety acceptance and integration; B #8 and D #9 remain open.
