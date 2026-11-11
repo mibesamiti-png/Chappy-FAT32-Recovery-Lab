@@ -22,7 +22,9 @@ $tests=@(
     'tests\Test-DirectoryScanner.ps1',
     'modules\fat-analysis\tests\Run-TeamD.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1',
-    'modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1'
+    'modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R3-Eb58.Tests.ps1',
+    'tests\Test-LocalReadOnlyPreflight.ps1'
 )
 $passed=0
 Push-Location $root
