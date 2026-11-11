@@ -1,4 +1,17 @@
-# Copy/paste start instructions for parallel ChatGPT teams
+# Start here: one identical prompt for all chats
+
+The canonical shared copy/paste prompt is:
+
+**[UNIVERSAL_BOOTSTRAP_PROMPT.md](UNIVERSAL_BOOTSTRAP_PROMPT.md)**
+
+Paste the same prompt into your existing A/B/C/D chats. Every chat retains its assigned role and fetches the latest GitHub instructions before taking the next task.
+
+The current role/branch routing is **[TEAM_DISPATCH.md](TEAM_DISPATCH.md)**. The live rules are **[UNIVERSAL_WORK_INSTRUCTION.md](UNIVERSAL_WORK_INSTRUCTION.md)**.
+
+---
+
+## Legacy role-specific starting instructions (reference only)
+
 
 The GitHub repository is PUBLIC. Code and synthetic fixtures only: https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab
 
