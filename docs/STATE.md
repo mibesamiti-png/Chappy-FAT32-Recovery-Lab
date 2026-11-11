@@ -49,3 +49,13 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - **Main integration state: 2/3 team PRs merged; C is pending**.
 - No real 31GB IMG was accessed by these GitHub tests; no recovery success or original file validation has been established. Do not use the new modules on the real IMG until A's local safety-validation workflow is reviewed.
 - Standalone A local runner remains pending. Import of legacy v0.5 is also pending and must not be assumed complete.
+
+
+## Team A new dispatch — 2026-11-11 (supersedes previous B/D waiting status)
+
+- **Team B R2 assigned:** [Issue #8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8), branch `feature/b-directory-r2-20261111`. Scoped work: false-positive reduction, confidence-aware directory hierarchy candidates, malformed LFN robustness, synthetic Windows tests. Original B R1 remains merged.
+- **Team D R3 assigned:** [Issue #9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9), branch `research/d-fat-r3-20261111`. Scoped work: FAT1/FAT2 bounded range differences, EB-58 distribution, cluster-chain anomaly statistics with explicit uncertainty and budgets. Original D R1/R2 remains merged.
+- Both new branches were created from `main` SHA `c7ff118acf9f667aef45cdc2b784269f666d174c`, and neither new issue is completed at assignment.
+- **Team C** remains on existing Draft PR #5, Issue #3, awaiting its A review fixes; no change in ownership.
+- Latest live roster: `docs/TEAM_DISPATCH.md`. The **same universal prompt** may now be pasted into B, C and D chat sessions without rewriting.
+- All teams work on synthetic fixtures only, report PR+CI evidence, and may not use or upload the real 31GB master IMG; confirmed recovery count remains unknown.
