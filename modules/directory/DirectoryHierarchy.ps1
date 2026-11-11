@@ -2,6 +2,14 @@
 # Team B R2: pure metadata graph. No stream, file IO, FAT access or path reconstruction.
 # Dot-source this file; call after Get-ChappyDirectoryCandidates.
 
+# Confidence grades are structural candidate evidence, never verified paths.
+# Old/unrecognized upstream grades intentionally fall back to partial.
+function Get-ChappyBHierarchyEvidenceGrade {
+    param([object]$Value)
+    if ($Value -is [string] -and $Value -ceq 'probable') { return 'probable' }
+    return 'partial'
+}
+
 function Get-ChappyDirectoryHierarchyEvidence {
     [CmdletBinding()]
     param(
@@ -47,10 +55,12 @@ function Get-ChappyDirectoryHierarchyEvidence {
         if ($cluster -lt 2) { continue }
         $key = [string]$cluster
         if ($nodeMap.ContainsKey($key)) { continue }
+        $nodeGrade = Get-ChappyBHierarchyEvidenceGrade $c.confidence
         $node = [pscustomobject]@{
             cluster = $cluster
             isRoot = [bool]$c.isRoot
             acceptanceReason = [string]$c.decisionReason
+            confidence = $nodeGrade
             parentClusterHint = $c.parentClusterHint
             linkStatus = 'unclassified_candidate'
         }
@@ -84,14 +94,26 @@ function Get-ChappyDirectoryHierarchyEvidence {
             [void]$warnings.Add('hierarchy_edge_limit')
             break
         }
+        $parentGrade = [string]$nodeMap[$parentKey].confidence
+        $childGrade = [string]$nodeMap[$childKey].confidence
+        $entryGrade = Get-ChappyBHierarchyEvidenceGrade $entry.confidence
+        $edgeEvidence = @('accepted_parent_container', 'directory_entry', 'accepted_child_container')
+        if ($parentGrade -ne 'probable') { $edgeEvidence += 'parent_container_weak_or_ungraded' }
+        if ($childGrade -ne 'probable') { $edgeEvidence += 'child_container_weak_or_ungraded' }
+        if ($entryGrade -ne 'probable') { $edgeEvidence += 'directory_entry_weak_or_ungraded' }
         $edge = [pscustomobject]@{
             parentCluster = $parent
             childCluster = $child
             entryOffsetBytes = [long]$entry.offsetBytes
             source = 'observed_directory_entry'
             relationStatus = 'pending_evidence'
+            # A link can only be probable when both containers and the
+            # directory entry are probable AND the dotdot hint corroborates.
             confidence = 'partial'
-            evidence = @('accepted_parent_container', 'directory_entry', 'accepted_child_container')
+            parentContainerConfidence = $parentGrade
+            childContainerConfidence = $childGrade
+            directoryEntryConfidence = $entryGrade
+            evidence = @($edgeEvidence)
         }
         [void]$edges.Add($edge)
         if (-not $parentsByChild.ContainsKey($childKey)) { $parentsByChild[$childKey] = @{} }
@@ -156,7 +178,11 @@ function Get-ChappyDirectoryHierarchyEvidence {
             $edge.relationStatus = 'parent_hint_conflict'
         } else {
             $edge.relationStatus = 'parent_hint_corroborated'
-            $edge.confidence = 'probable'
+            if ($edge.parentContainerConfidence -eq 'probable' -and
+                $edge.childContainerConfidence -eq 'probable' -and
+                $edge.directoryEntryConfidence -eq 'probable') {
+                $edge.confidence = 'probable'
+            }
             $edge.evidence = @($edge.evidence) + @('validated_dotdot_matches')
         }
         if ($parentRefs.Count -eq 1 -and [int]$parentRefs[$parentKey] -eq 1 -and
@@ -209,6 +235,19 @@ function Get-ChappyDirectoryHierarchyEvidence {
     if ($depthLimited -gt 0) { [void]$warnings.Add('hierarchy_ancestor_depth_limit') }
     if ($ancestorWorkLimited) { [void]$warnings.Add('hierarchy_ancestor_work_limit') }
 
+    # An incomplete graph cannot rule out unseen, conflicting parent entries.
+    # Preserve all links as candidates but never elevate them to probable.
+    $probableEdges = 0L
+    $partialEdges = 0L
+    foreach ($edge in $edges) {
+        if ($incomplete -and $edge.confidence -eq 'probable') {
+            $edge.confidence = 'partial'
+            $edge.evidence = @($edge.evidence) + @('hierarchy_coverage_incomplete')
+        }
+        if ($edge.confidence -eq 'probable') { $probableEdges++ }
+        else { $partialEdges++ }
+    }
+
     # Build a set of conflicted children once. O(nodes+edges), not O(nodes*edges).
     $conflictedChildren = @{}
     foreach ($edge in $edges) {
@@ -236,6 +275,8 @@ function Get-ChappyDirectoryHierarchyEvidence {
         metrics = [pscustomobject]@{
             nodes = $nodes.Count
             edgeAssertions = $edges.Count
+            probableEdgeAssertions = $probableEdges
+            partialEdgeAssertions = $partialEdges
             hintCount = $hints.Count
             unresolvedTargetReferences = $unobservedTargets
             metadataItemsVisited = $metadataSeen
