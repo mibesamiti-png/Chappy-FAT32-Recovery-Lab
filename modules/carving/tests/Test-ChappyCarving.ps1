@@ -22,12 +22,12 @@ function MakeZip([bool]$is3mf) {
     return ,$bytes
 }
 # Deterministic single-entry STORED ZIP, with standard CRC32 test vector "123456789".
-function MakeStoredZip([bool]$Corrupt) {
+function MakeStoredZip([bool]$Corrupt,[int]$PayloadSize=9) {
     $mem=New-Object IO.MemoryStream
     $writer=New-Object IO.BinaryWriter($mem)
     try {
         $fileName=[Text.Encoding]::ASCII.GetBytes('synthetic.txt')
-        $data=[Text.Encoding]::ASCII.GetBytes('123456789')
+        $data=if ($PayloadSize -eq 9) {[Text.Encoding]::ASCII.GetBytes('123456789')} else {New-Object byte[] $PayloadSize}
         if ($Corrupt) { $data[3]=[byte][char]'X' }
         $knownCrc=[uint32]3421780262L
         $writer.Write([uint32]0x04034b50)
@@ -131,6 +131,17 @@ try {
     Assert ($crcJson.items[0].crc32Status -eq 'mismatch') 'sanitized JSON retains CRC mismatch status'
     Assert (-not ((Get-Content -LiteralPath $crcReport -Raw) -match 'synthetic.txt')) 'report never includes inner filename'
     Write-Host 'PASS: ZIP STORED CRC-32 known vector, mismatch and sanitized JSON'
+    # >64 KiB STORED entry is structurally recognized, but content CRC is not checked.
+    $largeStored=MakeStoredZip $false 65537
+    $largeStoredPath=Join-Path $fixtureRoot 'stored_over_crc_budget.img'
+    WriteSynthetic $largeStoredPath $largeStored
+    $largeStoredScan=Scan $largeStoredPath
+    $largeStoredHits=@($largeStoredScan.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($largeStoredHits.Count -eq 1) 'large stored ZIP candidate found'
+    Assert ($largeStoredHits[0].crc32Status -eq 'not_checked' -and $largeStoredHits[0].crc32CheckedEntries -eq 0) 'CRC byte-budget skip explicit'
+    Assert ($largeStoredHits[0].checks -eq 'zip_structure_with_crc_unchecked') 'no full integrity claim when CRC skipped'
+    Write-Host 'PASS: bounded CRC budget marks unchecked ZIP content'
+
 
     # Truncated central directory is not verified.
     $broken=New-Object byte[] ($z.Length-9)
