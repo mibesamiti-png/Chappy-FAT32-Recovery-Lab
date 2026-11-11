@@ -20,12 +20,14 @@ if(-not [IO.File]::Exists($exe)){throw 'powershell.exe not found; cannot validat
 $tests=@(
     'tests\Test-QuickProbe.ps1',
     'tests\Test-DirectoryScanner.ps1',
+    'modules\carving\tests\Test-ChappyCarving.ps1',
     'modules\fat-analysis\tests\Run-TeamD.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-Eb58.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-ChainStats.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-Consistency.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R4-Geometry.Tests.ps1',
     'tests\Test-LocalReadOnlyPreflight.ps1',
     'tests\Test-SyntheticDamageBenchmark.ps1'
 )
