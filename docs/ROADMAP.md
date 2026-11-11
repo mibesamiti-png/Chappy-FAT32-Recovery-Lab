@@ -147,3 +147,17 @@ Research process: **R0 primary-source survey + licenses -> R1 freeze main baseli
 | A #1 | Review source provenance/license, compare identical fixture/baseline, negative controls, final-head Windows 5.1 and privacy gates | adopt_experimental / research_only / revise / reject, no automatic merge |
 
 **Baseline before new research:** 14/14 isolated artificial Windows test entry scripts PASS at `main` `4fcf0227f1c57d78f3e2a4166d5ea5c0b558baf4`, [Actions 43005908277](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43005908277). This is not a real reconstruction success score. Actual 31GB image trial is NOT APPROVED.
+
+
+## Research-first A integration checkpoint and next scoped R8/R6 work — 2026-11-11
+
+| Team | Completed research / A judgment | Next bounded assignment |
+| --- | --- | --- |
+| A | Reviewed/merged B [#49](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/49), C [#51](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/51), D [#50](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/50); [A PR #52](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/52) expanded **15/15 isolated Windows synthetic suites PASS** on [post-merge main](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43034313752) | Review next R0 sources/license/true A/B comparisons; harden actual-read-only local gate *on artificial fixtures only*; no real IMG trial authorized |
+| B | **adopt_experimental**: R7 conflicting-container evidence default-OFF, 13 invented cases false probable-edge claims 3 -> 0 with same TP2 | [Issue #53](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/53): conflicting parent outside scan coverage / corrupted LFN; same-corpus opt-in guards, no authentic path claims |
+| C | **research_only**: finite two-part candidate pairing, known artificial fragments; oracle tail offsets, false positives and ambiguous cases prevent production adoption | [Issue #54](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/54): bounded **non-oracle tail-offset discovery** with fair resource budgets and original-byte truth |
+| D | **research_only**: stratified midpoint FAT anomaly sample found 5/6 selected bad artificial cases but missed matching-mirror root cycle previously found by R6 | [Issue #55](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/55): additive remote anomaly + root cycle evidence under single global quota; keep R6 default |
+
+**Evidence vs recovery:** B structural evidence confidence, C artificially selected candidate-pair matches, D synthetic suspicious-marker detection are **different metrics**, not one overall recovery percentage. A's old selected seven-case 2MiB artificial IMG benchmark still **10/14 expected and observed byte-identical candidate slices**; this is not a real-world restore success rate. No actual user media has been scanned and real master IMG preflight remains **NOT APPROVED**.
+
+R0–R4 research-first protocol and R4 decisions: [Protocol](ALGORITHM_RESEARCH_PROTOCOL.md), [Decision register](R7_ALGORITHM_AB_DECISIONS.md).
