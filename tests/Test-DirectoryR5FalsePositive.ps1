@@ -119,7 +119,7 @@ foreach($case in $r5Fixtures) {
     if($seen.ContainsKey($case.id)) { throw 'Duplicate synthetic case ID' }
     $seen[$case.id]=$true
     $result=Read-ChappyBDirectoryCluster -Buffer $case.bytes -Cluster 60 -OffsetBytes 0 -MaxCluster 1000 -IsRoot $case.root -IncludeDeleted:$case.deleted
-    if($null -ne $case.expectedReason -and $result.decisionReason -ne $case.expectedReason) {
+    if(-not [string]::IsNullOrEmpty($case.expectedReason) -and $result.decisionReason -ne $case.expectedReason) {
         throw ('Unexpected synthetic container reason for ' + $case.id)
     }
     $legacyAccept=[bool]$result.accepted # unchanged acceptance predicate
