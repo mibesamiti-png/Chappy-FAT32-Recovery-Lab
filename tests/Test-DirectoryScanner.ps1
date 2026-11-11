@@ -288,6 +288,10 @@ try {
         $badLimit = $false
         try { $null=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxAncestorDepth 0 } catch { $badLimit = $true }
         Assert-B $badLimit 'Invalid hierarchy traversal limit rejected'
+        $workLimited = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxAncestorSteps 1
+        Assert-B ($workLimited.scanIncomplete -and $workLimited.status -eq 'partial' -and
+                  $workLimited.metrics.ancestorSteps -le 1 -and
+                  $workLimited.warnings -contains 'hierarchy_ancestor_work_limit') 'Global ancestor work budget enforces safe cutoff'
         Assert-B ((ConvertTo-Json -InputObject $anomalies -Depth 8) -notmatch 'SYNTHETIC_ONLY') 'Graph does not propagate entry names'
     } finally {$read.Dispose()}
     Assert-B ((Hash-B $imagePath) -eq $before) 'Source SHA-256 unchanged'
