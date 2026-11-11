@@ -220,7 +220,7 @@ try {
     $r=Get-ChappyFatVbrMirrorCrossEvidence -Stream $stop -Candidates $cands
     Check-D6 ($r.scanIncomplete -and $r.status -eq 'partial') 'Early end in backup FAT2 marks incomplete'
     Check-D6 ($r.items[1].fatCopies[1].reasonCodes -contains 'io.fat_entry_truncated') 'Partial FAT entry noted'
-    Check-D6 ($r.metrics.bytesRead -eq 81) 'Actual short return counted, not requested bytes'
+    Check-D6 ($r.metrics.bytesRead -eq 77) 'Actual short return counted: 72 full prior bytes plus 4+1 of final FAT copy'
 }finally{$stop.Dispose()}
 $w=[IO.MemoryStream]::new($healthy,$true)
 try {Check-D6 (Throws-D6 {Get-ChappyFatVbrMirrorCrossEvidence -Stream $w -Candidates $cands}) 'Writable stream rejected'}
