@@ -6,19 +6,19 @@
 | --- | --- | --- |
 | 0 | Local raw image backup, no writes to source | Image exists locally; copy integrity not independently proven |
 | 1 | Read-only FAT32 geometry and QuickProbe | Prototype; synthetic Windows tests passed |
-| 2 | Independent FAT anomaly diagnosis (D) | Assigned; not started |
-| 3 | FAT-independent directory candidates (B) | Assigned; not started |
-| 4 | G-code / 3MF content carving (C) | Assigned; not started |
-| 5 | A integration runner + privacy gate | Privacy gate + QuickProbe synthetic CI passes; integration pending |
+| 2 | Independent FAT anomaly diagnosis (D) | **R1 merged via PR #6**; synthetic 25/25 Windows tests passed |
+| 3 | FAT-independent directory candidates (B) | **R1 merged via PR #7**; synthetic 22/22 Windows tests passed |
+| 4 | G-code / 3MF content carving (C) | **Draft PR #5, CI passed; A blocked merge pending global I/O bounds and privacy hardening** |
+| 5 | A integration runner + privacy gate | **Combined Windows CI QuickProbe+B+D R1/R2 PASS**; standalone local runner pending |
 | 6 | Controlled local validation against master IMG | Pending; do not run unreveiwed code |
 | 7 | Restore candidates into separate output folder | Pending |
-| 8 | Optional repair-plan research on disposable copies | Pending; never auto-repair master |
+| 8 | Optional repair-plan research on disposable copies | **D synthetic in-memory only simulation merged**; disk/work-copy repair not authorized |
 
 ## Current priority
 
-D investigates repeated FAT bytes independently, B explores metadata when FAT fails, C tests bounded signatures, A ensures safety and integration.
+B and D delivered their assigned initial modules and A merged them. C must address A's review on PR #5 (global byte/probe budget, adversarial signature density, output path and report sanitization). A maintains combined synthetic CI and designs local-only gated verification of the original IMG. No real IMG scan with these new modules yet.
 
-Current baseline v0.5 remains a **legacy experiment**, not approved for recovery/repair against user data. QuickProbe v0.5.1 is available as read-only reference.
+Current baseline v0.5 remains a **legacy experiment**, not approved for recovery/repair against user data. **A integration round: 2 of 3 B/C/D PRs merged; C under review.** QuickProbe v0.5.1 is available as read-only reference.
 
 ## Success criteria
 
