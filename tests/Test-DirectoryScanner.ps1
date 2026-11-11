@@ -252,6 +252,8 @@ try {
         . (Join-Path $PSScriptRoot 'Test-DirectoryR5FalsePositive.ps1')
         # R6 no false probable paths: confidence comes from observed candidates.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR6HierarchyConfidence.ps1')
+        # R7 opt-in overlapping-container ambiguity and same-corpus A/B QA.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR7HierarchyEvidence.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
