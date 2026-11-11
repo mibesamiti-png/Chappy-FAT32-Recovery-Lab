@@ -99,7 +99,7 @@ try {
 }
 finally {$s.Dispose()}
 
-$trunc=New-Object 'byte[]' 4300
+$trunc=New-Object 'byte[]' 4310
 $full=New-DChainImage
 [Array]::Copy($full,0,$trunc,0,$trunc.Length)
 $s=Open-DChainRO $trunc
@@ -112,7 +112,7 @@ finally {$s.Dispose()}
 
 $s=Open-DChainRO (New-DChainImage)
 try {
-    $r=Get-ChappyFatChainAnomalyStats -Stream $s -Fat1OffsetBytes 512 -Fat2OffsetBytes 1099511627776 -FatLengthBytes 1099511627776 -MaxDataCluster 100 -StartClusters ([long[]]@(2)) -MaxTotalEntries 2 -MaxReadBytes 8
+    $r=Get-ChappyFatChainAnomalyStats -Stream $s -Fat1OffsetBytes 512 -Fat2OffsetBytes 2199023255552 -FatLengthBytes 1099511627776 -MaxDataCluster 100 -StartClusters ([long[]]@(2)) -MaxTotalEntries 2 -MaxReadBytes 8
     Check-DChain ($r.scanIncomplete -and $r.copies[1].terminalCounts.truncated -eq 1 -and $r.metrics.bytesRead -le 8) 'Huge declared FAT geometry stops safely on absent mirror'
 }
 finally {$s.Dispose()}
