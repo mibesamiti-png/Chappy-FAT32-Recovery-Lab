@@ -96,3 +96,15 @@ These are planning milestones, not actual recovery percentages. Do not test or c
 **In progress, intentionally not merged:** [A Draft PR #22](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/22) tests seven artificial FAT32-like IMG damage scenarios and independently compares known original G-code / 3MF bytes. Current measured artificial result is **6/14 exact candidate slices**, target **10/14**, due to the C candidate scanning order bug [Issue #23](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/23). This is not a real user file recovery rate; do not expand inference beyond the tiny synthetic corpus. C fix -> A review/merge -> re-run A CI -> only then consider merging PR #22.
 
 Future corpus work: correctly formatted full-size synthetic FAT32 volumes, genuine fragmentation and reconstruction, controlled bit rot and metadata/data damage, size-bound performance and byte-for-byte verification. Real IMG remains local-only, read-only and NOT APPROVED for this experimental runner yet.
+
+
+## Current integration and next-round roadmap — 2026-11-11
+
+| Team | Latest accepted artifact | Next independent P1 |
+| --- | --- | --- |
+| A | [PR #22](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/22): 7-case 2MiB artificial damaged-IMG candidate/byte-exact benchmark 10/14 as expected; [PR #30](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/30): central 12-suite Windows synthetic/Privacy CI | Further safe local-only preflight hardening and larger/fragmented artificial recovery benchmark; actual 31GB trial **still not approved** |
+| B | [PR #27](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/27): non-contiguous/orphan/false-positive directory test fixture, merged | [Issue #31](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/31): two-entry file-data masquerade precision evidence and regression |
+| C | [PR #29](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/29): fixed missing earlier G-code behind later 3MF, merged | [Issue #32](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/32): tightly bounded DEFLATE/CRC verification for small artificial ZIP/3MF entries |
+| D | [PR #28](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/28): bounded BPB/MBR/backup-VBR/FSInfo geometry trust research, merged | [Issue #33](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/33): primary/backup VBR disagreement evidence without selecting a repair |
+ 
+**Verification:** main [Windows 12/12 synthetic suites PASS, #42991261004](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42991261004). The **10/14 artificial selected-fixture byte-match ratio (71.43%) is NOT an actual recovery rate**. The program has not been run on the user's real 31GB master IMG; user-owned file recoveries and integrity remain unknown.
