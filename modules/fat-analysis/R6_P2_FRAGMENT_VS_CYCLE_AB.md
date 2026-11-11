@@ -27,9 +27,31 @@ This P2 **does not implement a new production algorithm**. The tested candidate 
 
 `tests/Run-TeamD-R6-FixtureChainAB.Tests.ps1` compares unchanged `Get-ChappyFatMirrorWindows` with a bounded independent pipeline using the same mirror comparison plus unchanged `Get-ChappyFatChainAnomalyStats` on fixed generic numeric starts 2..8. The script generates artificial cases in memory; verifies SHA-256 before and after each test, the upstream untrusted BPB/geometry reason, equal hard source budget, total/unique physical read bytes and read calls, partial-returning stream behavior, plus write-handle rejection. M01's noncontiguous chain must not become a cycle. M03's same-corrupted FAT copies must still produce cycles while mirror differences remain zero.
 
-**Planned scoring (not results until exact-head Windows CI):** mirror-only expected TP1 FP0 FN1 TN2; mirror+cycle expected TP2 FP0 FN0 TN2; two out-of-scope cases remain unknown. Any other observed result or false positive must be reported, **not silently relabeled to pass**. No original-file byte reconstruction is attempted; so exact recovered-file bytes and real-media recovery rates are **not applicable**.
+### R3: measured same-fixture Windows PowerShell 5.1 results (synthetic only)
 
-**Measurement status:** CI, actual bytes/unique bytes, TP/FP/FN/TN and final-head privacy gate pending. Same-corpus resource fairness and implementation correctness to be independently checked by Team A.
+All six generated cases and the early-stop negative test passed using the **unchanged baseline D modules** and identical artificial input arrays. The scorer held case truth/manifest and verified each generated image's SHA-256 before/after. All source streams were non-writable.
+
+| Metric | Baseline mirror-only | Bounded mirror + chain-cycle research candidate | Scope |
+| --- | ---: | ---: | --- |
+| TP / FP / FN / TN | **1 / 0 / 1 / 2** | **2 / 0 / 0 / 2** | **Only M00, M01, M02, M03** |
+| Precision | 1/1 = 100% | 2/2 = 100% | Chosen four cases, not real disk |
+| Recall | 1/2 = 50% | 2/2 = 100% | Chosen two anomalies, not real recovery |
+| Out-of-scope/unknown cases | 2 | 2 | M05 requires independent directory file-owner evidence; X02 has payload truncation |
+| Actual bytes read across all six | **12,288** | **9,604** | Hard cap **2,048 per method per case** |
+| Distinct physical source bytes across six | **12,288** | **9,216** | Repeated reads must not count as unique evidence |
+| Physical duplicate bytes across six | 0 | 388 | Actual minus distinct; not deduped in source |
+| Stream Read() requests across six | **24** | **121** | Candidate has more small random reads |
+| M03 observed cycles (both FATs combined) | not traced | **4** | FAT1/FAT2 contents identical; no mirror mismatch |
+| False file-integrity/repair/winner claims | 0 | 0 | Only evidence; no reconstruction |
+| Artificial source SHA unchanged | 6/6 | 6/6 | Internal scorer checks |
+| Actual file bytes recovered/verified | not applicable | not applicable | No file output |
+| Reliable peak memory or speed gain | not measured | not measured | No repeatable benchmark |
+
+Direct synthetic Windows PowerShell 5.1 run: [CI #43074626538](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43074626538) **SUCCESS**, new P2 **55/55 assertions PASS**; previous D suites also PASS. [Privacy + isolated synthetic integration #43074626461](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43074626461) **SUCCESS**. Those jobs tested code commit `7d9fdc4e1cca7dc10462d648ce8a73524eb40652`. The final documentation-only head still requires exact-head CI confirmation.
+
+**Observed per-case details:** M00/M01 mirror mismatch 0 and cycle 0; M02 mirror mismatch 1 and cycle 0; M03 mirror mismatch 0 but four cycle observations over the same corrupted FAT1/FAT2; M05 mismatch/cycle 0 despite an independently known false file-owner link; X02 mismatch/cycle 0 despite independently known payload truncation (parser reported `geometry.partition_exceeds_stream`). Short-read fault on M03 at **1,032 aggregate actual bytes** stayed incomplete in both methods and preserved the same generated input SHA. M03's 1,608 actual candidate bytes covered 1,536 distinct physical bytes; a repeatedly traversed link cannot create fresh source coverage.
+
+**Not a fair speed comparison:** Both pipelines obey the same maximum total 2,048-byte budget, but the candidate typically reads fewer bytes and issues more small Read() calls; timings and repeated-run variability were not measured. A/B comparison demonstrates a single missing class of evidence in the current mirror-only method, not that the candidate dominates all resource costs.
 
 ## R4. Team A acceptance and limitations
 
