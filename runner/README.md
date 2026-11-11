@@ -1,13 +1,13 @@
 # Team A — synthetic regression runner
 
-The Windows PowerShell 5.1 script `runner/Invoke-ChappySyntheticRegression.ps1` runs synthetic-only suites separately, including QuickProbe, Team B metadata scanning, Team D FAT diagnosis, Team D synthetic patch rollback, and Team D R3 mirror windows.
+The Windows PowerShell 5.1 script `runner/Invoke-ChappySyntheticRegression.ps1` runs synthetic-only suites separately, including QuickProbe, Team B metadata scanning/hierarchy, Team D FAT diagnosis, Team D synthetic patch rollback, Team D R3 mirror windows and EB58, plus Team A local read-only preflight on a disposable artificial IMG.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\runner\Invoke-ChappySyntheticRegression.ps1
 ```
 
 - No arguments; **cannot accept a path to a real IMG**.
-- Runs exactly five committed test programs; each generates artificial fixtures only.
+- Runs exactly seven committed test programs; each generates artificial fixtures only.
 - Launches a separate Windows PowerShell 5.1 process per suite to avoid leaked globals/functions and misleading pass counts.
 - Any nonzero exit code or missing test fails the entire job.
 - GitHub Actions uses this runner in the privacy gate.
