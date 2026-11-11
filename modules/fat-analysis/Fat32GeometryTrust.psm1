@@ -230,7 +230,7 @@ function Get-ChappyFatGeometryTrust {
                         $fsInfo=[pscustomobject]@{
                             leadSignatureObserved=([BitConverter]::ToUInt32($fsRaw,0) -eq 0x41615252)
                             structureSignatureObserved=([BitConverter]::ToUInt32($fsRaw,484) -eq 0x61417272)
-                            trailerSignatureObserved=([BitConverter]::ToUInt32($fsRaw,508) -eq 0xAA550000)
+                            trailerSignatureObserved=([BitConverter]::ToUInt32($fsRaw,508) -eq ([Convert]::ToUInt32('AA550000',16)))
                         }
                         if(-not $fsInfo.leadSignatureObserved -or
                             -not $fsInfo.structureSignatureObserved -or
