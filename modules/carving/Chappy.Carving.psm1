@@ -120,12 +120,12 @@ function Get-CDeflateCrc32 {
     $raw=Read-CBytes $Stream $Offset ([int]$CompressedBytes) $Budget
     if ($null -eq $raw) { return [pscustomobject]@{status='aborted';crc32=$null} }
     Initialize-CCrcTable
-    $memory=New-Object IO.MemoryStream(,$raw)
+    $memory=[IO.MemoryStream]::new($raw)
     $inflater=$null
     $crc=[uint32]4294967295L
     $produced=0L
     try {
-        $inflater=New-Object IO.Compression.DeflateStream($memory,[IO.Compression.CompressionMode]::Decompress,$false)
+        $inflater=[IO.Compression.DeflateStream]::new($memory,[IO.Compression.CompressionMode]::Decompress,$false)
         $buf=New-Object byte[] 4096
         # A fixed 65,536-byte maximum is checked before every read. An attempted
         # overrun performs at most one 4 KiB read and never stores that output.
