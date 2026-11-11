@@ -3,12 +3,10 @@ on:
   push:
     paths:
       - 'modules/fat-analysis/**'
-      - 'modules/fat-analysis/tests/Run-TeamD.Tests.ps1'
       - '.github/workflows/team-d-powershell51.yml'
   pull_request:
     paths:
       - 'modules/fat-analysis/**'
-      - 'modules/fat-analysis/tests/Run-TeamD.Tests.ps1'
       - '.github/workflows/team-d-powershell51.yml'
   workflow_dispatch:
 jobs:
@@ -16,6 +14,9 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run artificial-image forensic tests on Windows PowerShell 5.1
+      - name: Run R1 artificial-image forensic tests on Windows PowerShell 5.1
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD.Tests.ps1
+      - name: Run R2 in-memory synthetic FAT patch and rollback tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1
