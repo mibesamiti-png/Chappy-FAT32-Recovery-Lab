@@ -22,6 +22,15 @@ jobs:
       - name: Synthetic FAT32 QuickProbe regression test
         shell: powershell
         run: .\tests\Test-QuickProbe.ps1
+      - name: Integrated Team B directory synthetic regression
+        shell: powershell
+        run: .\tests\Test-DirectoryScanner.ps1
+      - name: Integrated Team D FAT forensic synthetic regression
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD.Tests.ps1
+      - name: Integrated Team D synthetic patch and rollback regression
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1
       - name: Confirm this gate is not a security audit
         shell: powershell
         run: Write-Host 'Manual review still required; do not commit any user data.'
