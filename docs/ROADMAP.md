@@ -108,3 +108,15 @@ Future corpus work: correctly formatted full-size synthetic FAT32 volumes, genui
 | D | [PR #28](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/28): bounded BPB/MBR/backup-VBR/FSInfo geometry trust research, merged | [Issue #33](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/33): primary/backup VBR disagreement evidence without selecting a repair |
  
 **Verification:** main [Windows 12/12 synthetic suites PASS, #42991261004](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42991261004). The **10/14 artificial selected-fixture byte-match ratio (71.43%) is NOT an actual recovery rate**. The program has not been run on the user's real 31GB master IMG; user-owned file recoveries and integrity remain unknown.
+
+
+## Latest team milestones and next P1 tasks — 2026-11-11 (R5 completed)
+
+| Team | Newly integrated, Windows CI verified | Next bounded task |
+| --- | --- | --- |
+| A | [PR #37](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/37): 13/13 isolated Windows synthetic suites; [latest baseline main CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42997918561) | Local read-only approval hardening (Windows aliases/TOCTOU/malformed geometry) and standards-shaped fragmented synthetic IMG, without touching actual user IMG |
+| B | [PR #34](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/34): evidence-coded partial weak directory candidates, no loss of known artificial orphans | [Issue #38](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/38): propagate weak confidence through candidate hierarchy, prevent unverifiable path claims |
+| C | [PR #36](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/36): synthetic-only default-off capped DEFLATE CRC, no actual file integrity certification | [Issue #39](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/39): synthetic fragmentation detection/partial evidence, not guessed reconstruction |
+| D | [PR #35](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/35): MBR-anchored read-only independent primary/backup VBR plausibility with no winner | [Issue #40](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/40): capped cross-evidence from VBR hypotheses and FAT mirror windows |
+
+**No real-world recovery result:** A's selected seven artificial image scenarios produced expected 10/14 original-byte-matching candidate slices. This does not translate to a 71.43% success rate on any real filesystem. Original 31GB IMG inspection and extraction remain unapproved and unperformed.
