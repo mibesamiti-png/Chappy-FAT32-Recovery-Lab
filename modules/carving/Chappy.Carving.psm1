@@ -1,5 +1,6 @@
 #requires -Version 5.1
 Set-StrictMode -Version Latest
+$script:CStoredCrcTable = $null
 
 function Read-CBytes {
     param([IO.Stream]$Stream, [long]$Offset, [int]$Count)
