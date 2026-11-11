@@ -116,6 +116,9 @@ try {
         $jpn=New-ShortB 'JPTEST~1GCO' 0x20 12 121
         foreach($e in (New-LfnB '日本語テスト.gcode' $jpn)) {[void]$root.Add($e)}
         [void]$root.Add($jpn)
+        $longJpn=New-ShortB 'LONGJP~1TXT' 0x20 35 209
+        foreach($e in (New-LfnB '復旧候補_機械部品_長いファイル名🌟.gcode' $longJpn)) {[void]$root.Add($e)}
+        [void]$root.Add($longJpn)
         [void]$root.Add((New-ShortB 'README  TXT' 0x20 15 24))
         [void]$root.Add((New-ShortB 'PARTS      ' 0x10 7 0))
         [byte[]]$badLfn=(New-LfnB 'FALSE-NAME.TXT' (New-ShortB 'BROKEN  TXT' 0x20 16 300))[0]
@@ -157,6 +160,7 @@ try {
         $all=Get-ChappyDirectoryCandidates -Stream $read -Geometry $geo -MaxScanBytes $length -IncludeNames -IncludeDeleted
         Assert-B ($all.errors.Count -eq 0 -and -not $all.scanIncomplete) 'FAT-independent bounded full scan'
         Assert-B (@($all.items|Where-Object {$_.name -eq '日本語テスト.gcode' -and $_.nameSource -eq 'lfn_validated'}).Count -eq 1) 'Japanese LFN and checksum'
+        Assert-B (@($all.items|Where-Object {$_.name -eq '復旧候補_機械部品_長いファイル名🌟.gcode' -and $_.nameSource -eq 'lfn_validated'}).Count -eq 1) 'Multi-entry UTF-16LE Japanese LFN including surrogate pair'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'CHILD.TXT' -and $_.containerCluster -eq 7 -and $_.parentClusterHint -eq 2}).Count -eq 1) 'Subdirectory parent hint'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'INNER.TXT' -and $_.containerCluster -eq 10}).Count -eq 1) 'Nested independent cluster discovery'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'ORPHAN.TXT' -and $_.containerCluster -eq 19}).Count -eq 1) 'Orphan directory discovery'
