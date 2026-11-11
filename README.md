@@ -31,3 +31,9 @@ FAT32破損解析・ファイル救出を研究する **Windows PowerShell 5.1**
 画像・G-code・3MFを含めた実ユーザーデータは **PC内のみ** に保管する。31GBのIMGそのものはGitHubには置かない。人工テスト用データだけをコミットする。
 
 See: [State](docs/STATE.md) · [Team protocol](docs/TEAM_PROTOCOL.md) · [Test policy](docs/TEST_POLICY.md).
+
+## 同一プロンプトによるABCD並列開発
+
+既存のチームA/B/C/Dチャットに、**[共通起動プロンプト](docs/UNIVERSAL_BOOTSTRAP_PROMPT.md)** をそのまま貼り付ける。全チャットで同一文面を使用できる。
+
+指示の正本は [共通運用ルール](docs/UNIVERSAL_WORK_INSTRUCTION.md) と [チーム担当表](docs/TEAM_DISPATCH.md)。担当は各チャットの既存の役割を維持する。新規チャットで担当が未設定の場合は初回だけ担当指定が必要。
