@@ -161,3 +161,15 @@ Research process: **R0 primary-source survey + licenses -> R1 freeze main baseli
 **Evidence vs recovery:** B structural evidence confidence, C artificially selected candidate-pair matches, D synthetic suspicious-marker detection are **different metrics**, not one overall recovery percentage. A's old selected seven-case 2MiB artificial IMG benchmark still **10/14 expected and observed byte-identical candidate slices**; this is not a real-world restore success rate. No actual user media has been scanned and real master IMG preflight remains **NOT APPROVED**.
 
 R0–R4 research-first protocol and R4 decisions: [Protocol](ALGORITHM_RESEARCH_PROTOCOL.md), [Decision register](R7_ALGORITHM_AB_DECISIONS.md).
+
+
+## Current A quality/algorithm roadmap — R8 integration (2026-11-11)
+
+| Area | Most recent verified progress | Next bounded gate |
+| --- | --- | --- |
+| A | [PR #59](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/59) added central D R8 synthetic tests: **16/16 isolated Windows PS5.1 suites PASS** at [PR CI #43043058113](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43043058113), [main post-merge CI #43043449530](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43043449530) PASS | Independent A review of B/C/D new research; artificial read-only path/geometry security; NOT YET a real IMG trial |
+| B | [PR #56](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/56) opt-in numeric coverage guard reduced selected structural FP8 to FP1, retaining TP2, **adopt_experimental/default OFF** | [Issue #60](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/60): independently observed coverage provenance and spoofed byte counter |
+| C | [PR #58](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/58) research-only test helper: five selected two-fragment cases 2 unique / 2 ambiguous / 1 missing true tail, no production recovery | [Issue #61](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/61): remove one privileged fragment hint while retaining strict bounds |
+| D | [PR #57](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/57) independent default-off additive FAT evidence 6/6 anomaly positives in selected corpus, but more reads than R7; **research_only** | [Issue #62](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/62): longer cyclic chains, remote anomaly tradeoffs, distinct coverage |
+
+**Not real file recovery accuracy:** selected artificial seven-case IMG byte match still 10/14, which is not an estimated probability of recovering the user's files. No actual 31GB master IMG test performed or authorized. Reference: [R8 adoption decisions](R8_ALGORITHM_AB_DECISIONS.md) and [local-only approval gate](LOCAL_READONLY_APPROVAL_GATE.md).
