@@ -239,7 +239,7 @@ function Read-ChappyBDirectoryCluster {
         $validCount++
         if ($null -ne $lfnName) { $hasValidLfn = $true }
         $isDeleted = ($first -eq 0xE5)
-        $zeroSizeAllocatedFile = (-not $directory -and $size -eq 0 -and $start -ge 2)
+        $zeroSizeAllocatedFile = (-not $directory -and -not $isDeleted -and $size -eq 0 -and $start -ge 2)
         $oversized = (-not $directory -and $size -gt (($MaxCluster-1L)*[long]$Buffer.Length))
         $visibleName = $null
         $visibleShort = $null
