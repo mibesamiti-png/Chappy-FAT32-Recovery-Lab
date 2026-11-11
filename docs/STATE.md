@@ -24,4 +24,9 @@
 4. A: create shared interfaces, synthetic CI, review and privacy gates.
 
 ## Current work status
-Repository setup and team assignment in progress. No real IMG or real reports committed.
+Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branches created.
+- Windows GitHub Actions privacy gate PASS (run 42962302965, attempt 2).
+- Synthetic valid FAT and repeated EB-58-pattern FAT QuickProbe tests PASS on Windows PowerShell 5.1 (run 42963673830).
+- Draft interface: docs/INTERFACE_V1.md; roadmap: docs/ROADMAP.md.
+- Main v0.5 legacy program and test script are NOT YET imported into the repo. Do not claim otherwise.
+- No real IMG or real reports committed. Recovery success remains unconfirmed.
