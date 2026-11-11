@@ -107,7 +107,8 @@ function Get-CStoredCrc32 {
 # Experimental opt-in only: check one small raw ZIP method-8 payload with built-in
 # DeflateStream (ZIP uses raw DEFLATE, not a zlib header). No path/output APIs.
 # The caller enforces per-entry compressed <=32KiB, expanded <=64KiB, ratio <=64,
-# 16 checked entries, aggregate compressed <=128KiB and expanded <=64KiB.
+# 16 checked entries and aggregate compressed <=128KiB and expanded <=64KiB
+# across the entire scan (not separately for every ZIP candidate).
 # Compressed bytes are acquired ONLY by Read-CBytes, shared with global scan I/O caps.
 # No decompressed content is returned or logged. The loop reads <=4096 bytes/call.
 function Get-CDeflateCrc32 {
@@ -228,9 +229,20 @@ function Test-CZip {
             } elseif ($emode -eq 8 -and $EnableSmallDeflateCrc -and
                       $deflateAttempts -lt 16 -and $comp -gt 0 -and $comp -le 32768L -and
                       $comp -le $deflateCompressedBudget -and $uncomp -le 65536L -and
-                      $uncomp -le $crcBudget -and $uncomp -le ($comp * 64L)) {
+                      $uncomp -le $crcBudget -and $uncomp -le ($comp * 64L) -and
+                      ($null -eq $Budget -or
+                       ($Budget.InflateEntries -lt 16 -and
+                        $comp -le (131072L-$Budget.InflateCompressedReserved) -and
+                        $uncomp -le (65536L-$Budget.InflateExpandedReserved)))) {
                 $deflateAttempts++
                 $deflateCompressedBudget-=$comp
+                if ($null -ne $Budget) {
+                    # Conservative global reservations across ALL candidate archives.
+                    # Reserve declared expansion even when a malformed stream later fails.
+                    $Budget.InflateEntries++
+                    $Budget.InflateCompressedReserved+=$comp
+                    $Budget.InflateExpandedReserved+=$uncomp
+                }
                 $inflate=Get-CDeflateCrc32 $Stream $dataStart $comp $uncomp $Budget
                 if ($inflate.status -eq 'checked') {
                     $crcChecked++; $deflateChecked++
@@ -370,6 +382,7 @@ function Get-ChappyCarvingCandidates {
     $budget=[pscustomobject]@{
         Start=[long]$StartOffset; End=[long]$limit; MaxBytes=([long]$range+$ExtraValidationReadBytes)
         BytesRead=0L; ReadRequests=0; Probes=0
+        InflateEntries=0; InflateCompressedReserved=0L; InflateExpandedReserved=0L
         StopCode=$null; WindowLimited=$false
         Timer=[Diagnostics.Stopwatch]::StartNew(); MaxElapsedMilliseconds=$MaxWorkMilliseconds
     }
