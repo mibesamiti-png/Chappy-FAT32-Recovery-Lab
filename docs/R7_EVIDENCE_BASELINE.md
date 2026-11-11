@@ -19,3 +19,9 @@ B reads the 512-byte root window. C uses a 65,536-byte scan cap plus up to 32,76
 - Bind proposed candidates to one input and ordered, bounded, in-range extents. Equal starts, equal lengths and filenames alone cannot establish that candidates represent the same original. Preserve competing extent orders and lengths.
 - Bind observations to the input, physical ranges and the observation they depend on. Repeated observations of the same bytes, including shared BPB reads, provide one origin for confidence. Keep interpretation codes as annotations and retain overlaps for audit. Add separate counters for charged reads and unique bytes only where actual ranges are measured.
 - Expose original-byte identity only after an independent full-candidate SHA comparison in the synthetic scorer. Exercise P02 as a regression for structure-only verification, M04 for conflicting length, and M02 for a disagreement with intact payload. After module review, add cases for missing evidence, ambiguous fragment orders, reordered input and tight shared limits.
+
+## Candidate grouping experiment
+
+`tests/helpers/Merge-A3DSyntheticEvidence.ps1` tests a normalized input boundary for one synthetic image. It groups equal format and ordered extents, retains different orders, and returns the set of checks without assigning an overall confidence. Identical observed ranges are grouped and overlapping ranges contribute their union to the unique-byte count. Original identity remains in the independent scorer. The regression covers reordered proposals, conflicting checks, missing observations and rejection of out-of-range or overlapping candidate extents and excess proposals.
+
+The helper uses supplied synthetic observations. The live module baseline above measures each module independently. Connecting module outputs to the grouping boundary requires review of the evidence and provenance available from #71, #72 and #73.
