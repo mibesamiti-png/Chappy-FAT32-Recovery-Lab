@@ -1,0 +1,24 @@
+name: Privacy and repository safety gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check tracked files for disallowed formats and large payloads
+        shell: powershell
+        run: .\tools\Check-RepoSafety.ps1 -CheckTracked
+      - name: Confirm this gate is not a security audit
+        shell: powershell
+        run: Write-Host 'Manual review still required; do not commit any user data.'
