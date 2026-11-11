@@ -414,8 +414,8 @@ function Export-ChappyCarvingCandidate {
     $source=Assert-CSafeCarvingPath -Path $ImagePath -Directory $false
     $destination=Assert-CSafeCarvingPath -Path $OutputDirectory -Directory $true
     # Do not mix recovered output with the source/backup directory tree.
-    $sourceParent=([IO.Path]::GetDirectoryName($source).TrimEnd('\\')+'\\')
-    $destPrefix=($destination.TrimEnd('\\')+'\\')
+    $sourceParent=([IO.Path]::GetDirectoryName($source).TrimEnd('\')+'\')
+    $destPrefix=($destination.TrimEnd('\')+'\')
     if ($sourceParent.StartsWith($destPrefix,[StringComparison]::OrdinalIgnoreCase) -or
         $destPrefix.StartsWith($sourceParent,[StringComparison]::OrdinalIgnoreCase)) {
         throw 'Destination must be in a separate directory tree'
