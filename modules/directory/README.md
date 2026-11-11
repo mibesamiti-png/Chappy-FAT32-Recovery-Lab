@@ -40,6 +40,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\modules\directory\Invo
 ## Verification status
 
 - Static review: performed during generation (not a runtime test).
-- PowerShell 5.1 synthetic tests: **not executed in this authoring environment** (Windows PowerShell not available).
-- Windows real IMG: **not tested**. No recovered data or names should be represented as confirmed.
-- Privacy: source image never uploaded to GitHub; no real filenames in repository.
+- **Windows PowerShell 5.1 synthetic GitHub Actions:** **21/21 PASS** (including Japanese LFN, orphan directories, corrupt FAT pattern, truncated IMG, bounded scanning, CLI JSON, overwrite and raw-device refusal, SHA-256 preservation). See [Team B Windows CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42966996085).
+- **Repository privacy gate:** PASS on the same change set. A's manual review is still required; CI is not a security certification.
+- **Real 31 GB IMG: NOT TESTED.** No real data recovery, integrity, names, or tree reconstruction is confirmed.
+- **Status:** Draft PR only; do not merge until A reviews and approves. All tests used artificial data; no real filenames uploaded.
