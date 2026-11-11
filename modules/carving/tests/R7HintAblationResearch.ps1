@@ -8,7 +8,7 @@ function Test-R7NoFirstOffsetSynthetic {
         [ValidateRange(1,512)][int]$SecondBytes,
         [ValidateRange(512,131072)][int]$SearchBytes=131072,
         [ValidateRange(1,2)][int]$MaxStarts=2,
-        [ValidateRange(1024,532480)][long]$MaxSourceBytes=532480,
+        [ValidateRange(1024,401408)][long]$MaxSourceBytes=401408,
         [ValidateRange(9216,147456)][long]$MaxValidationBytes=147456,
         [ValidateRange(100,60000)][int]$MaxMilliseconds=30000
     )
@@ -22,9 +22,11 @@ function Test-R7NoFirstOffsetSynthetic {
     $all=New-Object 'System.Collections.Generic.List[object]'
     $sourceBytes=0L;$validationBytes=0L;$grid=0;$pairs=0;$evaluated=0
     $status='ok';$code='none'
-    # Reserve the scanner's full potential read allowance in advance.
-    $scoutReservation=[long]$SearchBytes+131072L
-    if ($scoutReservation -gt $MaxSourceBytes) {
+    # R0 correction: production carver correctly reports incomplete
+    # full-file/ZIP validation on fragmented objects. Start-location research
+    # must only discover raw file anchors and NOT upgrade them to full files.
+    # Scan every synthetic 512B boundary without privileged original offsets.
+    if ([long]$SearchBytes -gt $MaxSourceBytes) {
         $watch.Stop()
         return [pscustomobject]@{
             status='partial';decision='incomplete';candidates=@()
@@ -36,21 +38,45 @@ function Test-R7NoFirstOffsetSynthetic {
             }
         }
     }
-    $scout=Get-ChappyCarvingCandidates -Stream $Source -StartOffset 0 -MaxScanBytes $SearchBytes -MaxFileBytes 1048576 -MaxProbes 256 -MaxCandidates 16 -ExtraValidationReadBytes 131072 -MaxWorkMilliseconds ([int][Math]::Min(30000,$MaxMilliseconds))
-    $sourceBytes=[long]$scout.metrics.bytesRead
-    if ($sourceBytes -gt $MaxSourceBytes) {throw 'R7 scout accounting invariant failed'}
     $starts=New-Object 'System.Collections.Generic.List[long]'
     $seen=New-Object 'System.Collections.Generic.HashSet[long]'
-    foreach($item in @($scout.items | Sort-Object offsetBytes)) {
-        # Use every format-matching observed start, including fake ZIP headers.
-        $matches=if($ExpectedFormat -eq 'gcode'){$item.format -eq 'gcode'}else{$item.format -in @('zip','3mf')}
-        if(-not $matches){continue}
-        $at=[long]$item.offsetBytes
-        if($at -lt 0 -or $at -gt $Source.Length-512){continue}
-        if($seen.Add($at)){$starts.Add($at)}
+    $scoutOffsets=0
+    $scoutBytes=0L
+    for($at=0L;$at -lt [long]$SearchBytes;$at+=512L) {
+        if($watch.ElapsedMilliseconds -ge ($MaxMilliseconds-100)){
+            $status='partial';$code='search.time_budget_exhausted';break
+        }
+        if($sourceBytes+512L -gt $MaxSourceBytes){
+            $status='partial';$code='search.source_limit';break
+        }
+        $chunk=New-Object byte[] 512
+        [void]$Source.Seek($at,[IO.SeekOrigin]::Begin)
+        $n=0
+        while($n -lt 512){
+            $read=$Source.Read($chunk,$n,512-$n)
+            if($read -le 0){$status='partial';$code='search.short_read';break}
+            $n+=$read;$sourceBytes += [long]$read
+        }
+        if($status -ne 'ok'){break}
+        $scoutOffsets++
+        $signal=$false
+        if($ExpectedFormat -eq '3mf'){
+            $signal=($chunk[0] -eq 0x50 -and $chunk[1] -eq 0x4b -and
+                     $chunk[2] -eq 0x03 -and $chunk[3] -eq 0x04)
+        } else {
+            $head=[Text.Encoding]::ASCII.GetString($chunk,0,64)
+            # Same broad semantic start families as C's scanner, independently
+            # implemented solely for bounded artificial-grid discovery.
+            $signal=($head -match '^(?:;\s*(?:FLAVOR:|generated|HEADER_START|BambuStudio)|G28\b|M104\b|M140\b|M73\b)')
+        }
+        if($signal -and $seen.Add([long]$at)){$starts.Add([long]$at)}
+        if($starts.Count -gt $MaxStarts){
+            $status='partial';$code='search.start_limit';break
+        }
     }
-    if($scout.scanIncomplete -or $scout.status -eq 'error'){
-        $status='partial';$code='search.scout_incomplete'
+    $scoutBytes=$sourceBytes
+    if($status -ne 'ok'){
+        # Do not validate a truncated/cherry-picked prefix of candidate starts.
     }elseif($starts.Count -gt $MaxStarts){
         $status='partial';$code='search.start_limit'
     }else{
@@ -90,7 +116,7 @@ function Test-R7NoFirstOffsetSynthetic {
         status=$status;decision=$decision;candidates=@($all.ToArray())
         metrics=[pscustomobject]@{
             startsProposed=$starts.Count;startsEvaluated=$evaluated
-            scoutBytesRead=[long]$scout.metrics.bytesRead
+            scoutBytesRead=$scoutBytes
             sourceBytesRead=$sourceBytes;validationBytesRead=$validationBytes
             gridProbes=$grid;pairsEvaluated=$pairs
             elapsedMilliseconds=$watch.ElapsedMilliseconds;stopCode=$code
@@ -111,13 +137,13 @@ foreach($case in $r6Cases){
     $reference=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.bytes,$false))
     try{
         $originalR6=Test-R6NonOracleSyntheticTailSearch -Source $reference -FirstOffset $case.first -FirstBytes 512 -SecondBytes $case.tailBytes -ExpectedFormat $case.kind -SearchBytes $case.searchBytes -MaxOffsets 256 -MaxPairs 8 -MaxSourceBytes 135168 -MaxValidationBytes 73728 -MaxMilliseconds 30000
-        Assert ($reference.BytesRead -eq $originalR6.metrics.sourceBytesRead -and $reference.BytesRead -le 532480) ($case.name+': R6 known-first-offset reference is counted')
+        Assert ($reference.BytesRead -eq $originalR6.metrics.sourceBytesRead -and $reference.BytesRead -le 401408) ($case.name+': R6 known-first-offset reference is counted')
         $r7ReferenceReads += $reference.BytesRead
     }finally{$reference.Dispose()}
     $input=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.bytes,$false))
     try{
-        $result=Test-R7NoFirstOffsetSynthetic -Source $input -ExpectedFormat $case.kind -SecondBytes $case.tailBytes -SearchBytes $case.searchBytes -MaxStarts 2 -MaxSourceBytes 532480 -MaxValidationBytes 147456
-        Assert ($input.BytesRead -eq $result.metrics.sourceBytesRead -and $input.BytesRead -le 532480) ($case.name+': R7 bytes independently measured')
+        $result=Test-R7NoFirstOffsetSynthetic -Source $input -ExpectedFormat $case.kind -SecondBytes $case.tailBytes -SearchBytes $case.searchBytes -MaxStarts 2 -MaxSourceBytes 401408 -MaxValidationBytes 147456
+        Assert ($input.BytesRead -eq $result.metrics.sourceBytesRead -and $input.BytesRead -le 401408) ($case.name+': R7 bytes independently measured')
         Assert ($result.metrics.gridProbes -le 512 -and $result.metrics.pairsEvaluated -le 16) ($case.name+': R7 bounded grid and pairs')
         Assert ($result.metrics.validationBytesRead -le 147456 -and -not $input.CanWrite) ($case.name+': R7 bounded memory validator and source nonwritable')
         $r7Source += $input.BytesRead
