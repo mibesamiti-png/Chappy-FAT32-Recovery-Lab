@@ -338,6 +338,90 @@ try {
     try { $null=& $cli -ImagePath '\\.\PhysicalDrive9' -MaxScanBytes 1024 } catch { $refusedDevice=$true }
     Assert-B $refusedDevice 'CLI refuses raw device path'
     Assert-B ((Hash-B $imagePath) -eq $before) 'CLI source SHA-256 unchanged'
+
+    # R4 bounded experiment: compare baseline and opt-in size-metadata evidence
+    # on identical generated images. The oracle is available only to this scorer;
+    # neither scanner call receives it. Each input is a read-only memory stream.
+    . (Join-Path (Join-Path $PSScriptRoot 'helpers') 'New-Chappy3DDamagedFixture.ps1')
+    $r4Cases = @('M00','M01','M04','X02')
+    $tp=0; $fp=0; $fn=0; $tn=0; $unknown=0; $r4DirectoryDataBytes=0L
+    foreach ($caseId in $r4Cases) {
+        $fixture = New-ChappyA3DDamagedFixture -Case $caseId -Seed 202611
+        [byte[]]$fixtureBytes = $fixture.image
+        $shaBefore = Get-A3DSha256 $fixtureBytes
+        $baseStream = [IO.MemoryStream]::new($fixtureBytes, $false)
+        $candidateStream = [IO.MemoryStream]::new($fixtureBytes, $false)
+        try {
+            Assert-B (-not $baseStream.CanWrite -and -not $candidateStream.CanWrite) "$caseId uses non-writable streams"
+            $baseline = Get-ChappyDirectoryCandidates -Stream $baseStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16
+            $candidate = Get-ChappyDirectoryCandidates -Stream $candidateStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -ExperimentalFlagZeroSizeNonzeroStartCluster
+            Assert-B ($baseline.metrics.bytesRead -eq $candidate.metrics.bytesRead -and
+                      (ConvertTo-Json $baseline.errors -Compress) -ceq (ConvertTo-Json $candidate.errors -Compress)) "$caseId equal scan budget and failure"
+            $baseZero = @($baseline.items | Where-Object { -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
+            $marked = @($candidate.items | Where-Object {
+                -not $_.isDirectory -and $_.evidence -contains 'zero_size_with_nonzero_start_cluster'
+            })
+            $expectedDamagedSize = ($caseId -eq 'M04')
+            if ($caseId -eq 'X02') { $unknown++ }
+            elseif ($expectedDamagedSize) { $tp += [int]($marked.Count -gt 0) }
+            elseif ($marked.Count -gt 0) { $fp++ }
+            else { $tn++ }
+            if ($expectedDamagedSize -and $marked.Count -eq 0) { $fn++ }
+            Assert-B ($baseline.scanIncomplete -eq $candidate.scanIncomplete) "$caseId baseline and candidate preserve incomplete status"
+            if ($caseId -in @('M00','M01','M04')) {
+                Assert-B $candidate.scanIncomplete "$caseId stays incomplete under 1024-byte scan cap"
+            }
+            Assert-B (($candidate.PSObject.Properties.Name -notcontains 'paths') -and
+                      (@($candidate.items | Where-Object {
+                          $_.PSObject.Properties.Name -contains 'path' -or
+                          $_.PSObject.Properties.Name -contains 'originalPath'
+                      }).Count -eq 0) -and
+                      ($candidate.notes -contains 'directory/container linkage not proven')) "$caseId emits no authenticated path claim"
+            if ($caseId -eq 'M04') {
+                Assert-B ($baseZero.Count -eq 1 -and $baseZero[0].confidence -eq 'probable') 'M04 baseline retains zero-size record as probable'
+                Assert-B ($marked.Count -eq 1 -and $marked[0].confidence -eq 'partial' -and
+                          $marked[0].evidence -contains 'zero_size_with_nonzero_start_cluster') 'M04 opt-in flags metadata anomaly and retains partial candidate'
+                $m04Bytes = New-Object byte[] $fixtureBytes.Length
+                [Array]::Copy($fixtureBytes, $m04Bytes, $fixtureBytes.Length)
+                $deletedRecordOffset = [long]$fixture.manifest.changes[0].offsetBytes - 28L
+                $m04Bytes[$deletedRecordOffset] = 0xE5
+                $deletedShaBefore = Get-A3DSha256 $m04Bytes
+                $deletedStream = [IO.MemoryStream]::new($m04Bytes, $false)
+                try {
+                    $deletedResult = Get-ChappyDirectoryCandidates -Stream $deletedStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -IncludeDeleted -ExperimentalFlagZeroSizeNonzeroStartCluster
+                    $deletedZero = @($deletedResult.items | Where-Object { $_.deleted -and -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
+                    Assert-B ($deletedZero.Count -eq 1 -and $deletedZero[0].confidence -eq 'partial' -and
+                              $deletedZero[0].evidence -notcontains 'zero_size_with_nonzero_start_cluster') 'Deleted zero-size entry with nonzero start cluster is retained without the live-record anomaly flag'
+                    $r4DirectoryDataBytes += [long]$deletedResult.metrics.bytesRead
+                } finally {$deletedStream.Dispose()}
+                Assert-B ((Get-A3DSha256 $m04Bytes) -ceq $deletedShaBefore) 'Deleted-entry artificial control SHA-256 unchanged'
+            } else {
+                Assert-B ($marked.Count -eq 0) "$caseId control has no zero-size nonzero-start file flag"
+            }
+            if ($caseId -eq 'X02') {
+                Assert-B ($candidate.metrics.bytesRead -eq 0 -and $candidate.status -eq 'error' -and
+                          $candidate.errors -contains 'directory_scan_error: Image truncated relative to BPB partition size') 'X02 rejected before directory data read'
+            }
+            $r4DirectoryDataBytes += [long]$candidate.metrics.bytesRead
+        } finally {
+            $baseStream.Dispose()
+            $candidateStream.Dispose()
+        }
+        Assert-B ((Get-A3DSha256 $fixtureBytes) -ceq $shaBefore) "$caseId synthetic input SHA-256 unchanged"
+    }
+    Assert-B ($tp -eq 1 -and $fp -eq 0 -and $fn -eq 0 -and $tn -eq 2 -and $unknown -eq 1) 'R4 selected-case confusion TP1 FP0 FN0 TN2; X02 unknown/not evaluated'
+    Assert-B ($r4DirectoryDataBytes -eq 4096) 'R4 candidate directory-data reads total 4096 bytes; geometry reads excluded'
+    $defaultFixture = New-ChappyA3DDamagedFixture -Case M04 -Seed 202611
+    [byte[]]$defaultBytes = $defaultFixture.image
+    $defaultStream = [IO.MemoryStream]::new($defaultBytes, $false)
+    try {
+        $defaultResult = Get-ChappyDirectoryCandidates -Stream $defaultStream -MaxScanBytes 1024
+        $defaultZero = @($defaultResult.items | Where-Object { -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
+        Assert-B ($defaultZero.Count -eq 1 -and $defaultZero[0].confidence -eq 'probable' -and
+                  $defaultZero[0].evidence -notcontains 'zero_size_with_nonzero_start_cluster') 'R4 experiment remains off by default'
+    } finally {$defaultStream.Dispose()}
+    Write-Host "R4 B/A: TP=$tp FP=$fp FN=$fn TN=$tn UNKNOWN=$unknown; directory-data bytes=$r4DirectoryDataBytes (geometry excluded); all fixtures seed=202611."
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
