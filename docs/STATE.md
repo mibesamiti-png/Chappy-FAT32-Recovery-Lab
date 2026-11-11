@@ -80,3 +80,13 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - **C PR #5 still DRAFT/UNMERGED**, last A-reviewed `03786895`: global I/O bound and report sanitization fixed, but secure export path/device/reparse validation and explicit structural-only ZIP integrity caveats are P1 merge blockers.
 - **Real 31GB IMG must NOT be scanned yet**; local trial approval checklist: `docs/LOCAL_READONLY_APPROVAL_GATE.md`. No actual original user data has been accessed via GitHub, recovered or validated.
 - Next B/D continuation tasks and new branches in `docs/TEAM_DISPATCH.md`; A retains Issue #1 for local safety acceptance and integration; B #8 and D #9 remain open.
+
+ 
+## Latest Team A handoff — fourth integration round (2026-11-11)
+
+- B PR #17 (malformed LFN validation + 160 fixed-seed artificial mutations + modeled historical acceptance A/B) MERGED, squash `232056a11dc159399c910763f2c9ae7267513ccc`; synthetic Windows 5.1/Privacy CI PASS on exact PR head. B R2 Issue #8 closed. B next new R3 Issue #19 (`feature/b-directory-r3-validation-20261111`), synthetic-confidence calibration and bounded adversarial scan tests.
+- D PR #16 (read-only FAT chain sample anomaly classification: free/reserved/bad/out-of-range/cycle/EOC/budgets) MERGED, squash `e9fca56779264ca46e793f2406b919e4b92234d4`; D 165/165 artificial test assertions and privacy CI PASS. D Issue #9 remains open, next numeric directory/FAT consistency task (`research/d-fat-r3-consistency-20261111`).
+- A PR #18 (central synthetic CI + read-only local experimental preflight root-chain sample) MERGED, squash `6ac7e8a4a912c8a273e49969a0d8287acd110f43`. Branch synthetic Windows CI PASS, post-merge main [CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42979036878). No original media scan.
+- C Draft PR #5 remains unmerged, latest reviewed `467f0534`: C fixed output-path opt-in and Windows device/UNC/reparse blocking; synthetic/Privacy CI passed. C still needs explicit ZIP structural-only integrity semantics and adversarial tests. No live extraction authorized.
+- **Actual 31GB master IMG access remains NOT APPROVED** and no original user data may enter public CI/Issues. No verified file recovery, original name or repair success. See `docs/LOCAL_READONLY_APPROVAL_GATE.md` for the independent local-review checklist.
+- Live assignments/branches: `docs/TEAM_DISPATCH.md`. Older sections are historical snapshots; this is the most recent checkpoint.
