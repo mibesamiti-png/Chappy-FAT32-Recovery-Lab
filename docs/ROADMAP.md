@@ -120,3 +120,15 @@ Future corpus work: correctly formatted full-size synthetic FAT32 volumes, genui
 | D | [PR #35](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/35): MBR-anchored read-only independent primary/backup VBR plausibility with no winner | [Issue #40](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/40): capped cross-evidence from VBR hypotheses and FAT mirror windows |
 
 **No real-world recovery result:** A's selected seven artificial image scenarios produced expected 10/14 original-byte-matching candidate slices. This does not translate to a 71.43% success rate on any real filesystem. Original 31GB IMG inspection and extraction remain unapproved and unperformed.
+
+
+## Latest A/BCD integration + next research round — 2026-11-11
+
+| Track | Completed in newest integration | Next single bounded P1 |
+| --- | --- | --- |
+| A | [PR #44](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/44) integrated D R6 into central **14 isolated synthetic Windows PowerShell 5.1 suites**, [post-merge main CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43005467944) | Review local-only read-only approval checklist, harden Windows alias/reparse path and geometry limits on artificial data, and plan standards-compliant synthetic fragmentation benchmarking |
+| B | [PR #41](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/41) prevents weak/unknown directory metadata from being promoted to probable original parent-child links | [Issue #45](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/45) conflicting parents, damaged LFN and misleading dot/dotdot negative fixtures |
+| C | [PR #42](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/42) confirms physically fragmented artificial files are NOT yet accurately reconstructed by contiguous carving | [Issue #46](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/46) two-fragment artificial candidate pairing with independent exact-byte ground truth and strict limits; no arbitrary real reconstruction |
+| D | [PR #43](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/43) 2 VBR hypotheses x FAT mirrors bounded cross-evidence, no winner | [Issue #47](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/47) suspicious mirrored FAT region density and coverage uncertainty |
+
+**Quality:** most recent post-merge Windows 5.1 integrated CI 14/14 suites PASS. A's selected 7-case artificial IMG suite byte-identical candidate slices: expected 10/14 and observed 10/14; these are intentionally generated and modified sample files, NOT a real recovery success rate. Real 31GB IMG diagnosis and export remain NOT APPROVED.
