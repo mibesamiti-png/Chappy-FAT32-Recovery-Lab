@@ -55,12 +55,23 @@ The IMG path above is *illustrative only*, not a user path; **do not execute thi
 
 ## Confidence semantics
 
-- `verified`: ZIP references and bounds are structurally valid. STORED (method 0) entries are checked with CRC-32 only while the **whole archive CRC-check budget is at most 64 KiB**. `verified` **does not imply every entry content was checked**, and does not prove the original data survived.
+- `verified`: ZIP *container structure* (EOCD, central directory and local-header bounds/references) passed the checks; **never** means fully validated payloads or original file integrity. ZIP method 8 (DEFLATE) is not inflated or CRC-checked. STORED (method 0) CRC-32 checks use a 64 KiB total budget. Always read the separate `integrityScope` and `crc32Status` fields.
 - `probable`: G-code ASCII commands/comments form a plausible continuous segment; file start/end and completeness remain uncertain.
-- `partial`: ZIP local header without a valid central directory (length 0; extraction blocked), or bounded/truncated/discontinuous G-code.
+- `partial`: ZIP local header without a validated central directory (length 0; extraction blocked), a structurally present ZIP whose checked STORED CRC mismatches, or bounded/truncated/discontinuous G-code.
 - `fragmentationSuspected`: optional heuristic for suspicious non-text break in G-code; does not reconstruct fragments.
 
 A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xml`, `_rels/.rels`, and `3D/*.model`. ZIP validation **does not** validate OPC/XML contents, relationships, ZIP64, encryption, deflate (method 8) decompression/CRC, or fragments. It targets single-disk ZIPs with stored/deflate entries; only small method 0 payloads receive CRC-32 checking.
+
+## Integrity scope: never mistake ZIP structure for recovered content
+
+Every returned candidate has a **fixed, non-sensitive** `integrityScope` field; the opt-in JSON report includes the same field with a strict enum allowlist:
+
+- `structural_only_not_original_file_integrity`: ZIP/3MF EOCD + central-directory + local-entry references passed bounded structural checks. It is used even if `confidence='verified'` or `crc32Status='match'`, and also for a structurally present ZIP with a STORED CRC mismatch (whose confidence is downgraded to `partial`). A ZIP may have unchecked DEFLATE payloads, unchecked large STORED payloads, and unvalidated 3MF OPC/XML.
+- `signature_only_not_validated`: ZIP local-header signature found but archive structure and end not established; extraction remains unavailable when length is 0.
+- `heuristic_text_only_not_original_file_integrity`: G-code printable-text and command-sequence heuristics only; not proof of complete G-code or original pre-corruption data.
+- `unknown` is used **only by the sanitized report** when a caller supplies an unrecognized/missing scope; never upgrade to a positive integrity assertion.
+
+`confidence` answers how strong a *candidate classification* is, not whether original file data is valid. The `structurally_verified` opt-in export **folder name describes ZIP container structure only**, not content integrity. Opt-in export returns `integrityScope='copied_bytes_sha256_only_not_original_file_integrity'`: its SHA-256 checks only what was copied to the new output file, not the original file on the corrupted card. There is **no** full-file-content-verified state in this module.
 
 ## CRC-32 result fields (R2)
 
@@ -73,11 +84,11 @@ A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xm
 ## Safe JSON reporting (Team A privacy review P1)
 
 - `Write-ChappyCarvingReport` is **explicit opt-in** and writes a new file only (`FileMode.CreateNew`). It produces a fixed `schemaVersion=1`/`team=C` schema; it never serializes arbitrary caller object properties.
-- `format`, `confidence`, `checks`, `crc32Status` and root `status` use strict, bounded string allowlists; unexpected values become `unknown`, `not_validated`, `not_applicable`, or `error` respectively.
+- `format`, `confidence`, `integrityScope`, `checks`, `crc32Status` and root `status` use strict, bounded string allowlists; unexpected values become `unknown`, `not_validated`, `not_applicable`, or `error` respectively.
 - `evidence`, `warnings`, and `errors` preserve only defined diagnostic reason codes (at most 32 per list). `gcode.command_count_N` is accepted only for bounded nonnegative numeric `N` up to 200000. Unknown strings, paths, filenames and free-form error messages are **dropped**.
 - Candidate byte offsets, lengths, CRC counts and six known metric fields accept nonnegative bounded decimal integers only; unexpected or malformed values become zero. Unknown metric keys are never serialized. Candidate results are capped at 10000 items.
 - Privacy regression deliberately injects synthetic Windows paths, sentinel filenames, arbitrary strings and invalid numbers into all report field categories. The synthetic CI confirms the private sentinel and extra keys are absent from the JSON output.
-- This is **output content sanitization**, not output-directory path security. The report path remains caller-controlled and the optional extraction function still needs independent path/device/reparse-point hardening before Team A can approve use on an actual backup.
+- This is **output content sanitization**, not complete filesystem path security. The report path remains caller-controlled; optional extraction has conservative drive/reparse/junction guards but remains unapproved for real images until Team A independently reviews the broader path/alias and race limitations.
 
 ## Known limitations and safety
 
