@@ -326,9 +326,17 @@ function Export-TeamDFat32Diagnostic {
     $source=(Resolve-Path -LiteralPath $ImagePath -ErrorAction Stop).ProviderPath
     $fullReport=[IO.Path]::GetFullPath($ReportPath)
     if ([string]::Equals($source,$fullReport,[StringComparison]::OrdinalIgnoreCase)) {throw 'Report destination may not overwrite image'}
+    if ([IO.Path]::GetExtension($fullReport) -ine '.json') { throw 'Report destination must have .json extension' }
+    if ([IO.File]::Exists($fullReport)) { throw 'Report destination already exists; overwrite is prohibited' }
     $report=Get-TeamDFat32Diagnostic -ImagePath $ImagePath -VolumeOffset $VolumeOffset -IncludePrivateMetadata:$IncludePrivateMetadata
     $json=$report | ConvertTo-Json -Depth 15
-    [IO.File]::WriteAllText($fullReport,$json,(New-Object Text.UTF8Encoding($false)))
+    # Atomic create-new behavior prevents clobbering any existing report or IMG.
+    $output=[IO.File]::Open($fullReport,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    try {
+        $body=[Text.Encoding]::UTF8.GetBytes($json)
+        $output.Write($body,0,$body.Length)
+        $output.Flush()
+    } finally { $output.Dispose() }
     return $report
 }
 function Get-ChappyFatDiagnostics {
