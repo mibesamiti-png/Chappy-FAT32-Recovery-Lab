@@ -37,12 +37,20 @@ The output directory must already exist and must differ from the source file dir
 
 ## Confidence semantics
 
-- `verified`: ZIP **structural references only** (EOCD, central directory and local headers). **No CRC or decompression test is performed**. Does **not** prove original data survived.
+- `verified`: ZIP references and bounds are structurally valid. STORED (method 0) entries are checked with CRC-32 only while the **whole archive CRC-check budget is at most 64 KiB**. `verified` **does not imply every entry content was checked**, and does not prove the original data survived.
 - `probable`: G-code ASCII commands/comments form a plausible continuous segment; file start/end and completeness remain uncertain.
 - `partial`: ZIP local header without a valid central directory (length 0; extraction blocked), or bounded/truncated/discontinuous G-code.
 - `fragmentationSuspected`: optional heuristic for suspicious non-text break in G-code; does not reconstruct fragments.
 
-A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xml`, `_rels/.rels`, and `3D/*.model`. The current implementation does not validate XML, OPC relationships, ZIP64, encryption, CRC-32, compressed payloads, or fragmented files; it targets single-disk ZIPs with stored/deflate entries.
+A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xml`, `_rels/.rels`, and `3D/*.model`. ZIP validation **does not** validate OPC/XML contents, relationships, ZIP64, encryption, deflate (method 8) decompression/CRC, or fragments. It targets single-disk ZIPs with stored/deflate entries; only small method 0 payloads receive CRC-32 checking.
+
+## CRC-32 result fields (R2)
+
+- ZIP candidate fields: `crc32Status` is `match`, `mismatch`, `partial`, or `not_checked`; `crc32CheckedEntries` and `crc32UncheckedEntries` give anonymous counts. These fields are also included in redacted JSON reports, without entry names or content.
+- A STORED entry can be CRC-checked only when its compressed/uncompressed lengths match and the remaining **64 KiB per-ZIP budget** permits. CRC-32 uses constant-size streaming buffers, not whole-file memory reads.
+- `mismatch` means at least one checked entry does not match its central-directory CRC. The candidate is downgraded to `confidence=partial` with evidence `zip.stored_crc_mismatch`. `truncated=false` is possible for corrupt-but-complete ZIPs.
+- `partial` CRC status means some entries checked and others deliberately skipped. `not_checked` means zero entries checked. **Deflate entries are never CRC-checked in this round**, even though structural classification may still be `verified`.
+- `match` means all considered entries were STORED and verified against the central-directory CRC under the budget. This still does not validate 3MF model XML or guarantee pre-corruption filesystem data.
 
 ## Known limitations and safety
 
