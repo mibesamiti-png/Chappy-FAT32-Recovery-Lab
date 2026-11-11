@@ -48,7 +48,7 @@ Ground truth means only that **a specific deliberately injected suspicious numer
 
 ## R3 — measured same-corpus artificial A/B on Windows PowerShell 5.1
 
-**Exact-head CI:** test branch `25860f95026c2ac19b774e83dd6b2eb38d3345c5`, [Team D PS5.1 #43038793617 SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43038793617), new R8 60/60 PASS; prior D R1–R7 472/472 PASS, overall **532/532**. [Privacy/integrated regression #43038793742 SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43038793742). A later docs-only commit requires rechecking *that* exact new HEAD, not assuming previous run covers it.
+**Verified expanded-code CI:** test branch `9208ecccd4a087da61832ae621b5956f711a625f`, [Team D PS5.1 #43039272873 SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43039272873), new R8 **65/65 PASS**; prior D R1–R7 **472/472 PASS**, overall **537/537** artificial assertions. [Privacy/integrated regression #43039272877 SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43039272877). This documentation correction is commit-only text; Team A should use the exact final PR HEAD CI, not assume a preceding run covers later commits.
 
 The test executes original unmodified R6/R7 and independently composed R8, on exactly **the same 8 truth-labeled, entirely invented 64KiB images**. Their budgets are identically capped at 160 bytes and 40 entries, but their actual read counts are explicitly different:
 
@@ -68,6 +68,8 @@ The test executes original unmodified R6/R7 and independently composed R8, on ex
 | Byte-identical recovered files | Not applicable | Not applicable | **Not applicable** | No file reconstruction is performed |
 | Approx. CI stopwatches | 203ms | 249ms | 431ms | Single noisy Actions run; **not reliable performance benchmark** |
 | Peak memory | not measured | not measured | not measured | Artificial fixture 64KiB, no heap peak measured |
+
+**Additional adversarial cases:** an artificial root link to unsampled cluster 9 yields `scanIncomplete=true`/`insufficient_evidence`, never healthy; when candidate root and midpoint windows coincide in an intentionally tiny two-data-cluster geometry, remote windows deduplicate entries within the R7 subpass and the **true combined read count falls to 128 bytes / 32 entries** (rather than a falsely claimed 160/40), with 124 unobserved FAT entries per copy. These tests are part of the final **65/65** R8 assertions.
 
 The mirrored two-link root cycle (`2→3→2` in *both* FAT copies) was detected by R6 and R8, **missed by R7**, preserving the known R7 regression. Artificial midpoint EB58/bad/out-of-range cases were detected by R7 and R8, often missed by R6. A matching pair of corrupted mirrors remains suspicious; absence of a sampled anomaly **never means** a healthy FAT. Read quotas, candidate geometry overflow/overlap, 1-byte fragmented reads, EOF-short reads, strict nonwritable Stream, no winner/repair and canary-free JSON all passed the new Windows suite.
 
