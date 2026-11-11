@@ -51,3 +51,15 @@ These are planning milestones, not actual recovery percentages. Do not test or c
 | A | [PR #12 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/12), isolated synthetic runner, [main CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42972326019) | Full combined local read-only diagnosis runner with explicit opt-in and safety review |
 
 **Current planning pulse:** B/D/A delivered 3/4 scoped current-round increments; C is unfinished. Overall recovery project and actual recovery percentage cannot be inferred from this.
+
+
+## Third integration checkpoint — 2026-11-11
+
+| Workstream | Completed and verified | Next bounded task |
+| --- | --- | --- |
+| B R2 | PR #14 merged: candidate-only hierarchy nodes/edges, cycle and ambiguity evidence; synthetic Windows CI passed | Issue #8: LFN adversarial and false-positive A/B baseline |
+| C | PR #5 draft: synthetic carving+I/O budget/report sanitization pass | Export path/physical-device/reparse defense; ZIP structural-only semantics; final A review |
+| D R3 | PR #13 merged: read-only EB58 repeated-pattern mapping and FAT/boot offset hypotheses; synthetic CI passed | Issue #9: bounded cluster chain anomaly statistics |
+| A | PR #15 merged: opt-in, no-write/no-extraction, numeric-only read-only preflight; 7-suite synthetic Windows CI passed | Review `docs/LOCAL_READONLY_APPROVAL_GATE.md`, further malformed BPB/alias negative tests, later explicit local-only real IMG trial |
+
+**Safety state:** synthetic and local-logic code only; real user master IMG never read by this workflow and **not approved** for diagnostic execution yet. No recovered file count, original filename correctness, or data recovery percentage has been verified.
