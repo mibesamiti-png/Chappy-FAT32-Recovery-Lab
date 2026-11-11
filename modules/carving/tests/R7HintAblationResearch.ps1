@@ -187,4 +187,36 @@ try{
     $partial=Test-R7NoFirstOffsetSynthetic -Source $tiny -ExpectedFormat gcode -SecondBytes $r5GRest -MaxSourceBytes 1024
     Assert ($partial.decision -eq 'incomplete' -and $partial.metrics.sourceBytesRead -eq 0 -and $tiny.BytesRead -eq 0) 'R7 tiny scout budget fails closed before reads'
 }finally{$tiny.Dispose()}
+# An additional fake ZIP local header beyond the existing one creates THREE
+# untrusted starts. It must NOT silently truncate to the first two or select
+# the true one simply because the artificial test knows its offset.
+$tooMany=[byte[]]$split.Clone()
+$thirdAt=115200
+$tooMany[$thirdAt]=0x50
+$tooMany[$thirdAt+1]=0x4b
+$tooMany[$thirdAt+2]=0x03
+$tooMany[$thirdAt+3]=0x04
+$tooManySource=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($tooMany,$false))
+try{
+    $tooManyResult=Test-R7NoFirstOffsetSynthetic -Source $tooManySource -ExpectedFormat 3mf -SecondBytes $r5ZRest -MaxStarts 2
+    Assert ($tooManyResult.decision -eq 'incomplete' -and $tooManyResult.status -eq 'partial' -and $tooManyResult.metrics.stopCode -eq 'search.start_limit') 'R7 third ZIP decoy causes explicit incomplete coverage'
+    Assert ($tooManyResult.metrics.startsProposed -eq 3 -and $tooManyResult.metrics.pairsEvaluated -eq 0) 'R7 never cherry-picks starts or validates partial prefix'
+    Assert ($tooManySource.BytesRead -eq $tooManyResult.metrics.sourceBytesRead -and $tooManySource.BytesRead -le 401408) 'R7 fake ZIP-start flood is source-read bounded'
+}finally{$tooManySource.Dispose()}
+
+# The 512B-alignment assumption is an acknowledged failure mode: an invented
+# genuine G-code first fragment shifted by one byte is not discoverable
+# through this narrow scout. The test scorer knows the true shift, the
+# experimental helper receives neither first offset nor truth metadata.
+$offGrid=[byte[]]$split.Clone()
+$offGrid[$gStart]=0
+[Array]::Copy($gOriginal,0,$offGrid,($gStart+1),512)
+$offGridRead=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($offGrid,$false))
+try{
+    $shifted=Test-R7NoFirstOffsetSynthetic -Source $offGridRead -ExpectedFormat gcode -SecondBytes $r5GRest
+    Assert ($shifted.decision -eq 'unknown' -and $shifted.metrics.startsProposed -eq 0) 'R7 cannot find genuine unaligned artificial G-code start'
+    Assert ($offGridRead.BytesRead -eq $shifted.metrics.sourceBytesRead -and $offGridRead.BytesRead -le 401408) 'R7 off-grid miss remains strictly bounded'
+}finally{$offGridRead.Dispose()}
+Write-Host 'PASS: R7 third fake ZIP start fails closed, off-grid true G-code start remains unknown'
+
 Write-Host 'PASS: R7 writable source rejected and scout budget exhaustion is incomplete'
