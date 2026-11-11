@@ -8,7 +8,7 @@
 | Metadata-only JSON, explicit name opt-in, bounded scan | implemented | Windows PS 5.1 synthetic PASS |
 | CLI refuses overwrite, source collision, device paths | implemented | Windows PS 5.1 synthetic PASS |
 | Source image SHA-256 unchanged | verified on synthetic fixture | Windows PS 5.1 synthetic PASS |
-| Full synthetic regression suite | **21/21 PASS** | GitHub Actions run [42966996085](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42966996085) |
+| Full synthetic regression suite | **22/22 PASS** | GitHub Actions run [42967286265](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42967286265) |
 | Repository privacy gate | PASS | GitHub Actions run 42966996061 |
 | Real ~31GB IMG | **NOT SCANNED** | User-local only, pending review |
 | Data extraction, fragmented chains, verified folder tree | unimplemented | Out of scope B R1 |
