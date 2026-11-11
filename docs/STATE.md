@@ -2,23 +2,24 @@
 
 ## ABCD synthetic program checkpoint — 2026-11-12 JST
 
-[Formal roadmap](ABCD_SYNTHETIC_ROADMAP.md), Issue #1. Verified weighted progress is **15%**. R0 and R1 passed their full gates. Real-media gate remains **NOT APPROVED**.
+[Formal roadmap](ABCD_SYNTHETIC_ROADMAP.md), Issue #1. Verified weighted progress is **39%**. R0–R3 passed their full gates. Real-media gate remains **NOT APPROVED**.
 
 | Stage | Implementation | Test | Integration | Documentation |
 | --- | --- | --- | --- | --- |
 | R0 | Passed | Passed | Passed | Passed |
 | R1 | Passed | Passed | Passed | Passed |
-| R2 | In progress | Initial format controls passed locally | Draft #70 | In progress |
-| R3 | Pending | Pending | Pending | Planned |
+| R2 | Passed | Passed | #70 and #75 | Corpus and mutation manifests |
+| R3 | Passed | Passed | #76 | Two FAT32 geometries and independent verifier |
 | R4 B / R5 C / R6 D | Assigned | Pending | Pending | New issues #71/#72/#73 |
-| R7–R10 | Pending | Pending | Pending | Planned |
+| R7 | Baseline regression | Four shared cases | #77 | [Evidence baseline](R7_EVIDENCE_BASELINE.md) |
+| R8–R10 | Pending | Pending | Pending | Planned |
 
 - [#68](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/68) adopt_experimental, main `42a09a75`, [Privacy and repository safety gate](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43062628074) passed.
 - [#64](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/64) adopt_experimental, main `6dc16cf2`, [Privacy and repository safety gate](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43062739217) passed.
 - [#63](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/63) research_only, main `14a0b97d`, [Privacy and repository safety gate](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43062763606) passed.
 - [#65](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/65) research_only, main `f24f384a`, [Privacy and repository safety gate](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43062786297) and [Team D Windows PowerShell 5.1 synthetic tests](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43062786194) passed.
 
-The next assignments use the fixture contract from #68 pinned at `f24f384acd83c0d1dadbbc0bbd8c5acc7b926da5`. B starts with corrupted directory evidence, C with format-vs-identity evidence, D with bounded mirror/short-read observations. A continues R2 with missing corruption scenarios and R3 with the standards-shaped generator. No source or output work uses real media.
+The next assignments use the fixture contract from #68 pinned at `f24f384acd83c0d1dadbbc0bbd8c5acc7b926da5`. B starts with corrupted directory evidence, C with format-vs-identity evidence, D with bounded mirror/short-read observations. R2 and R3 passed [main CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43064528318) at `30f9951e`. The R7 baseline is preparatory. Final adapters depend on reviewed #71/#72/#73 submissions. No source or output work uses real media.
 
 ## Incident (coarse, technical facts; no user files uploaded)
 - 32GB microSD used in a 3D printer; Windows shows RAW after removal while powered.
