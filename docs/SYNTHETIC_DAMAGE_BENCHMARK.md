@@ -49,3 +49,20 @@ The central `runner/Invoke-ChappySyntheticRegression.ps1` includes the benchmark
 - Test generated 3MF containers with valid ZIP structure but payload decompression or per-entry CRC failure; avoid treating CRC32 as a guarantee.
 - Consider large randomized artificial geometry/failure combinations with deterministic seeds, aggregate failure classifications and clear CI resource caps.
 - Before any user-owned IMG is read, complete and review `docs/LOCAL_READONLY_APPROVAL_GATE.md`; no synthetic benchmark result grants permission.
+
+## Actual CI observation — current Draft PR #22 (NOT ACCEPTED)
+
+A Windows PowerShell 5.1 CI run of the seven artificial scenarios on benchmark head `3ba48ac1e338aff33dfee53fc6d866db837ae3f1` **failed as intended**, because the combined C scan misses earlier G-code when a later valid 3MF is found in the same scan block: [Actions #42986714746](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42986714746).
+
+| Metric | Expected from known fixture | Observed before C repair |
+| --- | ---: | ---: |
+| Known artificial file instances | 14 | 14 |
+| Candidate slices byte-identical to clean source | 10 | **6** |
+| Artificial scenario count | 7 | 7 |
+| Scenarios with unexpectedly low original-byte matches | 0 | **4** |
+
+Missing matches occurred on the clean, both-FAT-corrupted, FAT1-corrupted, and DEFLATE-content-modified cases. The latter case found a structurally verified ZIP with changed payload bytes; neither a structure check nor matching copied-file SHA can establish original file correctness. The 3MF-without-EOCD test found its G-code again, because the valid later ZIP interval no longer suppressed earlier G-code.
+
+**Reproduction and fix are owned by Team C [Issue #23](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/23).** This A PR stays Draft/red; never lower strict expected values to make it green. Only after C's independently reviewed fix is merged may A re-run this benchmark against current main and promote it if tests pass.
+
+Even the expected 10/14 result is a selected corruption-corpus figure, **not** the user's microSD recovery rate, and no full reconstruction of damaged bytes is provided.
