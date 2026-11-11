@@ -25,6 +25,7 @@ $tests=@(
     'modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-Eb58.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R3-ChainStats.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R3-Consistency.Tests.ps1',
     'tests\Test-LocalReadOnlyPreflight.ps1'
 )
 $passed=0
