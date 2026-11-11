@@ -38,13 +38,20 @@ The IMG path above is *illustrative only*, not a user path; **do not execute thi
 
 ## Opt-in extraction
 
-The output directory must already exist and must differ from the source file directory. No filename from the source is ever trusted: output names derive from byte offsets. `Export-ChappyCarvingCandidate` writes into `structurally_verified`, `probable`, or `partial` subfolders with `FileMode.CreateNew`; no overwrite is permitted.
+`Export-ChappyCarvingCandidate` is **disabled by default** and throws without the explicit `-EnableFileExport` switch. It is for synthetic fixtures only until Team A independently approves a safe local recovery workflow. Only existing absolute local drive-letter source files and destination directories are accepted. Device/volume namespaces, UNC/drive-relative paths, alternate data streams and paths under reparse-point/symlink/junction ancestors are rejected. Output must be in a **separate directory tree** (not the source folder or its ancestor/descendant). No filename from source content is trusted: output names derive from offsets. The function writes into `structurally_verified`, `probable`, or `partial` subfolders with `FileMode.CreateNew`; no overwrite is allowed.
 
 ```powershell
 # Only AFTER manual review of the candidate and source constraints:
 # $candidate = @($found.items | Where-Object { $_.lengthBytes -gt 0 })[0]
-# Export-ChappyCarvingCandidate -ImagePath 'X:\local\backup.img' -Candidate $candidate -OutputDirectory 'D:\local-output'
+# Export-ChappyCarvingCandidate -ImagePath 'X:\local\backup.img' -Candidate $candidate -OutputDirectory 'D:\local-output' -EnableFileExport
 ```
+
+### Path-security validation and limitations
+
+- Windows PowerShell 5.1 synthetic CI checks positive extraction, read-only source SHA-256, `CreateNew` refusal to overwrite, default-disabled export, rejection of raw-device/UNC/drive-relative/ADS pseudo-paths, and ancestor/descendant overlap.
+- The test creates temporary **Windows directory junctions** representing a source-directory alias and an output-directory alias; both are rejected. Source files and directory ancestors must be existing non-reparse filesystem entries; the generated subdirectory is rechecked.
+- Path checks are conservative, but **not a proof against malicious local concurrent filesystem changes (TOCTOU), NTFS short-name aliases, SUBST drive mappings or Windows path/volume alias edge cases**. There is no claim of a fully secured general-purpose extractor. Do not run this writer on the real IMG or restored personal files without Team A review and a separately approved local-only workflow.
+- Source opened with `FileAccess.Read` / output with `FileMode.CreateNew`; failure means no pre-existing output is overwritten. These are artificial-data tests only.
 
 ## Confidence semantics
 
