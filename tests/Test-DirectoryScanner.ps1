@@ -254,6 +254,8 @@ try {
         . (Join-Path $PSScriptRoot 'Test-DirectoryR6HierarchyConfidence.ps1')
         # R7 opt-in overlapping-container ambiguity and same-corpus A/B QA.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR7HierarchyEvidence.ps1')
+        # R8 opt-in numeric coverage versus same synthetic R7 baseline.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR8CoverageEvidence.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
