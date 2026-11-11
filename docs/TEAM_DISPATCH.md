@@ -11,6 +11,21 @@
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
+## Next-round execution method: source research + independent A/B trials (2026-11-11)
+
+**The current B #45, C #46 and D #47 Issues, branches, and module ownership in the table above remain unchanged.** This is a process upgrade, not a new delegation or permission to work outside the assigned P1.
+
+Before coding each assigned P1, read `docs/ALGORITHM_RESEARCH_PROTOCOL.md`, `docs/ALGORITHM_RESEARCH_TEMPLATE.md`, and `docs/ALGORITHM_RESEARCH_STARTER_REFERENCES.md`. Publish a short R0 research card **in your own existing Issue** with up to three authoritative prior methods, exact URLs, risks and code-license status. Do not fill a quota with invented or weak references.
+
+| Current team Issue | Survey target and artificial A/B question |
+| --- | --- |
+| **B #45** | Compare independent FAT directory parsing + graph constraints versus current hierarchical evidence under conflicting parents, broken LFN and incomplete scans; preserve orphan/partial candidates |
+| **C #46** | Compare bounded bifragment/gap enumeration and file-format validation ideas versus current contiguous-only carving on two-part invented G-code/3MF files; test **known original byte identity**, not just ZIP structure |
+| **D #47** | Compare published FAT/VBR mirror diagnostics and anomaly sampling versus current small-window numeric cross-evidence under identical mirror corruption, fake EB58 and tiny budgets; **never rank/repair** original media |
+
+Use the **same baseline main SHA and synthetic corpus** for old/new approaches, keep proposed implementations separately testable/default OFF, provide measured FP/FN and uncertainty, resource budgets, final-head Windows/Privacy CI, and license review. Inconclusive results may end as docs/tests-only Draft PR. A alone makes adoption/merge decisions.
+
+**Hard boundary:** no original microSD/31GB master IMG scans, private data, repair/write API, real recovery claims, or third-party code copy without explicit license compatibility review. The local-only approval gate remains NOT APPROVED.
 ## How identical prompts preserve independent roles
 
 The same short message is pasted into all chats. Each chat **must retain its explicitly assigned A/B/C/D identity from its conversation history**, then load the corresponding row above. It must NOT select a role only based on GitHub Issue status; identical messages do not give a unique identity.

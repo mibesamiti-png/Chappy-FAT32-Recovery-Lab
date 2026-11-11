@@ -10,6 +10,7 @@
 8. Use a distinct branch and draft PR; do not modify other teams' modules without coordinating.
 9. Every PR reports changes, safety implications, tests actually executed, limitations, next actions, and progress as estimates not proof.
 10. Never merge unreviewed destructive actions or publish real user content.
+11. For newly studied algorithms in B/C/D, follow `docs/ALGORITHM_RESEARCH_PROTOCOL.md`: find primary sources, check licenses, freeze a baseline, compare one default-off experimental alternative on identical artificial fixtures, and have A decide. Use `docs/ALGORITHM_RESEARCH_TEMPLATE.md`. Never copy third-party code before license clearance.
 
 ## Universal bootstrap behavior
 
