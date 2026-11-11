@@ -22,7 +22,7 @@ function Read-A3DRecord([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes = 
     Assert-A3D ($bps -eq 512 -and $spc -eq 1 -and $copies -eq 2 -and
                 $fatSectors -eq 40 -and $dataStart -eq 57856) 'fixture_geometry'
     $record = $null
-    for ($i = 0; $i -lt 3; $i++) {
+    for ($i = 0; $i -lt 6; $i++) {
         $off = $dataStart + (32 * $i)
         $name = [Text.Encoding]::ASCII.GetString($Image, $off, 11)
         if ($name -ceq $Alias) { $record = $off; break }
@@ -37,7 +37,7 @@ function Read-A3DRecord([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes = 
     try {
         $left = $size
         while ($left -gt 0) {
-            Assert-A3D ($cluster -ge 3 -and $cluster -le 8 -and
+            Assert-A3D ($cluster -ge 3 -and $cluster -le 11 -and
                         $seen.Count -lt 4 -and $seen.Add($cluster)) 'invalid_or_cyclic_test_fat_chain'
             $at = $dataStart + (($cluster - 2) * 512)
             $n = [int][Math]::Min(512, $left)
@@ -46,7 +46,7 @@ function Read-A3DRecord([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes = 
             $left -= $n
             $next = [uint32]([BitConverter]::ToUInt32($Image, $fatStart + (4 * $cluster)) -band 0x0FFFFFFF)
             if ($left -gt 0) {
-                Assert-A3D ($next -ge 3 -and $next -le 8) 'test_fat_chain_truncated'
+                Assert-A3D ($next -ge 3 -and $next -le 11) 'test_fat_chain_truncated'
                 $cluster = [int]$next
             } else {
                 Assert-A3D ($next -ge [uint32]0x0FFFFFF8) 'test_fat_chain_not_terminated'
@@ -96,8 +96,9 @@ function Confirm-A3DGcode([byte[]]$Bytes) {
                 $text.Contains('G28') -and $text.Contains('M84')) 'gcode_artificial_marker'
 }
 
-$first = New-ChappyA3DCleanFixture -Seed 202611
-$again = New-ChappyA3DCleanFixture -Seed 202611
+$seed = 202611
+$first = New-ChappyA3DCleanFixture -Seed $seed
+$again = New-ChappyA3DCleanFixture -Seed $seed
 Assert-A3D ($first.image.Length -eq 2097152 -and
             $first.oracle.Count -eq 3 -and
             $first.layout.kind -eq 'synthetic_FAT32_like_not_standards_volume') 'bounded_fixture_schema'
@@ -156,4 +157,47 @@ try {
     if ([IO.Directory]::Exists($temp)) { [IO.Directory]::Delete($temp, $true) }
 }
 Write-Host 'PASS: A3D P0.1 clean 3MF/STL/G-code, oracle SHA256, bounded FAT-chain round-trip, synthetic corruption negative, unchanged source.'
+
+$expanded = New-ChappyA3DCleanFixture -Seed $seed -IncludeFormatControls
+$expandedRepeat = New-ChappyA3DCleanFixture -Seed $seed -IncludeFormatControls
+$expandedSha = Get-A3DSha256 $expanded.image
+Assert-A3D ($expanded.oracle.Count -eq 6 -and $expandedSha -ceq (Get-A3DSha256 $expandedRepeat.image)) 'expanded_deterministic'
+foreach ($truth in $expanded.oracle) {
+    [byte[]]$bytes = Read-A3DRecord $expanded.image $truth.shortName
+    Assert-A3D ((Get-A3DSha256 $bytes) -ceq $truth.sha256) 'expanded_original_sha'
+    switch ($truth.format) {
+        'stl_ascii' {
+            $stl = [Text.Encoding]::ASCII.GetString($bytes)
+            Assert-A3D ($stl -match '\Asolid [^\n]+\nfacet normal 0 0 1\nouter loop\n(?:vertex [01] [01] 0\n){3}endloop\nendfacet\nendsolid [^\n]+\n\z') 'ascii_stl_facet'
+        }
+        'zip_plain' {
+            $memory = [IO.MemoryStream]::new($bytes, $false)
+            try {
+                $archive = [IO.Compression.ZipArchive]::new($memory, [IO.Compression.ZipArchiveMode]::Read)
+                try {
+                    Assert-A3D ($archive.Entries.Count -eq 1 -and
+                        $archive.Entries[0].FullName -ceq 'synthetic.txt') 'plain_zip_single_non_opc_member'
+                    $reader = [IO.StreamReader]::new($archive.Entries[0].Open())
+                    try { Assert-A3D ($reader.ReadToEnd() -ceq 'artificial control') 'plain_zip_payload' }
+                    finally { $reader.Dispose() }
+                } finally { $archive.Dispose() }
+            } finally { $memory.Dispose() }
+        }
+        'decoy' {
+            Assert-A3D ([BitConverter]::ToUInt32($bytes, 0) -eq 0x04034B50) 'decoy_has_zip_signature'
+            $memory = [IO.MemoryStream]::new($bytes, $false)
+            $rejected = $false
+            try {
+                $archive = [IO.Compression.ZipArchive]::new($memory, [IO.Compression.ZipArchiveMode]::Read)
+                $archive.Dispose()
+            } catch {
+                if ($_.Exception.InnerException -isnot [IO.InvalidDataException]) { throw }
+                $rejected = $true
+            } finally { $memory.Dispose() }
+            Assert-A3D $rejected 'decoy_rejected_as_zip'
+        }
+    }
+}
+Assert-A3D ((Get-A3DSha256 $expanded.image) -ceq $expandedSha) 'expanded_source_sha'
+Write-Host 'PASS: expanded clean corpus, full-file SHA 6/6, ASCII STL and plain ZIP positive controls, ZIP signature decoy rejected.'
 Write-Host 'This is not a real FAT32-sized filesystem or actual user-file recovery test.'
