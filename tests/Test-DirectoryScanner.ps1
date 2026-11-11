@@ -128,6 +128,11 @@ try {
         $deleted[0]=0xE5
         [void]$root.Add($deleted)
         [void]$root.Add((New-ShortB 'BIGFILE BIN' 0x20 40 4294967295L))
+        Write-Host ("Fixture root count: " + $root.Count)
+        for ($debugIndex = 0; $debugIndex -lt [Math]::Min($root.Count,4); $debugIndex++) {
+            $debugEntry=$root[$debugIndex]
+            Write-Host ("Fixture root entry " + $debugIndex + " type=" + $debugEntry.GetType().FullName + " length=" + @($debugEntry).Length)
+        }
         Write-DirectoryB $s (ClusterAt 2) @($root.ToArray())
         $sub=New-Object System.Collections.ArrayList
         [void]$sub.Add((New-ShortB '.          ' 0x10 7 0))
