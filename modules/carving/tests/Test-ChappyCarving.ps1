@@ -829,6 +829,9 @@ try {
     Write-Host ("R5 SYNTHETIC AB METRICS cases=5 tested_pairs={0} TP={1} FP={2} FN=1 TN={3} baseline_exact=0 candidate_exact=4 unique_unambiguous=2 ambiguous_cases=2 source_bytes={4} memory_validator_bytes={5} summed_elapsed_ms={6} writable_source=False" -f $r5PairTotal,$r5TP,$r5FP,$r5TN,$r5SourceTotal,$r5ValidatorTotal,$r5ElapsedTotal)
     Write-Host 'PASS: R5 artificial pair A/B: baseline full-byte match 0/5, possible candidate pairs TP4 FP2 FN1 TN3; ambiguous matches not chosen'
 
+    # Issue #54: independently bounded non-oracle synthetic tail discovery.
+    . (Join-Path $PSScriptRoot 'R6NonOracleResearch.ps1')
+
     # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
     $f7=Join-Path $fixtureRoot 'fixture_bounded.img'
     WriteSynthetic $f7 (New-Object byte[] 0) 2097152
