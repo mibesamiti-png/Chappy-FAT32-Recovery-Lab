@@ -5,9 +5,9 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#19](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/19) **R3 OPEN**; [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) R2 closed | `feature/b-directory-r3-validation-20261111` | `modules/directory/` | **NEXT: synthetic candidate-confidence calibration and bounded scan stress; Draft PR** |
-| C | Existing Team C chat | [#3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3); [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) | `feature/c-carving-r1-20261111` | `modules/carving/` | **A requested P1 bounds/privacy fixes; continue PR #5** |
-| D | Existing Team D chat | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) **R3 OPEN**; [PR #16](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/16) merged | `research/d-fat-r3-consistency-20261111` | `modules/fat-analysis/` | **NEXT: R3 read-only directory/FAT numeric consistency summaries; Draft PR** |
+| B | Existing Team B chat | [#24](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/24) **R4 OPEN**; [#19](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/19) R3 closed | `feature/b-directory-r4-fragmented-qa-20261111` | `modules/directory/` | **NEXT: synthetic noncontiguous/orphaned directory candidate QA; Draft PR** |
+| C | Existing Team C chat | [#23](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/23) **R2 OPEN**; [PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) merged | `feature/c-carving-order-r2-20261111` | `modules/carving/` | **P1: fix G-code-before-3MF multi-file scan order bug (A Draft PR #22); Draft PR** |
+| D | Existing Team D chat | [#25](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/25) **R4 OPEN**; [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) R3 closed | `research/d-fat-r4-geometry-guards-20261111` | `modules/fat-analysis/` | **NEXT: synthetic BPB/MBR/backup VBR geometry trust guards; Draft PR** |
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
@@ -61,6 +61,16 @@ For a completely new chat without a known role, do not change the repository unt
 - **C PR #5** remains Draft at last reviewed `467f0534`, synthetic C/Privacy CI PASS. Opt-in path safeguards and report sanitization improved. **Remaining C P1:** mark ZIP/3MF structural-only validation explicitly in candidate and report semantics, add CRC-skipped and mismatch tests. No actual source-file recovery claims and **no real IMG extraction approval**.
 - A local real-master IMG trial **NOT AUTHORIZED**. Source microSD/master IMG never modified or scanned by CI; `docs/LOCAL_READONLY_APPROVAL_GATE.md` remains mandatory. All new developer work stays synthetic-only.
 - The newest B/D Issue and branch rows above supersede historic assignments elsewhere in this document. Use the same universal bootstrap prompt, keep each chat's pre-existing role.
+
+## Team A synthetic-damage benchmark dispatch — 2026-11-11 (latest)
+
+- B R3 artificial-confidence QA [PR #20](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/20) merged (`6d147814`), R3 Issue #19 closed. B R4 is **Issue #24**, `feature/b-directory-r4-fragmented-qa-20261111`: non-contiguous/orphaned metadata candidate stress tests with known artificial ground truth, no C/D overlap.
+- D R3 final directory/FAT consistency [PR #21](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/21) merged (`0e825f82`); Issue #9 closed after all P1..P4. D R4 is **Issue #25**, `research/d-fat-r4-geometry-guards-20261111`: artificial malformed BPB/MBR/backup VBR/FSInfo plausibility guards; does NOT authorize real IMG scanning.
+- C initial carving [PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) merged (`110ebbda`) as **experimental only**. Opt-in extraction remains disabled by default; real IMG extraction is forbidden pending separate A safety approval.
+- Team A **Draft [PR #22](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/22)** creates a deterministic 2MiB *FAT32-like* artificial IMG with G-code and 3MF and seven corruption scenarios. The initial Windows CI is **RED**, correctly exposing a previously undetected C scanning bug: later ZIP at offset 58880 causes earlier G-code at 58368 to be skipped. Reproduced in [run 42986062061](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42986062061). Do NOT lower test assertions merely to make CI green.
+- C's **new Issue #23** and `feature/c-carving-order-r2-20261111` are dedicated to fixing this overlap/order bug. C's new PR must pass its synthetic CI; A then re-verifies PR #22. B/C/D each continue using identical universal bootstrap messages, retaining existing chat roles.
+- All B/C/D new branches were created from `main` at `110ebbdaa29045cda7935061308f85c70ca3692f`. Main baseline synthetic Windows CI PASS [run 42985195170](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42985195170).
+- **Never run against or modify original microSD / 31GB master IMG, upload real data, or claim actual recovered-file correctness.** The A real-IMG local safety gate remains explicitly NOT APPROVED.
 
 ## Coordination updates
 
