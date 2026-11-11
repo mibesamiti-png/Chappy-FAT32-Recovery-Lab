@@ -31,6 +31,9 @@ function New-A3D3MfBytes {
         [pscustomobject]@{ name = '_rels/.rels'; data = $relationships },
         [pscustomobject]@{ name = '3D/3dmodel.model'; data = $model }
     )
+    return ,(New-A3DZipBytes $parts)
+}
+function New-A3DZipBytes([object[]]$Parts) {
     $ms = New-Object IO.MemoryStream
     $zip = [IO.Compression.ZipArchive]::new($ms, [IO.Compression.ZipArchiveMode]::Create, $true)
     try {
@@ -75,7 +78,7 @@ function New-A3DBinaryStlBytes {
 }
 function Set-A3DRootEntry([byte[]]$Image, [int]$Index, [string]$ShortName,
                            [uint16]$FirstCluster, [uint32]$Size) {
-    if ($ShortName.Length -ne 11 -or $Index -lt 0 -or $Index -gt 2) {
+    if ($ShortName.Length -ne 11 -or $Index -lt 0 -or $Index -gt 5) {
         throw 'Invalid bounded synthetic directory entry'
     }
     $off = 57856 + (32 * $Index)
@@ -111,7 +114,10 @@ function New-A3DOracle([string]$Id, [string]$Format, [string]$ShortName,
     }
 }
 function New-ChappyA3DCleanFixture {
-    [CmdletBinding()]param([ValidateRange(1, 999999)][int]$Seed = 202611)
+    [CmdletBinding()]param(
+        [ValidateRange(1, 999999)][int]$Seed = 202611,
+        [switch]$IncludeFormatControls
+    )
     if (-not [BitConverter]::IsLittleEndian) { throw 'Fixture writer requires little-endian Windows' }
     $gcodeLines = @(
         ';CHAPPY-ARTIFICIAL-GCODE'
@@ -170,8 +176,36 @@ function New-ChappyA3DCleanFixture {
         (New-A3DOracle 'artificial_3mf' '3mf' 'MODEL   3MF' $mf 4),
         (New-A3DOracle 'artificial_binary_stl' 'stl_binary' 'MESH    STL' $stl 8)
     )
+    $version = 'A3D-clean-r1'
+    if ($IncludeFormatControls) {
+        $version = 'A3D-clean-r2-format-controls'
+        $asciiStl = @(
+            'solid artificial', 'facet normal 0 0 1', 'outer loop',
+            'vertex 0 0 0', 'vertex 1 0 0', 'vertex 0 1 0',
+            'endloop', 'endfacet', 'endsolid artificial', ''
+        ) -join [char]10
+        $controls = @(
+            @{ id = 'artificial_ascii_stl'; format = 'stl_ascii'; name = 'ASCII   STL'
+               content = [Text.Encoding]::ASCII.GetBytes($asciiStl) },
+            @{ id = 'artificial_plain_zip'; format = 'zip_plain'; name = 'PLAIN   ZIP'
+               content = New-A3DZipBytes @([pscustomobject]@{ name = 'synthetic.txt'; data = 'artificial control' }) },
+            @{ id = 'artificial_zip_signature_decoy'; format = 'decoy'; name = 'DECOY   DAT'
+               content = [byte[]]@(0x50, 0x4B, 0x03, 0x04, 0, 0, 0, 0) }
+        )
+        for ($i = 0; $i -lt $controls.Count; $i++) {
+            $control = $controls[$i]
+            $cluster = 9 + $i
+            $length = $control.content.Length
+            if ($length -gt 512) { throw 'Format control exceeds one cluster' }
+            Set-A3DRootEntry $image (3 + $i) $control.name $cluster $length
+            Set-A3DUint32 $image (16896 + 4 * $cluster) 0x0FFFFFFF
+            Set-A3DUint32 $image (37376 + 4 * $cluster) 0x0FFFFFFF
+            Copy-A3DBytes $image (57856 + 512 * ($cluster - 2)) $control.content
+            $oracle += New-A3DOracle $control.id $control.format $control.name $control.content $cluster
+        }
+    }
     return [pscustomobject]@{
-        generatorVersion = 'A3D-clean-r1'
+        generatorVersion = $version
         seed = $Seed
         image = $image
         oracle = $oracle
