@@ -103,7 +103,7 @@ $cases=@(
 )
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('ChappyA_Damage_'+[guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($temp)
-$exactTotal=0;$foundTotal=0
+$exactTotal=0;$foundTotal=0;$caseFailures=0
 try {
     foreach($fixture in $cases){
         [byte[]]$bytes=[byte[]]$baseline.Clone()
@@ -144,7 +144,10 @@ try {
                 Write-Host ("SYNTHETIC DEBUG candidate format={0} offset={1} length={2} confidence={3}" -f $candidate.format,$candidate.offsetBytes,$candidate.lengthBytes,$candidate.confidence)
             }
             $exact=([int]$gok)+([int]$zok)
-            Check-A ($exact -eq $fixture.exact) ('Byte-for-byte mismatch '+$fixture.id)
+            if($exact -ne $fixture.exact){
+                $caseFailures++
+                Write-Host ("SYNTHETIC EXPECTATION MISMATCH case={0} expected_exact={1}/2 observed_exact={2}/2" -f $fixture.id,$fixture.exact,$exact)
+            }
             if($fixture.kind -eq 'zip'){
                 Check-A ($z.Count -eq 1 -and -not $zok -and $z[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'ZIP structural-only caveat must survive payload corruption'
             }
@@ -154,7 +157,8 @@ try {
         } finally {$s.Dispose()}
         Check-A ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -eq $before) 'Synthetic source IMG changed'
     }
-    Check-A ($exactTotal -eq 10 -and $cases.Count -eq 7) 'Unexpected controlled corpus totals'
+    Write-Host ("SYNTHETIC EXPECTED total=10/14 OBSERVED={0}/14; cases_with_mismatch={1}" -f $exactTotal,$caseFailures)
+    Check-A ($exactTotal -eq 10 -and $cases.Count -eq 7 -and $caseFailures -eq 0) 'Controlled synthetic corpus score changed'
     Write-Host ("PASS: 7 artificial damage cases; original-byte-identical candidate slices {0}/14, located {1}. This is NOT a real file recovery rate." -f $exactTotal,$foundTotal)
 } finally {
     if([IO.Directory]::Exists($temp)){[IO.Directory]::Delete($temp,$true)}
