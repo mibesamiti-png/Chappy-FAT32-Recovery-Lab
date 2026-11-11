@@ -31,21 +31,32 @@ Expected deliberate tradeoff: R7 finds injected midpoint abnormalities that R6's
 - Every sample reports numerators and denominators (`observedUniqueEntries`, `unknownDeclaredEntries`, per-window observed/requested entries, suspicious count, EB58-like pair count); suspicious/bad marker classifications are **hypotheses**, not proof of actual corruption. Incomplete/invalid geometry and budget/truncated reads are explicitly reported.
 - A/B tests use real R6 baseline API and new R7 API as two separate experiments; the default R6 code and main behavior remain completely unchanged.
 
-## R3 — A/B verification table (to be updated from exact-head native Windows CI)
+## R3 — Measured A/B on native Windows PowerShell 5.1 (artificial only)
 
-| Metric | R6 baseline | R7 candidate | Scope |
+**Tested source baseline:** existing R6 module from main `8fd97ce7306d7296f203c4561ff730b046e0c9ce`. A/B measurement uses exactly the same **8 artificial memory fixtures**, both R6 and R7 executed on each input with `MaxReadBytes=128`, `MaxEntries=32`. The 6 injected-positive cases are known synthetic FAT marker/pattern or cycle abnormalities, *not proven physical storage damage*; 2 negative cases are a clean control and a legal free midpoint entry. Fixed input identity `D47-R7-20261111`.
+
+| Metric | R6 baseline | R7 opt-in experimental | Condition |
 | --- | ---: | ---: | --- |
-| TP / FP / FN / TN | pending | pending | 8 tiny synthetic cases, known injected suspicious states |
-| Precision / recall | pending | pending | Defined only for this selected artificial corpus |
-| Incorrect original-file `verified` / auto-selected FAT | pending | pending | Must be zero |
-| Artificial original file bytes identical | not applicable | not applicable | No file reconstruction |
-| Bytes read / entries sampled | pending | pending | Equal 96 bytes / 24 entries per full case expected |
-| Elapsed time | pending | pending | CI wall clock only, not an optimization claim |
-| Peak memory | not measured reliably | not measured reliably | Constant small arrays, no process-level high-water capture |
-| Artificial input SHA unchanged | pending | pending | Unit-test internal verification |
-| Windows 5.1 and privacy CI | pending | pending | Final tested branch HEAD required |
+| True positives TP | 3 | 5 | 6 known artificial positives |
+| False positives FP | 0 | 0 | 2 artificial negatives |
+| False negatives FN | 3 | 1 | R7 misses identical root-cycle links, which R6 traces |
+| True negatives TN | 2 | 2 | Same invented corpus |
+| Precision | 3/3 = 100% | 5/5 = 100% | **Only this tiny selected synthetic set** |
+| Recall | 3/6 = 50.0% | 5/6 = 83.3% | **Not a real recovery probability** |
+| Incorrect original-file `verified` / auto-selected FAT | 0 | 0 | `sourceDecision=not_selected` always |
+| Artificial original file bytes identical | not applicable | not applicable | Neither method reconstructs any files |
+| Actual aggregate bytes read | 768 | 768 | 8 fixtures × 96 bytes each |
+| Actual aggregate FAT entries read | 192 | 192 | 8 fixtures × 24 entries each |
+| Per-copy theoretical coverage | 6 / 128 entries | 6 / 128 entries | **122 unobserved entries/copy** in the full-size artificial control |
+| Elapsed CI stopwatch time | 267 ms | 231 ms | Single GitHub-run timing, **not statistically significant** |
+| Peak memory | not measured | not measured | 64KiB synthetic arrays, no process high-water capture |
+| Artificial source SHA unchanged | yes, 8/8 | yes, 8/8 | Hash is checked only inside synthetic script |
+| Exact-code Windows PowerShell 5.1 test | [SUCCESS, 58/58 R7 new assertions](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43029633822) | same Windows run | D R1..R6 414/414 also passed |
+| Privacy and integration gate | [SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43029633937) | same gate | This is not a comprehensive security audit |
 
-**Coverage:** the new strata provide 6 of 128 FAT entries per copy observed on the full artificial fixture; the remaining 122 are unknown. Even all samples matching in two FAT copies is not proof of integrity or authentic geometry. If sample budget fails, results stay partial/unknown. No real FAT repair, actual user file reads, recovered file output or path claims.
+**Negative controls and regression:** The old R6 root-chain walker detected an intentionally created two-link cycle **present identically in both FAT mirrors**. R7's independent stratified sampler does not trace that cycle and did not signal it; explicit FN=1. Conversely, R7 sampled artificial bad/reserved/out-of-range/EB58-like FAT signatures at far midpoint entries, whereas R6's root-focused sample missed those. Both methods can receive matching but corrupted FAT mirrors; no file authenticity or correctness is inferred. Adversarial invalid/huge geometry, quota exhaustion, split/truncated Stream reads, non-writable-only validation and fake-signature/no-private-report checks passed in the new suite.
+
+**Research verdict recommendation to A:** **research_only** unless a future additive method demonstrates no meaningful root-cycle evidence regression; retaining R6 unchanged preserves baseline behavior. R7 is independent **default-OFF** and can be examined as an alternative evidence view only. No adoption by Team D.
 
 ## R4 — A review required
 
