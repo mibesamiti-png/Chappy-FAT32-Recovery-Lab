@@ -132,3 +132,18 @@ Future corpus work: correctly formatted full-size synthetic FAT32 volumes, genui
 | D | [PR #43](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/43) 2 VBR hypotheses x FAT mirrors bounded cross-evidence, no winner | [Issue #47](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/47) suspicious mirrored FAT region density and coverage uncertainty |
 
 **Quality:** most recent post-merge Windows 5.1 integrated CI 14/14 suites PASS. A's selected 7-case artificial IMG suite byte-identical candidate slices: expected 10/14 and observed 10/14; these are intentionally generated and modified sample files, NOT a real recovery success rate. Real 31GB IMG diagnosis and export remain NOT APPROVED.
+
+## Algorithm research-first development mode (2026-11-11; Team A preparation)
+
+**Current status: preparation / docs only.** Existing assignments B #45, C #46 and D #47 have not been replaced. No claim that the next teams have already run A/B tests or implemented new algorithms.
+
+Research process: **R0 primary-source survey + licenses -> R1 freeze main baseline/ground truth -> R2 tiny standalone default-OFF experiment -> R3 same-corpus synthetic A/B evaluation -> R4 Team A adoption decision**. Authoritative details: `docs/ALGORITHM_RESEARCH_PROTOCOL.md` and the fill-in `docs/ALGORITHM_RESEARCH_TEMPLATE.md`; verified links to starting sources: `docs/ALGORITHM_RESEARCH_STARTER_REFERENCES.md`.
+
+| Team / Issue | Next evidence to submit first | Code threshold |
+| --- | --- | --- |
+| B #45 | Three-or-fewer real source methods for FAT metadata ambiguity, LFN and graph constraints; falsifiable conflicting parent scenario | Only if stronger confidence does not introduce false original paths or discard weak candidate evidence |
+| C #46 | Two-fragment/gap methods, format validator research and 3MF ZIP spec; artificial original-binary ground truth for two fragments | Only bounded opt-in candidate pairing; no guessed FAT chain, inflated output or default export |
+| D #47 | FAT mirror/VBR numerical discrepancy and anomaly prevalence approaches; uncertain coverage under strict global reads | Only numeric redacted read-only sampling; no winner or repair recommendation |
+| A #1 | Review source provenance/license, compare identical fixture/baseline, negative controls, final-head Windows 5.1 and privacy gates | adopt_experimental / research_only / revise / reject, no automatic merge |
+
+**Baseline before new research:** 14/14 isolated artificial Windows test entry scripts PASS at `main` `4fcf0227f1c57d78f3e2a4166d5ea5c0b558baf4`, [Actions 43005908277](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43005908277). This is not a real reconstruction success score. Actual 31GB image trial is NOT APPROVED.
