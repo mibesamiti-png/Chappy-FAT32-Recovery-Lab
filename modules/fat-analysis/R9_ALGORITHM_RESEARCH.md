@@ -37,11 +37,39 @@ At most **10 physical entry reads per copy × four views = 40 charged entries / 
 
 Classification: `suspicious_samples_no_selection`, `ambiguous_samples_no_selection`, `insufficient_evidence`. Warnings include candidate geometry unverified, mirror agreement not proof, missing unsampled entry coverage and source trial NOT APPROVED. Result `experimentalDefaultOff=true`, `sourceDecision=not_selected`, `selectedCandidate=null`, `writePermitted=false`.
 
-## R3 Windows PowerShell 5.1 measured A/B
+## R3 native Windows PowerShell 5.1 measured A/B (synthetic-only)
 
-**Before first native run:** final matrices/results are **not yet measured**. Artificial truth controls and instrumentation are executable in `tests/Run-TeamD-R9-LongCycleAB.Tests.ps1`. The separate artificial-only tracing Stream records actual byte returns, read-request counts, and distinct 4-byte physical offsets for all four methods, rather than inferring baseline unique coverage from charged entry totals. CI must report **TP/FP/FN/TN**, per-mode actual byte/entry/unique counts, duplicate reads, incomplete cases and stopwatch times. No bytes restored, so byte-identical recovered file metric **not applicable**. Artificial source SHA invariance is checked internally; false file-origin verification/writer/source-selection claims must remain **zero**.
+**Executed code HEAD:** `633ddb75dc2568cb18e7af801ec0ce5ec81cc42a`. [Team D Windows 5.1 CI #43046492107 — SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43046492107), including **R9 185/185** and older R1–R8 **537/537**, total **722/722** artificial assertions. [Privacy/integrated synthetic #43046491711 — SUCCESS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43046491711). The exact-final-head CI must be verified again after this documentation update; no result is attributed to a newer untested commit.
 
-Mandatory negative cases: misleading identical mirror corruption, long non-contiguous root cycle that fixed-window approaches may miss, both candidate hypotheses overlapping, root/mid/far window overlaps, extreme or overflow FAT geometry, unusually tight cumulative byte/entry quotas, 1-byte short reads and truncated stream, writable input refusal, no sensitive output strings.
+**Exactly same 15 invented synthetic FAT cases per mode**: 11 deliberately injected positive suspicious states and 4 negative controls, no real user data; **same hard ceiling 160 bytes / 40 FAT entries per case**, but actual read counts vary.
+
+| Observed metric | Existing R6 | Existing R7 | Existing R8 | R9 new experimental |
+| --- | ---: | ---: | ---: | ---: |
+| TP (11 injected suspicious conditions) | 5 | 4 | 5 | **10** |
+| FP (4 artificial negatives) | 0 | 0 | 0 | **0** |
+| FN | 6 | 7 | 6 | **1** |
+| TN | 4 | 4 | 4 | **4** |
+| Precision on chosen fixtures | 100% | 100% | 100% | **100%** |
+| Recall on chosen fixtures | 45.5% | 36.4% | 45.5% | **90.9%** |
+| Actual source bytes across all 15 | 2,400 B | 1,440 B | 2,400 B | **2,400 B** |
+| Charged FAT entry reads across all 15 | 600 | 360 | 600 | **600** |
+| Unique actually observed physical 4-byte FAT offsets | 600 | 360 | 360 | **600** |
+| Duplicate reads of same physical FAT entry | 0 | 0 | **240** | **0** |
+| Incomplete/uncertain-case flags | 1 | 0 | 4 | **2** |
+| Stream Read() requests | 600 | 360 | 600 | **600** |
+| One Windows CI stopwatch run | 329ms | 371ms | 532ms | 313ms |
+| False file authenticity / chosen FAT / source write claims | 0 | 0 | 0 | **0** |
+| Artificial byte-source SHA unchanged | yes, 15/15 | yes, 15/15 | yes, 15/15 | **yes, 15/15** |
+| Verified real file-byte reconstructions | not applicable | not applicable | not applicable | **not applicable** |
+| Reliable memory peak | not measured | not measured | not measured | **not measured** |
+
+**Observed tradeoff:** R9 detected intentionally constructed 3/4-link *contiguous* root cycles shared by both FAT mirrors and additional bad/EB58/out-of-range markers in the 3/4 distant region. R6 follows more near-root entries but does not sample that far region; R7 uses fewer bytes but cannot trace cycles; R8 rereads overlapping prefix/root positions, consuming 40 charged entries for only 24 unique physical entries in each full normal 4-view fixture. R9 reads 10 unique physical entries per view in the selected non-overlapping geometry, but **only 10 of 128 FAT entries/copy**, so 118 entries/copy remain unknown. R9 additionally reports distinct observed 4-byte source offsets across both candidate geometries, preventing overlapping hypotheses from falsely doubling coverage.
+
+**Known genuine limitations from synthetic negatives:** the non-contiguous cycle root `2 → 9 → 10 → 2` lies beyond all selected continuous windows, so R9 recorded a false negative rather than claiming success or a healthy original. The intentionally non-contiguous *valid* root chain also leaves R9's root evidence unknown/incomplete without claiming corrupted data. A/B negative tests for legal free midpoint/far regions did not trigger positives. An adversarial duplicate-VBR geometry points both candidates to exactly the same FAT1/FAT2 offsets; R9 charged **40 reads/160B** but independently observed only **20 distinct physical 4-byte positions**, and reported the remaining 20 charged rereads. Overlapping windows within a copy charged **28 reads/112B** for the four views, with **7 actually distinct indices per copy** rather than 40 fictitious samples.
+
+Safety negative controls passed: gross overflow/misaligned FAT geometry and contradicted candidate, extreme 16B/4-entry and 32B/8-entry budgets, max 256B/40-entry request, 1-byte fragmented streams, premature EOF, writable-source rejection, redacted JSON canary and unchanged synthetic source SHA. **No actual file content is recovered or authenticated**.
+
+Performance caveat: these elapsed times come from a single noisy GitHub Windows job, not a statistically meaningful speed benchmark. R9 detects 10/11 chosen anomalies but this is **not** a general recovery probability, and longer/fragmented cycles may defeat the fixed four-entry root window. Full FAT and real storage health remain unknown.
 
 ## R4 A adoption decision
 
