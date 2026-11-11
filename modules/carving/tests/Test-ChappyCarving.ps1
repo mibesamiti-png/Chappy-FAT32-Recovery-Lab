@@ -4,6 +4,29 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 Import-Module (Join-Path (Split-Path -Parent $PSScriptRoot) 'Chappy.Carving.psm1') -Force
 Add-Type -AssemblyName System.IO.Compression
+# Test-only wrapper independently counts actual source reads. Write always throws.
+Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+public sealed class ChappyCountingReadStream : Stream {
+    private readonly Stream inner;
+    public long BytesRead { get; private set; }
+    public ChappyCountingReadStream(Stream stream) { inner = stream; }
+    public override bool CanRead { get { return inner.CanRead; } }
+    public override bool CanSeek { get { return inner.CanSeek; } }
+    public override bool CanWrite { get { return false; } }
+    public override long Length { get { return inner.Length; } }
+    public override long Position { get { return inner.Position; } set { inner.Position=value; } }
+    public override void Flush() { }
+    public override int Read(byte[] buffer,int offset,int count) {
+        int got=inner.Read(buffer,offset,count); BytesRead+=got; return got;
+    }
+    public override long Seek(long offset,SeekOrigin origin) { return inner.Seek(offset,origin); }
+    public override void SetLength(long value) { throw new NotSupportedException(); }
+    public override void Write(byte[] buffer,int offset,int count) { throw new NotSupportedException(); }
+    protected override void Dispose(bool disposing) { if (disposing) inner.Dispose(); base.Dispose(disposing); }
+}
+'@
 $fixtureRoot=[IO.Path]::Combine([IO.Path]::GetTempPath(),'ChappyCarveSynthetic_'+[guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($fixtureRoot)
 function Assert($cond,$message) {if (-not $cond) {throw "FAIL: $message"}}
@@ -187,12 +210,14 @@ try {
     $spam=New-Object byte[] (256*1024)
     for ($p=0; $p -lt $spam.Length-8; $p+=8) { $spam[$p]=0x50; $spam[$p+1]=0x4b; $spam[$p+2]=3; $spam[$p+3]=4 }
     $spamPath=Join-Path $fixtureRoot 'dense_fake_signatures.img'; WriteSynthetic $spamPath $spam
-    $spamStream=[IO.File]::OpenRead($spamPath)
+    $spamStream=[ChappyCountingReadStream]::new([IO.File]::OpenRead($spamPath))
     try {
         $stress=Get-ChappyCarvingCandidates -Stream $spamStream -StartOffset 0 -MaxScanBytes 65536 -MaxFileBytes 1048576 -MaxCandidates 128 -MaxProbes 16
         Assert ($stress.status -eq 'partial' -and $stress.scanIncomplete) 'dense fake ZIP results in partial scan'
         Assert ($stress.metrics.entriesChecked -le 16) 'global candidate-probe cap enforced'
         Assert ($stress.metrics.bytesRead -le 65536) 'cumulative real reads fit default MaxScanBytes'
+        Assert ($spamStream.BytesRead -eq $stress.metrics.bytesRead) 'I/O metric matches independent counting stream'
+        Assert (-not $spamStream.CanWrite) 'test source stream has no write capability'
         Assert (@($stress.warnings | Where-Object { $_ -in @('scan.probe_budget_exhausted','scan.read_budget_exhausted') }).Count -gt 0) 'explicit resource-limit reason'
     } finally { $spamStream.Dispose() }
     Write-Host 'PASS: dense fake ZIPs bounded by global byte and probe limits'
@@ -201,10 +226,11 @@ try {
     $longFake=New-Object byte[] 262144
     $longFake[0]=0x50;$longFake[1]=0x4b;$longFake[2]=3;$longFake[3]=4;$longFake[26]=8
     $longPath=Join-Path $fixtureRoot 'malformed_zip_eocd_stress.img'; WriteSynthetic $longPath $longFake
-    $longStream=[IO.File]::OpenRead($longPath)
+    $longStream=[ChappyCountingReadStream]::new([IO.File]::OpenRead($longPath))
     try {
         $stress2=Get-ChappyCarvingCandidates -Stream $longStream -MaxScanBytes 32768 -MaxFileBytes 1048576 -MaxProbes 128
         Assert ($stress2.metrics.bytesRead -le 32768) 'repeated EOCD search fits cumulative read budget'
+        Assert ($longStream.BytesRead -eq $stress2.metrics.bytesRead) 'malformed ZIP exact actual I/O metric'
         Assert ($stress2.scanIncomplete -and ($stress2.warnings -contains 'scan.read_budget_exhausted')) 'malformed ZIP exhausts budget safely'
     } finally { $longStream.Dispose() }
     Write-Host 'PASS: malformed ZIP EOS search safely consumes shared read budget'
