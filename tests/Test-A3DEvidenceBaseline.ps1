@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'helpers\New-Chappy3DDamagedFixture.ps1')
 . (Join-Path $PSScriptRoot 'helpers\Merge-A3DSyntheticEvidence.ps1')
+. (Join-Path $PSScriptRoot 'helpers\Convert-A3DLiveModuleEvidence.ps1')
 . (Join-Path $root 'modules\directory\DirectoryScanner.ps1')
 Import-Module (Join-Path $root 'modules\carving\Chappy.Carving.psm1') -Force
 Import-Module (Join-Path $root 'modules\fat-analysis\Fat32MirrorWindows.psm1') -Force
@@ -20,7 +21,7 @@ function Read-A3DModuleEvidence([IO.Stream]$Source) {
     Assert-A3DEvidence ($geometry.fatCount -eq 2) 'mirror_geometry'
     $fatBytes = [long]$geometry.fatSizeSectors * $geometry.bytesPerSector
     $fat1 = $geometry.dataOffsetBytes - 2 * $fatBytes
-    $directory = Get-ChappyDirectoryCandidates -Stream $Source -Geometry $geometry -MaxScanBytes 512 -MaxCandidates 16 -MaxDirectories 4
+    $directory = Get-ChappyDirectoryCandidates -Stream $Source -Geometry $geometry -MaxScanBytes 512 -MaxCandidates 16 -MaxDirectories 4 -ExperimentalFlagZeroSizeNonzeroStartCluster
     $carving = Get-ChappyCarvingCandidates -Stream $Source -MaxScanBytes 65536 -ExtraValidationReadBytes 32768 -MaxFileBytes 4096 -MaxCandidates 16 -MaxProbes 16 -MaxProbeBytes 8192
     $mirrors = Get-ChappyFatMirrorWindows -Stream $Source -Fat1OffsetBytes $fat1 -Fat2OffsetBytes ($fat1 + $fatBytes) -FatLengthBytes $fatBytes -WindowEntries 128 -MaxWindows 1 -MaxReadBytes 1024
     Assert-A3DEvidence ($directory.status -ne 'error' -and $carving.status -ne 'error' -and $mirrors.status -ne 'error') 'analysis_status'
@@ -49,7 +50,21 @@ foreach ($case in @('M00', 'M02', 'M04', 'P02')) {
     $candidates = @($evidence.carving.items | Where-Object { $_.offsetBytes -eq $modelOffset -and $_.format -eq '3mf' })
     Assert-A3DEvidence ($entries.Count -eq 1 -and $candidates.Count -eq 1) 'known_synthetic_observations_present'
     $candidate = $candidates[0]
+    $live = Convert-A3DLiveModuleEvidence -ImageLengthBytes $fixture.image.Length -Directory $evidence.directory -Carving $evidence.carving -Mirrors $evidence.mirrors
+    $liveModel = @($live.candidates | Where-Object {
+        $_.format -ceq '3mf' -and $_.extents[0].offsetBytes -eq $modelOffset
+    })
+    $liveRecord = @($live.directory.records | Where-Object { $_.recordOffsetBytes -eq $entryOffset })
+    Assert-A3DEvidence ($liveModel.Count -eq 1 -and $liveModel[0].extents[0].lengthBytes -eq $candidate.lengthBytes -and
+        $liveModel[0].checks.Count -eq 1 -and $liveModel[0].checks[0] -ceq 'structurally_valid' -and
+        $liveModel[0].observations.Count -eq 0) 'live_carving_extent_and_scoped_check'
+    Assert-A3DEvidence ($liveRecord.Count -eq 1 -and $liveRecord[0].declaredSizeBytes -eq $entries[0].sizeBytes -and
+        $live.directory.scanIncomplete -and $live.mirrors.scanIncomplete -and
+        $live.mirrors.differingEntries -eq $evidence.mirrors.metrics.differentEntries) 'live_metadata_and_partial_mirrors'
     Assert-A3DEvidence ($candidate.lengthBytes -eq $truth.lengthBytes -and $candidate.confidence -eq 'verified') 'C_structure_check'
+    if ($case -eq 'M04') {
+        Assert-A3DEvidence ($liveRecord[0].confidence -ceq 'partial') 'directory_size_warning_does_not_override_carving_structure'
+    }
     $expectedSize = if ($case -eq 'M04') { 0 } else { $truth.lengthBytes }
     Assert-A3DEvidence ($entries[0].sizeBytes -eq $expectedSize) 'B_reported_metadata_size'
     $expectedDifferences = if ($case -eq 'M02') { 1 } else { 0 }
@@ -64,6 +79,18 @@ foreach ($case in @('M00', 'M02', 'M04', 'P02')) {
         $evidence.directory.metrics.bytesRead, $evidence.carving.metrics.bytesRead, $evidence.mirrors.metrics.bytesRead)
 }
 Write-Host 'PASS: A3D shared evidence baseline, four synthetic cases, independent SHA and read-only source.'
+
+# The EOCD-damaged case has signature observations with unknown byte lengths.
+$fixture = New-ChappyA3DDamagedFixture -Seed $seed -Case P01
+$source = [IO.MemoryStream]::new($fixture.image, $false)
+try { $evidence = Read-A3DModuleEvidence $source }
+finally { $source.Dispose() }
+$live = Convert-A3DLiveModuleEvidence -ImageLengthBytes $fixture.image.Length -Directory $evidence.directory -Carving $evidence.carving -Mirrors $evidence.mirrors
+Assert-A3DEvidence ($live.signatureOnlyCount -gt 0 -and
+    @($live.candidates | Where-Object { $_.format -ceq '3mf' }).Count -eq 0) 'signature_without_known_extent'
+Assert-A3DEvidence ((Get-A3DSha256 $fixture.image) -ceq $fixture.manifest.imageSha256) 'signature_only_source_unchanged'
+Write-Host 'PASS: Live B/C/D adapter preserves declared metadata, bounded carving proposals and sampled FAT observations.'
+
 
 # Synthetic normalized proposals exercise the boundary without assuming any
 # pending B/C/D result schema. Reversed extents describe a competing order.
