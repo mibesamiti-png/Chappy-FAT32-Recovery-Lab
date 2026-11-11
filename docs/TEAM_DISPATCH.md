@@ -5,9 +5,9 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) **R2 OPEN**; [PR #10](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/10) merged | `feature/b-directory-r2-hierarchy-20261111` | `modules/directory/` | **NEXT: R2 parent-child edge evidence and ambiguity/cycle tests; Draft PR** |
+| B | Existing Team B chat | [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) **R2 OPEN**; [PR #14](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/14) merged | `feature/b-directory-r2-lfn-qa-20261111` | `modules/directory/` | **NEXT: R2 LFN adversarial stress / false-positive A-B baseline; Draft PR** |
 | C | Existing Team C chat | [#3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3); [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) | `feature/c-carving-r1-20261111` | `modules/carving/` | **A requested P1 bounds/privacy fixes; continue PR #5** |
-| D | Existing Team D chat | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) **R3 OPEN**; [PR #11](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/11) merged | `research/d-fat-r3-eb58-20261111` | `modules/fat-analysis/` | **NEXT: R3 bounded EB-58 pattern mapping / offset hypotheses; Draft PR** |
+| D | Existing Team D chat | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) **R3 OPEN**; [PR #13](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/13) merged | `research/d-fat-r3-chain-stats-20261111` | `modules/fat-analysis/` | **NEXT: R3 bounded FAT chain anomaly counts and classifications; Draft PR** |
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
@@ -42,6 +42,16 @@ For a completely new chat without a known role, do not change the repository unt
 - B next branch `feature/b-directory-r2-hierarchy-20261111`, D next branch `research/d-fat-r3-eb58-20261111` created from A-integrated `main` HEAD `7094e7809239b1efc721b2d05db9507b4c256f38`. Branches may fall behind later doc commits; fetch latest main and reconcile before work.
 - Do **not** open a second PR for completed B R2 P1 or D R3 P1. Continue the still-open Issues #8 and #9 with one scoped task at a time. C continues same Draft PR #5.
 - No actual 31GB IMG scans, repair, recovery validation or public private-data uploads have occurred.
+
+## Team A current integration checkpoint (2026-11-11, most recent)
+
+- **B hierarchy** [PR #14](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/14) was merged (squash `5077d38f`); it adds candidate-only directory parent-child evidence and contradictory/cyclic link classification. Issue #8 remains open.
+- **D EB58** [PR #13](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/13) was merged (squash `9fd8c9aa`); it adds bounded read-only `EB 58` mapping and possible FAT/boot offset hypotheses. Issue #9 remains open.
+- **A local read-only preflight** [PR #15](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/15) was merged (squash `5fbb7be4`): explicit opt-in regular local IMG read-only stream, numerical B/D aggregate summary and **zero output files/repairs/extraction**. Both branch and [post-merge Windows synthetic CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42975361336) passed. **NOT AUTHORIZED against the actual 31GB IMG** until `docs/LOCAL_READONLY_APPROVAL_GATE.md` is fulfilled and reviewed.
+- **C carving** [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) remains unmerged, last reviewed `03786895` with synthetic CI PASS. C fixed bounded reads and report free-text handling, but A still requires safe export path/device/reparse guard and ZIP structural-only semantics before merging.
+- **Next B task:** within existing [Issue #8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8), add adversarial malformed LFN ordering/checksum/surrogate/cluster boundary tests, fixed-code evidence and reproducible A/B false-positive synthetic baseline. Avoid changing hierarchy semantics without regression evidence. New branch `feature/b-directory-r2-lfn-qa-20261111`.
+- **Next D task:** within existing [Issue #9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9), implement strict read-only bounded FAT chain anomaly counts (cycle/free/EOC/reserved/out-of-range) and incomplete coverage reporting, synthetic-only tests. New branch `research/d-fat-r3-chain-stats-20261111`.
+- Continue using the identical universal bootstrap text. Read this newest checkpoint and the active rows first; older assignments retained below are history. Never run real IMG experiments in public CI, upload real reports, or make source writes.
 
 ## Coordination updates
 
