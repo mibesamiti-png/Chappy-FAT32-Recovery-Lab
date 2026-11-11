@@ -929,3 +929,6 @@ try {
 } finally {
     if ([IO.Directory]::Exists($fixtureRoot)) {[IO.Directory]::Delete($fixtureRoot,$true)}
 }
+
+. (Join-Path $PSScriptRoot 'R5SyntheticFormatEvidence.ps1')
+Invoke-R5SyntheticFormatEvidence
