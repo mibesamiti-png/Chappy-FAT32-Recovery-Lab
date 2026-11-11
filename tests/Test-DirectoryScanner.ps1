@@ -244,6 +244,8 @@ try {
         $redacted=Get-ChappyDirectoryCandidates -Stream $read -Geometry $geo -MaxScanBytes 1024
         Assert-B ($redacted.scanIncomplete -and $redacted.metrics.bytesRead -eq 1024 -and @($redacted.items|Where-Object {$null -ne $_.name}).Count -eq 0) 'Budget stop plus default name redaction'
         Assert-B ((ConvertTo-Json -InputObject $all -Depth 9) -match '"startCluster"') 'JSON metadata serializes'
+        # R3 synthetic calibration and bounded read-only stress suite.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR3Validation.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
