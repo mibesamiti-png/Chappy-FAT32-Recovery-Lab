@@ -53,14 +53,14 @@ $r8Unique=New-Object 'System.Collections.Generic.HashSet[string]'
 foreach($id in $r8Ids) {
     if(-not $r8Unique.Add($id)){throw 'Duplicate R8 fixture ID'}
     $case=New-R8GraphCase $id
-    $before=ConvertTo-Json -InputObject $case.input -Depth 9 -Compress
+    $r8BeforeJson=ConvertTo-Json -InputObject $case.input -Depth 9 -Compress
     $watch=[Diagnostics.Stopwatch]::StartNew()
     $old=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $case.input -DetectConflictingContainerObservations -MaxContainerObservations 16 -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
     $watch.Stop();$r8LegacyMs+=$watch.ElapsedMilliseconds
     $watch=[Diagnostics.Stopwatch]::StartNew()
     $new=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $case.input -DetectConflictingContainerObservations -RequireCompleteClusterCoverageEvidence -MaxContainerObservations 16 -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
     $watch.Stop();$r8OptinMs+=$watch.ElapsedMilliseconds
-    if((ConvertTo-Json -InputObject $case.input -Depth 9 -Compress) -cne $before) {
+    if((ConvertTo-Json -InputObject $case.input -Depth 9 -Compress) -cne $r8BeforeJson) {
         throw ('R8 mutates input: '+$id)
     }
     $oldPositive=@($old.edges|Where-Object{$_.parentCluster -eq 2 -and $_.childCluster -eq 7 -and $_.confidence -eq 'probable'}).Count -gt 0
