@@ -84,6 +84,25 @@ try {
     Assert ($gc[0].confidence -eq 'probable') 'G-code syntax alone is probable, not verified'
     Write-Host 'PASS: contiguous G-code and end estimation'
 
+    # A non-text interruption after valid commands means at most a partial segment.
+    $fragBytes=[Text.Encoding]::ASCII.GetBytes($gcode + "BROKEN_BINARY_FRAGMENT\u0060nG28\u0060n")
+    $f6=Join-Path $fixtureRoot 'fixture_fragmented.img'
+    $fragImage=New-Object byte[] (256+$fragBytes.Length+8192)
+    [Array]::Copy($fragBytes,0,$fragImage,256,$fragBytes.Length)
+    WriteSynthetic $f6 $fragImage
+    $r6=Scan $f6
+    $frag=@($r6.items | Where-Object {$_.format -eq 'gcode' -and $_.offsetBytes -eq 256})
+    Assert ($frag.Count -eq 1) 'discontinuous G-code candidate found'
+    Assert ($frag[0].fragmentationSuspected -and $frag[0].confidence -eq 'partial') 'discontinuous G-code marked partial'
+    Write-Host 'PASS: non-text G-code discontinuity is partial'
+
+    # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
+    $f7=Join-Path $fixtureRoot 'fixture_bounded.img'
+    WriteSynthetic $f7 (New-Object byte[] 0) 2097152
+    $r7=Scan $f7 0 4096
+    Assert ($r7.scanIncomplete -and $r7.metrics.bytesRead -eq 4096) 'scan is range bounded'
+    Write-Host 'PASS: bounded scan reports incomplete coverage'
+
     # False positive starts and invalid stream ranges.
     $f5=Join-Path $fixtureRoot 'fixture_e.img'
     WriteSynthetic $f5 ([Text.Encoding]::ASCII.GetBytes('trash PK' + [char]3 + [char]4 + ' nonzip'))
