@@ -39,3 +39,15 @@ Current baseline v0.5 remains a **legacy experiment**, not approved for recovery
 | A | Complete C safety review/integration and isolated read-only local runner | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | **in progress** |
 
 These are planning milestones, not actual recovery percentages. Do not test or change the real IMG inside public CI.
+
+ 
+## Second integration round checkpoint — 2026-11-11
+
+| Team / stage | Latest outcome | Remaining |
+| --- | --- | --- |
+| B R2 P1 | [PR #10 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/10), lower directory false-positive risk, synthetic CI PASS | Issue #8 hierarchy edge inference, ambiguity/cycle tests, no true paths claimed |
+| C | [PR #5 Draft](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5), cumulative I/O / probe budget and synthetic stress cases CI PASS | P1 path/device/export guards, strict JSON reason-code allowlist, structural-only integrity clarity |
+| D R3 P1 | [PR #11 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/11), bounded mirror windows, synthetic 31/31 PASS | Issue #9 EB-58 distribution + chain anomalies + metadata conflict summaries |
+| A | [PR #12 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/12), isolated synthetic runner, [main CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42972326019) | Full combined local read-only diagnosis runner with explicit opt-in and safety review |
+
+**Current planning pulse:** B/D/A delivered 3/4 scoped current-round increments; C is unfinished. Overall recovery project and actual recovery percentage cannot be inferred from this.
