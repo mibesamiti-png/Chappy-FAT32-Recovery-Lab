@@ -57,7 +57,7 @@ function New-A3DBinaryStlBytes {
         [pscustomobject]@{ n = @($k,$k,$k); v = @(1,0,0, 0,1,0, 0,0,1) }
     )
     $ms = New-Object IO.MemoryStream
-    $writer = New-Object IO.BinaryWriter($ms)
+    $writer = [IO.BinaryWriter]::new($ms)
     try {
         [byte[]]$header = New-Object 'byte[]' 80
         [byte[]]$tag = [Text.Encoding]::ASCII.GetBytes('CHAPPY ARTIFICIAL TETRAHEDRON STL')
