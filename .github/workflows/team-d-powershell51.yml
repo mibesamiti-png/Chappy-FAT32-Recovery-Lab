@@ -26,3 +26,6 @@ jobs:
       - name: Run R3 bounded EB58 pattern and offset hypotheses synthetic tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R3-Eb58.Tests.ps1
+      - name: Run R3 bounded FAT chain anomaly synthetic tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R3-ChainStats.Tests.ps1
