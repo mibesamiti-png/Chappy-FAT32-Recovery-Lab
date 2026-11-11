@@ -32,7 +32,7 @@ $sub2=New-ShortB 'SUBTWO     ' 0x10 81 0
 $dot=New-ShortB '.          ' 0x10 60 0
 $dotdot=New-ShortB '..         ' 0x10 2 0
 $short=New-ShortB 'LFNQA   TXT' 0x20 70 15
-$lfn=@(New-LfnB 'InventedLong.txt' $short)
+$lfn=(New-LfnB 'InventedLong.txt' $short)
 [byte[]]$deletedOne=[byte[]]$one.Clone();$deletedOne[0]=0xE5
 [byte[]]$deletedTwo=[byte[]]$two.Clone();$deletedTwo[0]=0xE5
 
