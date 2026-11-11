@@ -95,6 +95,7 @@ function Scan([string]$file,[long]$start=0,[long]$count=1048576) {
 try {
     # Valid 3MF: central directory and all three required part names.
     $prefix=New-Object byte[] 65534; $zip=MakeZip $true
+    Assert ([BitConverter]::ToUInt16($zip,8) -eq 8) '3MF fixture method 8 DEFLATE, not STORED'
     $image=New-Object byte[] ($prefix.Length+$zip.Length+1024)
     [Array]::Copy($zip,0,$image,$prefix.Length,$zip.Length)
     $sourceDir=Join-Path $fixtureRoot 'source'
@@ -107,7 +108,8 @@ try {
     Assert ($three.Count -eq 1) '3MF should have exactly one structurally valid candidate'
     Assert ($three[0].offsetBytes -eq 65534) 'precise offset across 64 KiB boundary'
     Assert ($three[0].lengthBytes -eq $zip.Length) '3MF length from EOCD'
-    Assert ($three[0].crc32Status -in @('match','partial','not_checked')) 'CRC status explicitly classified'
+    Assert ($three[0].crc32Status -eq 'not_checked') 'DEFLATE 3MF payload CRC not verified'
+    Assert ($three[0].integrityScope -eq 'structural_only_not_original_file_integrity') '3MF structural-only scope explicit even when confidence is verified'
     $dest=Join-Path $fixtureRoot 'restore';[void][IO.Directory]::CreateDirectory($dest)
     $defaultDenied=$false
     try { Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest | Out-Null } catch {$defaultDenied=$true}
@@ -116,6 +118,7 @@ try {
     $saved=Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest -EnableFileExport
     $restored=Join-Path (Join-Path $dest $saved.group) $saved.fileName
     Assert ($saved.sha256 -eq (Get-FileHash -LiteralPath $restored -Algorithm SHA256).Hash.ToLowerInvariant()) 'SHA-256 on extraction'
+    Assert ($saved.group -eq 'structurally_verified' -and $saved.integrityScope -eq 'copied_bytes_sha256_only_not_original_file_integrity') 'export folder is ZIP structure only; output SHA does not certify original bytes'
     Assert ($before -eq (Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash) 'source SHA unchanged'
     $againThrew=$false
     try {Export-ChappyCarvingCandidate -ImagePath $f -Candidate $three[0] -OutputDirectory $dest -EnableFileExport | Out-Null} catch {$againThrew=$true}
@@ -125,6 +128,7 @@ try {
     $written=Write-ChappyCarvingReport -Result $result -ReportPath $report
     $json=Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     Assert ($json.items[0].format -eq '3mf') 'JSON report contains format'
+    Assert ($json.items[0].integrityScope -eq 'structural_only_not_original_file_integrity') '3MF report explicitly limits integrity to ZIP structure'
     Assert (-not ((Get-Content -LiteralPath $report -Raw) -match [regex]::Escape($f))) 'report does not include IMG path'
     Write-Host 'PASS: 3MF central directory, boundary offsets, read-only SHA, output no-overwrite and report'
 
@@ -174,7 +178,10 @@ try {
 
     # Non-3MF ZIP; required 3MF part missing.
     $z=MakeZip $false; $f2=Join-Path $fixtureRoot 'fixture_b.img';WriteSynthetic $f2 $z
+    Assert ([BitConverter]::ToUInt16($z,8) -eq 8) 'ordinary ZIP fixture must use DEFLATE'
     $r2=Scan $f2;Assert (@($r2.items | Where-Object {$_.format -eq 'zip' -and $_.confidence -eq 'verified'}).Count -eq 1) 'ordinary ZIP classification'
+    $deflate=@($r2.items | Where-Object {$_.format -eq 'zip'})[0]
+    Assert ($deflate.crc32Status -eq 'not_checked' -and $deflate.integrityScope -eq 'structural_only_not_original_file_integrity') 'DEFLATE without inflate/CRC is structurally verified only'
     Write-Host 'PASS: ordinary ZIP classification'
 
     # CRC32 of a known synthetic STORED ZIP: CRC(123456789) = CBF43926.
@@ -188,6 +195,7 @@ try {
     Assert ($storedHits[0].confidence -eq 'verified' -and $storedHits[0].crc32Status -eq 'match') 'valid stored ZIP CRC32 matches'
     Assert ($storedHits[0].crc32CheckedEntries -eq 1 -and $storedHits[0].crc32UncheckedEntries -eq 0) 'stored CRC checked entry count'
     Assert ($storedHits[0].checks -eq 'zip_structure_and_stored_crc32') 'ZIP checks record CRC coverage'
+    Assert ($storedHits[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'even checked CRC cannot certify original file integrity'
     Assert ($storedBefore -eq (Get-FileHash -LiteralPath $storedPath -Algorithm SHA256).Hash) 'CRC check is source-read-only'
 
     $corruptStored=MakeStoredZip $true
@@ -198,11 +206,13 @@ try {
     Assert ($corruptHits.Count -eq 1) 'damaged stored ZIP candidate found'
     Assert ($corruptHits[0].confidence -eq 'partial' -and $corruptHits[0].crc32Status -eq 'mismatch') 'corrupted body is not verified'
     Assert ($corruptHits[0].evidence -contains 'zip.stored_crc_mismatch') 'CRC failure reason code'
+    Assert ($corruptHits[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'CRC mismatch does not become a positive content integrity claim'
     Assert (@($corruptScan.items | Where-Object {$_.confidence -eq 'verified'}).Count -eq 0) 'known corrupt ZIP never verified'
     $crcReport=Join-Path $fixtureRoot 'crc-check-report.json'
     [void](Write-ChappyCarvingReport -Result $corruptScan -ReportPath $crcReport)
     $crcJson=Get-Content -LiteralPath $crcReport -Raw | ConvertFrom-Json
     Assert ($crcJson.items[0].crc32Status -eq 'mismatch') 'sanitized JSON retains CRC mismatch status'
+    Assert ($crcJson.items[0].integrityScope -eq 'structural_only_not_original_file_integrity' -and $crcJson.items[0].confidence -eq 'partial') 'CRC mismatch JSON is partial and structural-only'
     Assert (-not ((Get-Content -LiteralPath $crcReport -Raw) -match 'synthetic.txt')) 'report never includes inner filename'
     Write-Host 'PASS: ZIP STORED CRC-32 known vector, mismatch and sanitized JSON'
     # >64 KiB STORED entry is structurally recognized, but content CRC is not checked.
@@ -214,6 +224,7 @@ try {
     Assert ($largeStoredHits.Count -eq 1) 'large stored ZIP candidate found'
     Assert ($largeStoredHits[0].crc32Status -eq 'not_checked' -and $largeStoredHits[0].crc32CheckedEntries -eq 0) 'CRC byte-budget skip explicit'
     Assert ($largeStoredHits[0].checks -eq 'zip_structure_with_crc_unchecked') 'no full integrity claim when CRC skipped'
+    Assert ($largeStoredHits[0].integrityScope -eq 'structural_only_not_original_file_integrity') 'budget-skipped CRC cannot certify payload'
     Write-Host 'PASS: bounded CRC budget marks unchecked ZIP content'
 
 
@@ -222,6 +233,7 @@ try {
     [Array]::Copy($z,0,$broken,0,$broken.Length)
     $f3=Join-Path $fixtureRoot 'fixture_c.img';WriteSynthetic $f3 $broken
     $r3=Scan $f3;Assert (@($r3.items | Where-Object {$_.confidence -eq 'verified'}).Count -eq 0) 'truncated ZIP not verified'
+    Assert (@($r3.items | Where-Object { $_.format -eq 'zip' -and $_.integrityScope -eq 'signature_only_not_validated' }).Count -ge 1) 'truncated ZIP is signature-only, not structure/content proof'
     Write-Host 'PASS: truncated ZIP is not marked verified'
 
     # G-code: 8 valid instruction/comment lines and explicit binary end.
@@ -235,6 +247,7 @@ try {
     Assert ($gc.Count -eq 1) 'G-code start recognized'
     Assert ($gc[0].lengthBytes -eq $data.Length) 'G-code end inferred at newline before padding'
     Assert ($gc[0].confidence -eq 'probable') 'G-code syntax alone is probable, not verified'
+    Assert ($gc[0].integrityScope -eq 'heuristic_text_only_not_original_file_integrity') 'G-code candidate uses text heuristic integrity scope'
     Write-Host 'PASS: contiguous G-code and end estimation'
     # A G-code result lacks ZIP-specific optional properties; sanitization must not throw.
     $gReport=Join-Path $fixtureRoot 'gcode_sanitized_report.json'
@@ -243,6 +256,7 @@ try {
     $gItem=@($gJson.items | Where-Object {$_.format -eq 'gcode'})
     Assert ($gItem.Count -eq 1) 'G-code report survives missing ZIP optional fields'
     Assert ($gItem[0].crc32Status -eq 'not_applicable') 'G-code CRC status is not applicable'
+    Assert ($gItem[0].integrityScope -eq 'heuristic_text_only_not_original_file_integrity') 'G-code redacted report preserves only text heuristic scope'
     Assert (@($gItem[0].evidence | Where-Object { $_ -like 'gcode.command_count_*' }).Count -eq 1) 'safe G-code evidence count retained'
     Write-Host 'PASS: G-code report optional CRC fields and bounded numeric evidence'
 
@@ -309,7 +323,7 @@ try {
         scanIncomplete=$true
         items=@([pscustomobject]@{
             offsetBytes="../$privateMarker"; lengthBytes=$privateMarker
-            format=$privateMarker; confidence=$privateMarker
+            format=$privateMarker; confidence=$privateMarker; integrityScope=$privateMarker
             evidence=@('zip.local_header',"C:\private\$privateMarker",'gcode.command_count_7','gcode.command_count_999999')
             checks=$privateMarker; crc32Status=$privateMarker
             crc32CheckedEntries=$privateMarker; crc32UncheckedEntries=-7
@@ -332,6 +346,7 @@ try {
     Assert ($poisonJson.status -eq 'error') 'arbitrary result status sanitized'
     Assert ($poisonJson.items[0].format -eq 'unknown' -and $poisonJson.items[0].confidence -eq 'unknown') 'untrusted enum fields sanitized'
     Assert ($poisonJson.items[0].checks -eq 'not_validated' -and $poisonJson.items[0].crc32Status -eq 'not_applicable') 'untrusted check/CRC strings sanitized'
+    Assert ($poisonJson.items[0].integrityScope -eq 'unknown') 'untrusted integrity scope sanitized to bounded unknown enum'
     Assert ($poisonJson.items[0].offsetBytes -eq 0 -and $poisonJson.items[0].lengthBytes -eq 0) 'untrusted numeric strings sanitized'
     Assert ($poisonJson.items[0].crc32CheckedEntries -eq 0 -and $poisonJson.items[0].crc32UncheckedEntries -eq 0) 'untrusted counts sanitized'
     Assert ($poisonJson.items[0].evidence.Count -eq 2) 'only allowed evidence and bounded G-code count retained'
