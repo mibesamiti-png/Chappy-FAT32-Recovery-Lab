@@ -810,6 +810,23 @@ try {
     Assert (@($fragmented.items | Where-Object {$_.offsetBytes -eq $zStart -and $_.format -eq '3mf' -and $_.lengthBytes -eq $zOriginal.Length}).Count -eq 0) 'baseline contiguous-only scanner cannot certify the fragmented 3MF'
     Assert (@($fragmented.items | Where-Object {$_.offsetBytes -eq $gStart -and $_.format -eq 'gcode' -and $_.lengthBytes -eq $gOriginal.Length}).Count -eq 0) 'baseline contiguous-only scanner cannot certify the fragmented G-code'
     Assert ($splitBefore -eq (Get-FileHash -LiteralPath $splitPath -Algorithm SHA256).Hash) 'R5 experiment left original synthetic test image unchanged'
+    $r5ReadBudgetRejected=$false
+    $r5ReadCapStream=[IO.MemoryStream]::new($split,$false)
+    try {
+        try {
+            Test-R5FiniteSyntheticPairs -Source $r5ReadCapStream -FirstOffset $gStart -FirstBytes 512 -SecondBytes 512 -SecondOffsets ([long[]]@($gTail)) -ExpectedFormat gcode -MaxSourceBytes 1024 | Out-Null
+        } catch {$r5ReadBudgetRejected=$true}
+    } finally {$r5ReadCapStream.Dispose()}
+    Assert $r5ReadBudgetRejected 'R5 pair helper rejects source-byte budget before any oversized read'
+    $r5PairTotal=0;$r5SourceTotal=0L;$r5ValidatorTotal=0L;$r5ElapsedTotal=0L
+    foreach($case in @($r5UniqueG,$r5GAlternatives,$r5UniqueZ,$r5ZAlternatives,$r5Miss)){
+        $r5PairTotal += [int]$case.metrics.pairsEvaluated
+        $r5SourceTotal += [long]$case.metrics.sourceBytesRead
+        $r5ValidatorTotal += [long]$case.metrics.validationBytesRead
+        $r5ElapsedTotal += [long]$case.metrics.elapsedMilliseconds
+    }
+    Assert ($r5PairTotal -eq 9 -and $r5SourceTotal -le 40960 -and $r5ValidatorTotal -le 82944) 'R5 five-case total 9 pairs and bounded source plus in-memory validation work'
+    Write-Host ("R5 SYNTHETIC AB METRICS cases=5 tested_pairs={0} TP={1} FP={2} FN=1 TN={3} baseline_exact=0 candidate_exact=4 unique_unambiguous=2 ambiguous_cases=2 source_bytes={4} memory_validator_bytes={5} summed_elapsed_ms={6} writable_source=False" -f $r5PairTotal,$r5TP,$r5FP,$r5TN,$r5SourceTotal,$r5ValidatorTotal,$r5ElapsedTotal)
     Write-Host 'PASS: R5 artificial pair A/B: baseline full-byte match 0/5, possible candidate pairs TP4 FP2 FN1 TN3; ambiguous matches not chosen'
 
     # Bounded scanning intentionally ignores later bytes, reporting incomplete coverage.
