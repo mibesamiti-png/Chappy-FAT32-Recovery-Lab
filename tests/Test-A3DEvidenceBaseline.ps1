@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'helpers\New-Chappy3DDamagedFixture.ps1')
+. (Join-Path $PSScriptRoot 'helpers\Merge-A3DSyntheticEvidence.ps1')
 . (Join-Path $root 'modules\directory\DirectoryScanner.ps1')
 Import-Module (Join-Path $root 'modules\carving\Chappy.Carving.psm1') -Force
 Import-Module (Join-Path $root 'modules\fat-analysis\Fat32MirrorWindows.psm1') -Force
@@ -63,3 +64,49 @@ foreach ($case in @('M00', 'M02', 'M04', 'P02')) {
         $evidence.directory.metrics.bytesRead, $evidence.carving.metrics.bytesRead, $evidence.mirrors.metrics.bytesRead)
 }
 Write-Host 'PASS: A3D shared evidence baseline, four synthetic cases, independent SHA and read-only source.'
+
+# Synthetic normalized proposals exercise the boundary without assuming any
+# pending B/C/D result schema. Reversed extents describe a competing order.
+$firstExtent = @{ offsetBytes = 1024; lengthBytes = 40 }
+$tailExtent = @{ offsetBytes = 1536; lengthBytes = 20 }
+$boot = @{ offsetBytes = 512; lengthBytes = 512; kind = 'geometry' }
+$nested = @{ offsetBytes = 600; lengthBytes = 32; kind = 'directory' }
+$format = @{ offsetBytes = 1024; lengthBytes = 40; kind = 'format' }
+$proposals = @(
+    @{ format = '3mf'; extents = @($firstExtent, $tailExtent); check = 'partial'; observations = @($boot, $nested) },
+    @{ format = '3mf'; extents = @($firstExtent, $tailExtent); check = 'structurally_valid'; observations = @($boot, $format) },
+    @{ format = '3mf'; extents = @($tailExtent, $firstExtent); check = 'detected'; observations = @() }
+)
+$summary = Merge-A3DSyntheticEvidence -ImageLengthBytes 2048 -Proposals $proposals
+$reordered = Merge-A3DSyntheticEvidence -ImageLengthBytes 2048 -Proposals @($proposals[2], $proposals[1], $proposals[0])
+Assert-A3DEvidence ((ConvertTo-Json $summary -Depth 7 -Compress) -ceq
+    (ConvertTo-Json $reordered -Depth 7 -Compress)) 'proposal_order_invariance'
+Assert-A3DEvidence ($summary.candidates.Count -eq 2 -and
+    $summary.candidates[0].extents[0].offsetBytes -eq 1024 -and
+    $summary.candidates[1].extents[0].offsetBytes -eq 1536) 'competing_extent_orders'
+$joined = $summary.candidates[0]
+Assert-A3DEvidence ($joined.observations.Count -eq 3 -and
+    $joined.uniqueObservationBytes -eq 552 -and
+    ($joined.checks -join ',') -ceq 'partial,structurally_valid') 'deduplicated_and_overlapping_evidence'
+Assert-A3DEvidence ($summary.candidates[1].observations.Count -eq 0 -and
+    $summary.candidates[1].uniqueObservationBytes -eq 0) 'missing_evidence'
+
+$outside = @{ format = '3mf'; extents = @(@{ offsetBytes = [long]::MaxValue; lengthBytes = 2 })
+    check = 'detected'; observations = @() }
+$overlap = @{ format = '3mf'; extents = @($firstExtent, @{ offsetBytes = 1030; lengthBytes = 20 })
+    check = 'detected'; observations = @() }
+$invalidInputs = @(
+    @{ items = @($outside); reason = 'Candidate extent outside synthetic image' },
+    @{ items = @($overlap); reason = 'Overlapping candidate extents' },
+    @{ items = @($proposals[0]) * 33; reason = 'Synthetic proposal budget exceeded' }
+)
+foreach ($test in $invalidInputs) {
+    $rejected = $false
+    try { $null = Merge-A3DSyntheticEvidence -ImageLengthBytes 2048 -Proposals $test.items }
+    catch {
+        if ($_.Exception.Message -cne $test.reason) { throw }
+        $rejected = $true
+    }
+    Assert-A3DEvidence $rejected 'invalid_normalized_input_rejected'
+}
+Write-Host 'PASS: A3D evidence grouping preserves competing extent orders, conflicts and unique observed bytes.'
