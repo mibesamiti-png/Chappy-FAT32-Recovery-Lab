@@ -14,7 +14,7 @@ These are three distinct primary project/specification sources. They motivate co
 
 ## R1 — frozen baseline and comparable inputs
 
-- Frozen `main` is `ba55aea41e8d747589482de06b4ac6e0430ce61c`; no production algorithm is replaced.
+- Frozen D code baseline is `ba55aea41e8d747589482de06b4ac6e0430ce61c`. Review base later advanced to `b70a6122451b6e2e4c7a73a61ec2c8314c8ce1e6`; the intervening changes were documentation and C-only, and the two tested D module blobs were unchanged.
 - Fixture helper: `tests/helpers/New-Chappy3DDamagedFixture.ps1`, generator `A3D-damage-r1`, seed `202611`.
 - Cases: M00 clean control, M01 valid 3MF chain fragmentation with both FAT copies updated, M02 one FAT1 3MF link cleared, X02 image truncated inside 3MF payload.
 - The analyzer receives a read-only, seekable memory stream and the BPB/MBR-derived geometry record from `Get-ChappyFatGeometryTrust`; it does not receive the fixture manifest, original SHA, file extents, names or mutation offsets. The geometry parser rejects this deliberately FAT32-like fixture because FSInfo/backup VBR metadata is absent; its numeric geometry remains an untrusted observation only.
@@ -24,7 +24,16 @@ These are three distinct primary project/specification sources. They motivate co
 
 The existing independent implementation is used without new FAT-selection or repair logic: R4 `Get-ChappyFatGeometryTrust`, then R3 `Get-ChappyFatMirrorWindows` over one 128-entry window per FAT. This is a baseline diagnostic experiment, not a proposed algorithm adoption.
 
-`modules/fat-analysis/tests/Run-TeamD-P02Evidence.Tests.ps1` uses a read-only in-memory counting stream. The mutation manifest and hashes remain scorer-only. Actual returned-byte count and distinct physical offsets are measured independently. The experiment expects mirror equality in M00/M01, one difference in M02, X02 geometry rejection for a stream shorter than its declared volume, and `io.truncated_fat_window` under the separate short-read fault.
+`modules/fat-analysis/tests/Run-TeamD-P02Evidence.Tests.ps1` uses a read-only in-memory counting stream. The mutation manifest and file-level oracle remain scorer-only. The scorer prints each generated input image SHA-256 before and after the analysis, and asserts equality. Actual returned-byte count and distinct physical offsets are measured independently. Observed input image SHA-256 values were:
+
+| Case | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| M00 | `80A3265E5D08B1522985DA84FAC2120530366E8B3BB86A70F969235050CDB3E9` | same |
+| M01 | `B4FBCFDEDAF57571AB4581EF2213C03C7974044FB418785238D13AC2B56F86A9` | same |
+| M02 | `3A2F84D546907E227D1A4972AF75466DAC08812D1700EF33CC3A4E0167A9FDC5` | same |
+| X02 | `2E766CB664976D694BEC0CBC4DE8C51D5E8BF0E504D8453EC995FEC1ACA85B01` | same |
+
+The experiment expects mirror equality in M00/M01, one difference in M02, X02 geometry rejection for a stream shorter than its declared volume, and `io.truncated_fat_window` under the separate short-read fault.
 
 Interpretation limits: mirror equality does not establish correct or complete chains. In M01, a matching FAT pair is compatible with valid fragmentation but does not certify or reconstruct that chain. X02 truncates after both FAT windows, so mirror sampling alone can miss payload truncation; the geometry extent rejection must remain visible. A short read must remain partial and cannot be silently treated as equality.
 

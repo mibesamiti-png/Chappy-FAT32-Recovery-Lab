@@ -99,6 +99,7 @@ foreach ($caseId in $cases) {
         }
         $results[$caseId] = [pscustomobject]@{
             case=$caseId; trust=$evidence.geometry.trustDecision
+            inputSha256Before=$beforeHash; inputSha256After=$afterHash
             geometryReasons=@($evidence.geometry.reasons)
             differences=$evidence.mirror.metrics.differentEntries
             compared=$evidence.mirror.metrics.entriesChecked
@@ -106,9 +107,10 @@ foreach ($caseId in $cases) {
             totalBytes=$source.ActualReadBytes; uniqueBytes=$source.UniqueReadBytes
             imageLength=$fixture.image.Length
         }
-        Write-Host ('D synthetic {0}: trust={1}, differingEntries={2}, compared={3}, bytes actual/unique={4}/{5}, inputLength={6}.' -f
+        Write-Host ('D synthetic {0}: trust={1}, differingEntries={2}, compared={3}, bytes actual/unique={4}/{5}, inputLength={6}, SHA256={7}->{8}.' -f
             $caseId,$evidence.geometry.trustDecision,$evidence.mirror.metrics.differentEntries,
-            $evidence.mirror.metrics.entriesChecked,$source.ActualReadBytes,$source.UniqueReadBytes,$fixture.image.Length)
+            $evidence.mirror.metrics.entriesChecked,$source.ActualReadBytes,$source.UniqueReadBytes,$fixture.image.Length,
+            $beforeHash,$afterHash)
     } finally { $source.Dispose() }
 }
 Assert-D10 ($results.M00.differences -eq 0 -and $results.M01.differences -eq 0 -and
