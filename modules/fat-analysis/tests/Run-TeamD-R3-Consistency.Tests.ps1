@@ -134,7 +134,7 @@ $s=Open-DConsistency $swapped
 try {
     $r=Scan-DConsistency $s
     Check-DConsistency ($r.metrics.candidateRecords -eq 1 -and $r.metrics.skippedEntries -eq 6) 'LFN, volume, deleted, dot and unsupported attribute slots excluded'
-    Check-DConsistency ($r.items.Count -eq 2 -and $r.items[0].slotIndex -eq 5) 'Only real short-entry candidates considered, numeric result only'
+    Check-DConsistency ($r.items.Count -eq 2 -and $r.items[0].slotIndex -eq 5) 'Only anonymous short-entry candidates considered, numeric result only'
 }
 finally {$s.Dispose()}
 
@@ -176,8 +176,10 @@ try {
     Check-DConsistency (Throws-DConsistency {Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 512 -Fat2OffsetBytes 4096 -FatLengthBytes 1024 -MaxDataCluster 100 -MaxStepsPerTrace 33}) 'Chain trace step count capped'
     Check-DConsistency (Throws-DConsistency {Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 512 -Fat2OffsetBytes 4096 -FatLengthBytes 1024 -MaxDataCluster 100 -MaxReadBytes 4097}) 'Global 4096-byte budget capped'
     Check-DConsistency (Throws-DConsistency {Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 512 -Fat2OffsetBytes 4096 -FatLengthBytes 1024 -MaxDataCluster 100 -BytesPerCluster 768}) 'Non-power-of-two cluster byte count rejected'
-    $x=Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 512 -Fat2OffsetBytes 2199023255552 -FatLengthBytes 1099511627776 -MaxDataCluster 100 -MaxReadBytes 1024
-    Check-DConsistency ($x.scanIncomplete -and $x.metrics.bytesRead -le 1024) 'Huge declared but absent FAT2 is bounded and incomplete'
+    $x=Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 512 -Fat2OffsetBytes 2199023255552 -FatLengthBytes 1024 -MaxDataCluster 100 -MaxReadBytes 1024
+    Check-DConsistency ($x.scanIncomplete -and $x.metrics.bytesRead -le 1024) 'Huge offset with absent FAT2 is bounded and incomplete'
+    $y=Get-ChappyFatDirectoryConsistency -Stream $s -DirectoryOffsetBytes 8192 -Fat1OffsetBytes 2199023255552 -Fat2OffsetBytes 4398046511104 -FatLengthBytes 1099511627776 -MaxDataCluster 100 -MaxReadBytes 1024
+    Check-DConsistency ($y.scanIncomplete -and $y.metrics.bytesRead -le 1024) 'Huge declared FAT sizes with absent copies remain strictly bounded'
 }
 finally {$s.Dispose()}
 Write-Host "Team D R3-P4 result: $script:Passed passed; $script:Failed failed."
