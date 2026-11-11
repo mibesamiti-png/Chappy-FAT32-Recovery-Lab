@@ -289,15 +289,26 @@ function Read-ChappyBDirectoryCluster {
     } elseif ($validCount -eq 1 -and $hasValidLfn) {
         $decisionReason = 'isolated_lfn_without_directory_header'
     }
+    # A weak multi-entry cluster may be ordinary file content that happens
+    # to look like directory records. Keep it discoverable as a *candidate*,
+    # but do not assign the same evidence confidence as a dot-pair or root.
+    $containerConfidence = if (-not $accepted) { 'unknown' }
+                           elseif ($decisionReason -eq 'multiple_entries_with_end_marker') { 'partial' }
+                           else { 'probable' }
     if ($accepted) {
         foreach ($item in $candidateItems) {
             $item.parentClusterHint = $parentHint
             $item.evidence = @($item.evidence) + @('container_' + $decisionReason)
+            if ($containerConfidence -eq 'partial') {
+                $item.confidence = 'partial'
+                $item.evidence = @($item.evidence) + @('unpaired_multi_entry_weak_container')
+            }
         }
     }
     return [pscustomobject]@{
         accepted = $accepted
         decisionReason = $decisionReason
+        confidence = $containerConfidence
         entries = @($candidateItems.ToArray())
         validCount = $validCount
         hasDotHeader = $dotSeen
@@ -383,6 +394,7 @@ function Get-ChappyDirectoryCandidates {
                         cluster = $root
                         isRoot = $true
                         decisionReason = $parsed.decisionReason
+                        confidence = $parsed.confidence
                         parentClusterHint = $parsed.parentClusterHint
                         entryCount = $parsed.validCount
                     })
@@ -419,6 +431,7 @@ function Get-ChappyDirectoryCandidates {
                     cluster = $c
                     isRoot = $false
                     decisionReason = $parsed.decisionReason
+                    confidence = $parsed.confidence
                     parentClusterHint = $parsed.parentClusterHint
                     entryCount = $parsed.validCount
                 })
