@@ -190,6 +190,27 @@ $invalid[1].geometry.fat2OffsetBytes=8200L
 $r=Run-D8 $good $invalid 'r8'
 Check-D8 ($r.scanIncomplete -and $r.items[1].rootStatus -eq 'insufficient_evidence') 'Overlapping FAT geometries remain unresolved'
 
+# A valid root may point outside the tiny two-entry root window; a chain gap is
+# incomplete coverage, not a clean/verified FAT conclusion.
+$fragmented=New-D8Fixture
+foreach($fat in @(4096,4608)){Set-D8Entry $fragmented $fat 2 9}
+$r=Run-D8 $fragmented $cands 'r8'
+Check-D8 ($r.scanIncomplete -and $r.crossEvidence -eq 'insufficient_evidence') 'Fragmented root outside sampled window never reports healthy'
+Check-D8 ($r.items[0].fatCopies[0].rootChainEvidence -eq 'chain_outside_sample' -and $r.metrics.entriesRead -le 40) 'Root-chain coverage limit preserves honest unknown evidence'
+
+# Primary and backup each have only two data clusters, so R7's midpoint
+# overlaps its root sample. Charged physical reads must never be promoted to
+# a false count of distinct observed cluster entries.
+$overlap=New-D8Candidates
+foreach($cand in $overlap){
+    $cand.geometry.rootCluster=2L
+    $cand.geometry.dataClusterCount=2L
+}
+$r=Run-D8 $good $overlap 'r8'
+Check-D8 ($r.metrics.rootEntriesRead -eq 16 -and $r.metrics.remoteEntriesRead -eq 16) 'Overlapping root/midpoint windows deduplicated within remote pass'
+Check-D8 ($r.metrics.bytesRead -eq 128 -and $r.metrics.entriesRead -eq 32) 'Overlapping windows counted as actual 128 bytes, never invented 160'
+Check-D8 ($r.items[0].fatCopies[0].remoteObservedUniqueEntries -eq 4 -and $r.items[0].fatCopies[0].remoteUnknownDeclaredEntries -eq 124) 'Overlapping midpoint has four actual unique entries and 124 unobserved'
+
 # Forced short reads, including 1-byte chunks and cutoff, must not bypass sum.
 Add-Type -TypeDefinition @'
 using System;
