@@ -20,3 +20,6 @@ jobs:
       - name: Run R2 in-memory synthetic FAT patch and rollback tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1
+- name: Run R3 bounded FAT mirror comparison synthetic tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R3-Mirror.Tests.ps1
