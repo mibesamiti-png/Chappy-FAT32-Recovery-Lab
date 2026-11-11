@@ -59,3 +59,14 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - **Team C** remains on existing Draft PR #5, Issue #3, awaiting its A review fixes; no change in ownership.
 - Latest live roster: `docs/TEAM_DISPATCH.md`. The **same universal prompt** may now be pasted into B, C and D chat sessions without rewriting.
 - All teams work on synthetic fixtures only, report PR+CI evidence, and may not use or upload the real 31GB master IMG; confirmed recovery count remains unknown.
+
+ 
+## Latest Team A checkpoint — 2026-11-11, second B/D integration
+
+- B R2 P1 [PR #10](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/10) merged, squash `00a1bba6a59b7a24a1291b0a31f6e052e90573b4`. R2 Issue #8 remains OPEN for confidence-aware hierarchy and malformed/ambiguous graph tests.
+- D R3 P1 [PR #11](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/11) merged, squash `98cafeb423c70bb04502f33238f24b4a866c6753`. R3 Issue #9 remains OPEN for EB-58 mapping and bounded chain anomaly summaries.
+- A synthetic regression runner `runner/Invoke-ChappySyntheticRegression.ps1` merged via [PR #12](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/12), squash `7094e7809239b1efc721b2d05db9507b4c256f38`. Runs QuickProbe, B directory, D R1, D R2 and D R3 synthetic Windows PS5.1 suites in isolated processes.
+- **Post-merge integrated Windows CI PASS:** https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42972326019 .
+- C [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5) is still UNMERGED at last reviewed `6b4b3ab`; cumulative I/O safeguards now pass synthetic CI, but output alias/physical device path and free-form report sanitization and ZIP integrity semantics remain A blockers.
+- New B/D continuation branches and exact next tasks: `docs/TEAM_DISPATCH.md`. **Three of four current parallel stream deliverables integrated** (B/D/A); C is pending review hardening. That ratio is NOT a recovered data rate.
+- User's real 31GB microSD master IMG has not been scanned by this GitHub workflow and must never be modified or uploaded. Actual restored files verified: none confirmed. Legacy v0.5 import remains pending.
