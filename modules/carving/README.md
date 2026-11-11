@@ -63,6 +63,15 @@ A 3MF is classified from three conventional ZIP entry names: `[Content_Types].xm
 - `partial` CRC status means some entries checked and others deliberately skipped. `not_checked` means zero entries checked. **Deflate entries are never CRC-checked in this round**, even though structural classification may still be `verified`.
 - `match` means all considered entries were STORED and verified against the central-directory CRC under the budget. This still does not validate 3MF model XML or guarantee pre-corruption filesystem data.
 
+## Safe JSON reporting (Team A privacy review P1)
+
+- `Write-ChappyCarvingReport` is **explicit opt-in** and writes a new file only (`FileMode.CreateNew`). It produces a fixed `schemaVersion=1`/`team=C` schema; it never serializes arbitrary caller object properties.
+- `format`, `confidence`, `checks`, `crc32Status` and root `status` use strict, bounded string allowlists; unexpected values become `unknown`, `not_validated`, `not_applicable`, or `error` respectively.
+- `evidence`, `warnings`, and `errors` preserve only defined diagnostic reason codes (at most 32 per list). `gcode.command_count_N` is accepted only for bounded nonnegative numeric `N` up to 200000. Unknown strings, paths, filenames and free-form error messages are **dropped**.
+- Candidate byte offsets, lengths, CRC counts and six known metric fields accept nonnegative bounded decimal integers only; unexpected or malformed values become zero. Unknown metric keys are never serialized. Candidate results are capped at 10000 items.
+- Privacy regression deliberately injects synthetic Windows paths, sentinel filenames, arbitrary strings and invalid numbers into all report field categories. The synthetic CI confirms the private sentinel and extra keys are absent from the JSON output.
+- This is **output content sanitization**, not output-directory path security. The report path remains caller-controlled and the optional extraction function still needs independent path/device/reparse-point hardening before Team A can approve use on an actual backup.
+
 ## Known limitations and safety
 
 - G-code start anchors require a recognized command/header at the beginning of a block or after a newline/zero byte; some valid G-code may be missed. Encodings other than printable ASCII are not supported yet.
