@@ -35,3 +35,6 @@ jobs:
       - name: Run R4 MBR BPB backup VBR FSInfo synthetic geometry tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R4-Geometry.Tests.ps1
+      - name: Run R5 bounded primary backup VBR disagreement synthetic tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R5-Disagreement.Tests.ps1
