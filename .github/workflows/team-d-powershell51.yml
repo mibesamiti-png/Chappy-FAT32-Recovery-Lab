@@ -47,3 +47,6 @@ jobs:
       - name: Run R8 additive FAT anomaly summed-budget synthetic A/B
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R8-AdditiveAB.Tests.ps1
+      - name: Run R9 longer root cycles far FAT and unique coverage same-corpus synthetic A/B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R9-LongCycleAB.Tests.ps1
