@@ -250,6 +250,8 @@ try {
         . (Join-Path $PSScriptRoot 'Test-DirectoryR4Fragmented.ps1')
         # R5 confidence precision / fake directory classification matrix.
         . (Join-Path $PSScriptRoot 'Test-DirectoryR5FalsePositive.ps1')
+        # R6 no false probable paths: confidence comes from observed candidates.
+        . (Join-Path $PSScriptRoot 'Test-DirectoryR6HierarchyConfidence.ps1')
 
         # Synthetic metadata graph negatives; no real image or private names.
         $graphFixture = [pscustomobject]@{
