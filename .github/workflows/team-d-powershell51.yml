@@ -29,3 +29,6 @@ jobs:
       - name: Run R3 bounded FAT chain anomaly synthetic tests
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R3-ChainStats.Tests.ps1
+      - name: Run R3 anonymous directory and FAT consistency synthetic tests
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R3-Consistency.Tests.ps1
