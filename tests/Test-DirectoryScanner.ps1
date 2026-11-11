@@ -354,12 +354,12 @@ try {
         try {
             Assert-B (-not $baseStream.CanWrite -and -not $candidateStream.CanWrite) "$caseId uses non-writable streams"
             $baseline = Get-ChappyDirectoryCandidates -Stream $baseStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16
-            $candidate = Get-ChappyDirectoryCandidates -Stream $candidateStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -ExperimentalFlagZeroSizeAllocatedFile
+            $candidate = Get-ChappyDirectoryCandidates -Stream $candidateStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -ExperimentalFlagZeroSizeNonzeroStartCluster
             Assert-B ($baseline.metrics.bytesRead -eq $candidate.metrics.bytesRead -and
                       (ConvertTo-Json $baseline.errors -Compress) -ceq (ConvertTo-Json $candidate.errors -Compress)) "$caseId equal scan budget and failure"
             $baseZero = @($baseline.items | Where-Object { -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
             $marked = @($candidate.items | Where-Object {
-                -not $_.isDirectory -and $_.evidence -contains 'zero_size_with_allocated_start_cluster'
+                -not $_.isDirectory -and $_.evidence -contains 'zero_size_with_nonzero_start_cluster'
             })
             $expectedDamagedSize = ($caseId -eq 'M04')
             if ($caseId -eq 'X02') { $unknown++ }
@@ -380,7 +380,7 @@ try {
             if ($caseId -eq 'M04') {
                 Assert-B ($baseZero.Count -eq 1 -and $baseZero[0].confidence -eq 'probable') 'M04 baseline retains zero-size record as probable'
                 Assert-B ($marked.Count -eq 1 -and $marked[0].confidence -eq 'partial' -and
-                          $marked[0].evidence -contains 'zero_size_with_allocated_start_cluster') 'M04 opt-in flags metadata anomaly and retains partial candidate'
+                          $marked[0].evidence -contains 'zero_size_with_nonzero_start_cluster') 'M04 opt-in flags metadata anomaly and retains partial candidate'
                 $m04Bytes = New-Object byte[] $fixtureBytes.Length
                 [Array]::Copy($fixtureBytes, $m04Bytes, $fixtureBytes.Length)
                 $deletedRecordOffset = [long]$fixture.manifest.changes[0].offsetBytes - 28L
@@ -388,15 +388,15 @@ try {
                 $deletedShaBefore = Get-A3DSha256 $m04Bytes
                 $deletedStream = [IO.MemoryStream]::new($m04Bytes, $false)
                 try {
-                    $deletedResult = Get-ChappyDirectoryCandidates -Stream $deletedStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -IncludeDeleted -ExperimentalFlagZeroSizeAllocatedFile
+                    $deletedResult = Get-ChappyDirectoryCandidates -Stream $deletedStream -MaxScanBytes 1024 -MaxCandidates 32 -MaxDirectories 16 -IncludeDeleted -ExperimentalFlagZeroSizeNonzeroStartCluster
                     $deletedZero = @($deletedResult.items | Where-Object { $_.deleted -and -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
                     Assert-B ($deletedZero.Count -eq 1 -and $deletedZero[0].confidence -eq 'partial' -and
-                              $deletedZero[0].evidence -notcontains 'zero_size_with_allocated_start_cluster') 'Deleted zero-size allocated entry is retained without the live-record anomaly flag'
+                              $deletedZero[0].evidence -notcontains 'zero_size_with_nonzero_start_cluster') 'Deleted zero-size entry with nonzero start cluster is retained without the live-record anomaly flag'
                     $r4DirectoryDataBytes += [long]$deletedResult.metrics.bytesRead
                 } finally {$deletedStream.Dispose()}
                 Assert-B ((Get-A3DSha256 $m04Bytes) -ceq $deletedShaBefore) 'Deleted-entry artificial control SHA-256 unchanged'
             } else {
-                Assert-B ($marked.Count -eq 0) "$caseId control has no zero-size allocated-file flag"
+                Assert-B ($marked.Count -eq 0) "$caseId control has no zero-size nonzero-start file flag"
             }
             if ($caseId -eq 'X02') {
                 Assert-B ($candidate.metrics.bytesRead -eq 0 -and $candidate.status -eq 'error' -and
@@ -418,7 +418,7 @@ try {
         $defaultResult = Get-ChappyDirectoryCandidates -Stream $defaultStream -MaxScanBytes 1024
         $defaultZero = @($defaultResult.items | Where-Object { -not $_.isDirectory -and $_.sizeBytes -eq 0 -and $_.startCluster -ge 2 })
         Assert-B ($defaultZero.Count -eq 1 -and $defaultZero[0].confidence -eq 'probable' -and
-                  $defaultZero[0].evidence -notcontains 'zero_size_with_allocated_start_cluster') 'R4 experiment remains off by default'
+                  $defaultZero[0].evidence -notcontains 'zero_size_with_nonzero_start_cluster') 'R4 experiment remains off by default'
     } finally {$defaultStream.Dispose()}
     Write-Host "R4 B/A: TP=$tp FP=$fp FN=$fn TN=$tn UNKNOWN=$unknown; directory-data bytes=$r4DirectoryDataBytes (geometry excluded); all fixtures seed=202611."
 

@@ -178,7 +178,7 @@ function Get-ChappyBShortName {
 function Read-ChappyBDirectoryCluster {
     param([byte[]]$Buffer, [long]$Cluster, [long]$OffsetBytes,
           [long]$MaxCluster, [switch]$IncludeDeleted, [switch]$IncludeNames,
-          [switch]$ExperimentalFlagZeroSizeAllocatedFile, [bool]$IsRoot)
+          [switch]$ExperimentalFlagZeroSizeNonzeroStartCluster, [bool]$IsRoot)
     $candidateItems = New-Object System.Collections.ArrayList
     $segments = New-Object System.Collections.ArrayList
     $validCount = 0
@@ -239,7 +239,7 @@ function Read-ChappyBDirectoryCluster {
         $validCount++
         if ($null -ne $lfnName) { $hasValidLfn = $true }
         $isDeleted = ($first -eq 0xE5)
-        $zeroSizeAllocatedFile = (-not $directory -and -not $isDeleted -and $size -eq 0 -and $start -ge 2)
+        $zeroSizeNonzeroStartCluster = (-not $directory -and -not $isDeleted -and $size -eq 0 -and $start -ge 2)
         $oversized = (-not $directory -and $size -gt (($MaxCluster-1L)*[long]$Buffer.Length))
         $visibleName = $null
         $visibleShort = $null
@@ -253,8 +253,8 @@ function Read-ChappyBDirectoryCluster {
         if ($lfnInvalid) { [void]$reasons.Add('lfn_rejected_short_fallback') }
         if ($isDeleted) { [void]$reasons.Add('deleted_first_character_unknown') }
         if ($oversized) { [void]$reasons.Add('size_exceeds_volume_capacity') }
-        if ($ExperimentalFlagZeroSizeAllocatedFile -and $zeroSizeAllocatedFile) {
-            [void]$reasons.Add('zero_size_with_allocated_start_cluster')
+        if ($ExperimentalFlagZeroSizeNonzeroStartCluster -and $zeroSizeNonzeroStartCluster) {
+            [void]$reasons.Add('zero_size_with_nonzero_start_cluster')
         }
         [void]$candidateItems.Add([pscustomobject]@{
             offsetBytes = ($OffsetBytes + $j)
@@ -267,7 +267,7 @@ function Read-ChappyBDirectoryCluster {
             shortName = $visibleShort
             nameSource = $(if ($null -ne $lfnName) { 'lfn_validated' } elseif ($isDeleted) { 'deleted_short_partial' } else { 'short_8_3' })
             confidence = $(if ($isDeleted -or $lfnInvalid -or $oversized -or
-                ($ExperimentalFlagZeroSizeAllocatedFile -and $zeroSizeAllocatedFile)) { 'partial' } else { 'probable' })
+                ($ExperimentalFlagZeroSizeNonzeroStartCluster -and $zeroSizeNonzeroStartCluster)) { 'partial' } else { 'probable' })
             evidence = @($reasons.ToArray())
             parentClusterHint = $null
         })
@@ -343,8 +343,8 @@ function Get-ChappyDirectoryCandidates {
           [int]$MaxDirectories = 1000,
           [switch]$IncludeNames,
           [switch]$IncludeDeleted,
-          # R4 experiment, default OFF: flag zero-size files with allocated starts.
-          [switch]$ExperimentalFlagZeroSizeAllocatedFile,
+          # R4 experiment, default OFF: flag zero-size files with nonzero start-cluster fields.
+          [switch]$ExperimentalFlagZeroSizeNonzeroStartCluster,
           # R9 experimental, default OFF: bounded read-event provenance.
           # This reports scanner observations, not cryptographic authenticity.
           [switch]$RecordClusterCoverage,
@@ -424,7 +424,7 @@ function Get-ChappyDirectoryCandidates {
                     } else { $coverageDuplicates++ }
                 }
                 $rootRead = $true
-                $parsed = Read-ChappyBDirectoryCluster -Buffer $rootBuf -Cluster $root -OffsetBytes $rootOffset -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeAllocatedFile:$ExperimentalFlagZeroSizeAllocatedFile -IsRoot $true
+                $parsed = Read-ChappyBDirectoryCluster -Buffer $rootBuf -Cluster $root -OffsetBytes $rootOffset -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -IsRoot $true
                 $checked += [long]$parsed.validCount
                 if ($parsed.accepted) {
                     $directoriesAccepted++
@@ -465,7 +465,7 @@ function Get-ChappyDirectoryCandidates {
                         $coverageUnique++
                     } else { $coverageDuplicates++ }
                 }
-                $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeAllocatedFile:$ExperimentalFlagZeroSizeAllocatedFile -IsRoot $false
+                $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -IsRoot $false
                 $checked += [long]$parsed.validCount
                 if (-not $parsed.accepted) {
                     $rejectedReasons[$parsed.decisionReason] = [long]$rejectedReasons[$parsed.decisionReason] + 1L
