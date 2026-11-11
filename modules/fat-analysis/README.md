@@ -56,16 +56,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\modules\fat-analysis\t
 
 ## R2 — synthetic-only in-memory patch and rollback experiment
 
-**Implemented in** \`Fat32SyntheticSimulation.psm1\` with tests \`tests/Run-TeamD-R2.Tests.ps1\`.
+**Implemented in** `Fat32SyntheticSimulation.psm1` with tests `tests/Run-TeamD-R2.Tests.ps1`.
 This is **not** a repair tool for a disk, a 31 GB master IMG, or even a user-provided working IMG.
-It accepts only a small artificial \`byte[]\` (4 KiB .. 8 MiB) with a deliberately stamped
-\`CHAPPY-SYNTH-R2\` marker at byte 480, a valid test VBR signature,
+It accepts only a small artificial `byte[]` (4 KiB .. 8 MiB) with a deliberately stamped
+`CHAPPY-SYNTH-R2` marker at byte 480, a valid test VBR signature,
 512 B/sector, and exactly two FAT regions within the synthetic buffer.
 The marker is a **test guard, not a cryptographic authenticity proof**. No file-path
 parameter, file-opening API, physical-disk API, or file-writing API exists in this module.
 
-A proposal explicitly specifies \`FatIndex\`, \`EntryIndex\`, \`ExpectedValue\`,
-and \`ProposedValue\`. Up to 32 non-overlapping 4-byte aligned FAT-entry patches are
+A proposal explicitly specifies `FatIndex`, `EntryIndex`, `ExpectedValue`,
+and `ProposedValue`. Up to 32 non-overlapping 4-byte aligned FAT-entry patches are
 allowed. Proposal creation verifies all old bytes, checks the geometry and computes the
 entire artificial input SHA-256. Invocation validates the same hash, all expected bytes,
 their computed offsets, and the manifest hex **before** modifying a cloned byte array.
@@ -75,15 +75,15 @@ count, cloned simulated byte array, and a reverse (rollback) plan constrained to
 resulting hash. The original input remains unchanged. Rollback is itself an in-memory
 simulation and returns a second clone; tests confirm the original SHA-256 is restored.
 
-\`\`\`powershell
+```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1
-\`\`\`
+```
 
 **Explicit non-goals:** no real image patching, no work-copy writes, no automatic
 repair inference, no private IMG access, no recovery-success claim. The old R1
-\`RepairCandidates\` remain investigative hypotheses and are **never converted
+`RepairCandidates` remain investigative hypotheses and are **never converted
 automatically** into byte patches. The R2 before/after manifest may be exported
-to JSON only after selecting report fields that exclude \`SimulatedImageBytes\`.
+to JSON only after selecting report fields that exclude `SimulatedImageBytes`.
 A separate approved design would be required before any work-copy disk simulation.
 
 ## Limits
