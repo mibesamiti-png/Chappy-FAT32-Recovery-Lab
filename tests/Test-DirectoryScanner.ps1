@@ -94,6 +94,9 @@ function Hash-B([string]$Path) {
     try {return [BitConverter]::ToString($sha.ComputeHash($s))} finally {$s.Dispose();$sha.Dispose()}
 }
 
+# Additional synthetic LFN and fixed-ground-truth precision cases.
+. (Join-Path $PSScriptRoot 'Test-DirectoryLfnAdversarialCases.ps1')
+
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('ChappyB-Synthetic-'+[Guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($temp)
 $imagePath=Join-Path $temp 'generated-test.img'
