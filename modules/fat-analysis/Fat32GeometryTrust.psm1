@@ -154,7 +154,9 @@ function Get-ChappyFatGeometryTrust {
                 if($primary.rootEntryCount -ne 0 -or $primary.totalSectors16 -ne 0 -or $primary.fatSectors16 -ne 0){
                     [void]$reasons.Add('bpb.fat32_legacy_fields_nonzero');$reject=$true
                 }
-                if($bpsValid -and $primary.totalSectors -gt 0 -and $primary.fatSectors -gt 0){
+                if($bpsValid -and $spc -ge 1 -and $spc -le 128 -and ($spc -band ($spc-1)) -eq 0 -and
+                    $primary.reservedSectors -ge 2 -and $primary.fatCopies -gt 0 -and
+                    $primary.totalSectors -gt 0 -and $primary.fatSectors -gt 0){
                     $bpbEnd=$partStart+$primary.totalSectors*$bps
                     if($bpbEnd -gt ($partStart+$partLength)){
                         [void]$reasons.Add('geometry.bpb_exceeds_mbr_partition');$reject=$true
