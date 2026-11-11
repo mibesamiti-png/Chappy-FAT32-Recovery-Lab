@@ -6,48 +6,48 @@ $lfnShort = New-ShortB 'LFNQA   TXT' 0x20 50 12
 $lfnHash = Get-ChappyBShortChecksum $lfnShort
 $positions = @(1,3,5,7,9,14,16,18,20,22,24,28,30)
 $longName = '日本語の長い名前🌟.gcode'
-$cleanLfn = @(New-LfnB $longName $lfnShort)
+$cleanLfn = (New-LfnB $longName $lfnShort)
 Assert-B ($cleanLfn.Count -ge 2 -and
     (Get-ChappyBLfnName -Segments $cleanLfn -Checksum $lfnHash) -eq $longName) 'LFN adversarial fixture valid multi-segment Unicode'
 
-$mutatedOrder = @(New-LfnB $longName $lfnShort)
+$mutatedOrder = (New-LfnB $longName $lfnShort)
 $mutatedOrder[0][0] = [byte]($mutatedOrder[0][0] -bor 0x20)
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $mutatedOrder -Checksum $lfnHash)) 'LFN reserved ordinal 0x20 rejected'
 
-$mutatedInner = @(New-LfnB $longName $lfnShort)
+$mutatedInner = (New-LfnB $longName $lfnShort)
 $mutatedInner[1][0] = [byte]($mutatedInner[1][0] -bor 0x20)
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $mutatedInner -Checksum $lfnHash)) 'LFN reserved ordinal in nonterminal segment rejected'
 
 $swapped = @($cleanLfn[1], $cleanLfn[0])
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $swapped -Checksum $lfnHash)) 'LFN reversed ordinal sequence rejected'
 
-$checksumBad = @(New-LfnB $longName $lfnShort)
+$checksumBad = (New-LfnB $longName $lfnShort)
 $checksumBad[0][13] = [byte](($checksumBad[0][13] + 1) -band 255)
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $checksumBad -Checksum $lfnHash)) 'LFN corrupted short checksum rejected'
 
 $shortName = 'TEST.txt'
-$shortLfn = @(New-LfnB $shortName $lfnShort)
+$shortLfn = (New-LfnB $shortName $lfnShort)
 Assert-B ($shortLfn.Count -eq 1 -and
     (Get-ChappyBLfnName -Segments $shortLfn -Checksum $lfnHash) -eq $shortName) 'LFN single-segment positive control'
 
-$invalidNull = @(New-LfnB $shortName $lfnShort)
+$invalidNull = (New-LfnB $shortName $lfnShort)
 Set-U16 $invalidNull[0] $positions[$shortName.Length] 65535
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $invalidNull -Checksum $lfnHash)) 'LFN 0xFFFF is not a substitute for null terminator'
 
-$invalidTail = @(New-LfnB $shortName $lfnShort)
+$invalidTail = (New-LfnB $shortName $lfnShort)
 Set-U16 $invalidTail[0] $positions[($shortName.Length+1)] 0x0041
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $invalidTail -Checksum $lfnHash)) 'LFN non-padding after terminator rejected'
 
-$surrogateBad = @(New-LfnB 'AB🌟.txt' $lfnShort)
+$surrogateBad = (New-LfnB 'AB🌟.txt' $lfnShort)
 Set-U16 $surrogateBad[0] $positions[2] 0xDC00
 Assert-B ($null -eq (Get-ChappyBLfnName -Segments $surrogateBad -Checksum $lfnHash)) 'LFN unpaired UTF-16 surrogate rejected'
 
-$withoutTerminator = @(New-LfnB ('A'*12) $lfnShort)
+$withoutTerminator = (New-LfnB ('A'*12) $lfnShort)
 Set-U16 $withoutTerminator[0] $positions[12] 0x0042
 Assert-B ((Get-ChappyBLfnName -Segments $withoutTerminator -Checksum $lfnHash) -eq (('A'*12)+'B')) 'LFN exact 13-unit segment without terminator allowed'
 
-$maxLfn = @(New-LfnB ('Z'*255) $lfnShort)
-$tooLongLfn = @(New-LfnB ('Z'*256) $lfnShort)
+$maxLfn = (New-LfnB ('Z'*255) $lfnShort)
+$tooLongLfn = (New-LfnB ('Z'*256) $lfnShort)
 Assert-B ((Get-ChappyBLfnName -Segments $maxLfn -Checksum $lfnHash).Length -eq 255 -and
     $null -eq (Get-ChappyBLfnName -Segments $tooLongLfn -Checksum $lfnHash)) 'LFN 255 UTF-16 units accepted; 256 rejected'
 
@@ -55,7 +55,7 @@ Assert-B ((Get-ChappyBLfnName -Segments $maxLfn -Checksum $lfnHash).Length -eq 2
 $rng = New-Object System.Random 20261111
 $mutationAccepted = 0
 for ($k=0; $k -lt 160; $k++) {
-    $parts = @(New-LfnB $longName $lfnShort)
+    $parts = (New-LfnB $longName $lfnShort)
     $n = $rng.Next(0, $parts.Count)
     switch ($k % 5) {
         0 { $parts[$n][0] = [byte]($parts[$n][0] -bor 0x20) }
