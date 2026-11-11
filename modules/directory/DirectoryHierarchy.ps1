@@ -23,7 +23,11 @@ function Get-ChappyDirectoryHierarchyEvidence {
         [int]$MaxContainerObservations = 200000,
         # Experimental R8 opt-in: a caller-composed/partial metadata graph
         # must not be mistaken for full-volume evidence. No raw reads.
-        [switch]$RequireCompleteClusterCoverageEvidence
+        [switch]$RequireCompleteClusterCoverageEvidence,
+        # R9 experiment, default OFF. Only an independent scanner-produced
+        # bounded interval ledger can corroborate byte counts. A caller can
+        # forge the object; this is NOT an authenticated source.
+        [switch]$RequireObservedClusterIntervals
     )
     if ($MaxNodes -lt 1 -or $MaxNodes -gt 100000 -or
         $MaxEdges -lt 1 -or $MaxEdges -gt 200000 -or
@@ -51,7 +55,7 @@ function Get-ChappyDirectoryHierarchyEvidence {
     $containerObservationsVisited = 0L
     $incomplete = [bool]$DirectoryResult.scanIncomplete
     $coverageEvidence = 'not_requested'
-    if ($RequireCompleteClusterCoverageEvidence) {
+    if ($RequireCompleteClusterCoverageEvidence -or $RequireObservedClusterIntervals) {
         $coverageEvidence = 'unproven'
         # A byte count is necessary, never sufficient to establish all
         # original directory relationships: corrupted or unrecognized records
@@ -88,6 +92,41 @@ function Get-ChappyDirectoryHierarchyEvidence {
         if ($coverageEvidence -eq 'unproven') {
             $incomplete = $true
             [void]$warnings.Add('hierarchy_cluster_coverage_unproven')
+        }
+    }
+    if ($RequireObservedClusterIntervals) {
+        $intervalConsistent = $false
+        # Because a complete compact interval union must cover clusters
+        # 2..maxCluster exactly once, require ONE single inclusive interval.
+        # Never accept duplicate reads, overlapping segments or a missing
+        # block merely because aggregate read bytes appear sufficient.
+        if ($coverageEvidence -eq 'numeric_cluster_coverage_consistent') {
+            $prop = $DirectoryResult.PSObject.Properties['coverageProvenance']
+            if ($null -ne $prop -and $null -ne $prop.Value) {
+                $ledger = $prop.Value
+                try {
+                    $ranges = $ledger.intervals
+                    if ([string]$ledger.source -ceq 'scanner_read_events_v1' -and
+                        [string]$ledger.status -ceq 'recorded' -and
+                        $ranges -is [array] -and $ranges.Length -eq 1 -and
+                        [long]$ledger.uniqueClusters -eq $clusterCount -and
+                        [long]$ledger.readEvents -eq $clusterCount -and
+                        [long]$ledger.duplicateReadEvents -eq 0 -and
+                        [long]$ranges[0].firstCluster -eq 2L -and
+                        [long]$ranges[0].lastCluster -eq $maxCluster) {
+                        $intervalConsistent = $true
+                    }
+                } catch {
+                    # Malformed/untrusted caller-supplied ledger stays unknown.
+                }
+            }
+        }
+        if ($intervalConsistent) {
+            $coverageEvidence = 'scanner_reported_interval_consistent'
+        } else {
+            $coverageEvidence = 'unproven'
+            $incomplete = $true
+            [void]$warnings.Add('hierarchy_cluster_interval_coverage_unproven')
         }
     }
     $unobservedTargets = 0L
