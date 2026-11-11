@@ -63,3 +63,15 @@ These are planning milestones, not actual recovery percentages. Do not test or c
 | A | PR #15 merged: opt-in, no-write/no-extraction, numeric-only read-only preflight; 7-suite synthetic Windows CI passed | Review `docs/LOCAL_READONLY_APPROVAL_GATE.md`, further malformed BPB/alias negative tests, later explicit local-only real IMG trial |
 
 **Safety state:** synthetic and local-logic code only; real user master IMG never read by this workflow and **not approved** for diagnostic execution yet. No recovered file count, original filename correctness, or data recovery percentage has been verified.
+
+ 
+## Fourth integration checkpoint (2026-11-11) — scoped engineering progress, not recovery %
+
+| Role | Newly accepted artifact | Next separately bounded work |
+| --- | --- | --- |
+| B | [PR #17 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/17); R2 Issue #8 closed | [R3 Issue #19](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/19) synthetic confidence calibration/scan bounds |
+| C | [Draft PR #5](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/5); opt-in output safety and free-text report sanitization CI PASS | ZIP/3MF structural-only confidence vs CRC/content tests; A re-review before merge |
+| D | [PR #16 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/16) bounded FAT chain terminals, Windows D 165/165 synthetic assertions PASS | [Issue #9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) D-owned read-only numeric directory/FAT consistency |
+| A | [PR #18 merged](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/18), root-chain aggregate in experimental local preflight and 8-suite central CI, [main PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/42979036878) | Strengthen BPB/Windows-alias safety before any real master IMG trial |
+
+**Do not interpret passing synthetic assertions, calculated candidate counts or this roadmap as actual recovered-file percentages.** The user's 31GB master IMG has not been tested with the new integration runner.
