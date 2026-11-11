@@ -304,44 +304,58 @@ function Get-ChappyCarvingCandidates {
         [Array]::Copy($tail,0,$combined,0,$tail.Length)
         [Array]::Copy($buf,0,$combined,$tail.Length,$buf.Length)
         $base=$cursor-$tail.Length
+        # Collect both signature families before validating. ZIP-first validation previously
+        # suppressed an earlier, non-overlapping G-code whenever ZIP ended later in this chunk.
+        # Per-chunk event discovery is bounded by the 16 KiB scan chunk (+ 256-byte tail).
+        $events=New-Object 'System.Collections.Generic.List[object]'
         $i=0
         while ($i -le ($combined.Length - $sig.Length)) {
             $hit=[Array]::IndexOf($combined,$sig[0],$i)
             if ($hit -lt 0 -or $hit -gt ($combined.Length-$sig.Length)) { break }
             $i=$hit+1
             if ($combined[$hit+1] -ne 0x4b -or $combined[$hit+2] -ne 3 -or $combined[$hit+3] -ne 4) { continue }
-            $at=$base+$hit
-            if ($at -lt $StartOffset -or $at -le $lastZipProbed -or $at -lt $skipZip) { continue }
-            if ($budget.Probes -ge $MaxProbes) { $budget.StopCode='scan.probe_budget_exhausted'; break }
-            if ($budget.Timer.ElapsedMilliseconds -gt $MaxWorkMilliseconds) {
-                $budget.StopCode='scan.time_budget_exhausted'; break
+            $at=$base+[long]$hit
+            if ($at -ge $StartOffset -and $at -lt $limit -and $at -gt $lastZipProbed) {
+                $events.Add([pscustomobject]@{at=$at; kind='zip'; priority=0})
             }
-            $lastZipProbed=$at; $budget.Probes++
-            $item=Test-CZip $Stream $at $MaxFileBytes $budget $MaxProbeBytes
-            if ($null -ne $item) {
-                $candidates.Add($item)
-                if ($item.lengthBytes -gt 0) { $skipZip=$at+$item.lengthBytes }
-                if ($candidates.Count -ge $MaxCandidates) { break }
-            }
-            if ($null -ne $budget.StopCode) { break }
         }
-        if ($null -ne $budget.StopCode -or $candidates.Count -ge $MaxCandidates) { break }
         $text=[Text.Encoding]::ASCII.GetString($combined)
         foreach ($m in [regex]::Matches($text,$rx,[Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
             $at=$base+[long]$m.Groups['anchor'].Index
-            if ($at -lt $StartOffset -or $at -ge $limit -or $at -le $lastGcodeProbed -or $at -lt $skipGcode -or $at -lt $skipZip) { continue }
+            if ($at -ge $StartOffset -and $at -lt $limit -and $at -gt $lastGcodeProbed) {
+                $events.Add([pscustomobject]@{at=$at; kind='gcode'; priority=1})
+            }
+        }
+        # Monotonic offsets allow skipZip/skipGcode to mean "end of an earlier
+        # accepted candidate", rather than incorrectly excluding preceding data.
+        foreach ($event in ($events | Sort-Object at,priority)) {
+            $at=[long]$event.at
+            if ($event.kind -eq 'zip') {
+                if ($at -le $lastZipProbed -or $at -lt $skipZip -or $at -lt $skipGcode) { continue }
+            } else {
+                if ($at -le $lastGcodeProbed -or $at -lt $skipGcode -or $at -lt $skipZip) { continue }
+            }
             if ($budget.Probes -ge $MaxProbes) { $budget.StopCode='scan.probe_budget_exhausted'; break }
             if ($budget.Timer.ElapsedMilliseconds -gt $MaxWorkMilliseconds) {
                 $budget.StopCode='scan.time_budget_exhausted'; break
             }
-            $lastGcodeProbed=$at; $budget.Probes++
-            $gc=Test-CGcode $Stream $at $MaxFileBytes $budget $MaxProbeBytes
-            if ($null -ne $gc) {
-                $candidates.Add($gc)
-                $skipGcode=$at+[Math]::Max(1L,[long]$gc.lengthBytes)
-                if ($candidates.Count -ge $MaxCandidates) { break }
+            $budget.Probes++
+            if ($event.kind -eq 'zip') {
+                $lastZipProbed=$at
+                $item=Test-CZip $Stream $at $MaxFileBytes $budget $MaxProbeBytes
+                if ($null -ne $item) {
+                    $candidates.Add($item)
+                    if ($item.lengthBytes -gt 0) { $skipZip=$at+[long]$item.lengthBytes }
+                }
+            } else {
+                $lastGcodeProbed=$at
+                $gc=Test-CGcode $Stream $at $MaxFileBytes $budget $MaxProbeBytes
+                if ($null -ne $gc) {
+                    $candidates.Add($gc)
+                    $skipGcode=$at+[Math]::Max(1L,[long]$gc.lengthBytes)
+                }
             }
-            if ($null -ne $budget.StopCode) { break }
+            if ($null -ne $budget.StopCode -or $candidates.Count -ge $MaxCandidates) { break }
         }
         if ($null -ne $budget.StopCode -or $candidates.Count -ge $MaxCandidates) { break }
         $keep=[Math]::Min(256,$combined.Length)
