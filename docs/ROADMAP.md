@@ -28,3 +28,14 @@ Current baseline v0.5 remains a **legacy experiment**, not approved for recovery
 - Sensitive filenames/report contents never reach public repository
 - Actual real-image tests conducted locally only after code review, and their sanitized summary is recorded
 - Every claim distinguishes test evidence from hypothesis.
+
+## Next parallel round (A-issued 2026-11-11)
+
+| Team | Next deliverable | Assigned Issue | Status |
+| --- | --- | --- | --- |
+| B R2 | Confidence-aware directory hierarchy candidate reconstruction, reduced false positives, synthetic adversarial tests | [#8](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/8) | **assigned, open** |
+| C R2 | Fix cumulative ZIP/G-code probe read budgets and privacy/path issues before A merges Draft PR #5 | [#3](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/3) | **review changes requested** |
+| D R3 | Bounded FAT1/FAT2 regional comparison, EB-58 distribution and chain anomaly statistics | [#9](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/9) | **assigned, open** |
+| A | Complete C safety review/integration and isolated read-only local runner | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | **in progress** |
+
+These are planning milestones, not actual recovery percentages. Do not test or change the real IMG inside public CI.
