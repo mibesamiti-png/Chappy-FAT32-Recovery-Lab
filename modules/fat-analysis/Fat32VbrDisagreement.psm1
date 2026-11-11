@@ -232,6 +232,9 @@ function Get-ChappyFatVbrDisagreement {
         }
     }
     $anchorBad=$mbrErrors.Count -gt 0
+    # An invalid MBR prevents both VBR probes. Even if its contradiction is
+    # observed, the comparison itself is incomplete and must say so.
+    if($anchorBad){$incomplete=$true}
     $pa=Get-D5Candidate -Role 'primary' -ProbeOffset $primaryOffset -Bpb $primary -ReadProblem $pProblem -Start $start -Length $length -StreamLength $Stream.Length -Fs $fs -FsLocation $fsLocation -BadMbr $anchorBad
     $ba=Get-D5Candidate -Role 'backup' -ProbeOffset $backupOffset -Bpb $backup -ReadProblem $bProblem -Start $start -Length $length -StreamLength $Stream.Length -Fs $fs -FsLocation $fsLocation -BadMbr $anchorBad
     $diff=New-Object System.Collections.ArrayList
