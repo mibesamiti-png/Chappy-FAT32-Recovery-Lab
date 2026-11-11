@@ -328,6 +328,41 @@ try {
     Assert (@($ratioDefault.items | Where-Object {$_.crc32Status -eq 'match'}).Count -eq 0) 'default opt-out never inflates ratio fixture'
     Write-Host 'PASS: declared expansion-ratio risk skipped; default-off preserved'
 
+    # Header lies about the expanded size: even if the *declared* ratio looks
+    # small, the stream must stop as soon as actual output exceeds declaration.
+    $hiddenBomb=[byte[]]$ratioZip.Clone()
+    $bombCd=FindSyntheticCentralDirectory $hiddenBomb
+    [Array]::Copy([BitConverter]::GetBytes([uint32]32),0,$hiddenBomb,$bombCd+24,4)
+    $bombPath=Join-Path $fixtureRoot 'deflate_underdeclared_expansion.img'
+    WriteSynthetic $bombPath $hiddenBomb
+    $bombResult=Scan $bombPath 0 1048576 -DeflateCrc
+    $bombHits=@($bombResult.items | Where-Object {$_.format -eq 'zip'})
+    Assert ($bombHits.Count -eq 1 -and $bombHits[0].confidence -eq 'partial') 'underdeclared real expansion fails instead of being accepted'
+    Assert ($bombHits[0].checks -eq 'zip_deflate_inflate_failed') 'underdeclared expansion produces bounded negative code'
+    Write-Host 'PASS: actual decompression output cannot exceed declared bounded size'
+
+    # Global 16-entry inflate cap must span separate archives, not restart at
+    # each independent ZIP candidate in one stream.
+    $miniDeflate=MakeDeflateZip ([Text.Encoding]::ASCII.GetBytes('uncompressible artificial ABCD-1234'))
+    $archiveCount=18
+    $many=New-Object byte[] ($miniDeflate.Length*$archiveCount)
+    for($i=0;$i -lt $archiveCount;$i++){
+        [Array]::Copy($miniDeflate,0,$many,($miniDeflate.Length*$i),$miniDeflate.Length)
+    }
+    $manyPath=Join-Path $fixtureRoot 'multiple_zip_global_inflate_quota.img'
+    WriteSynthetic $manyPath $many
+    $manyStream=[ChappyCountingReadStream]::new([IO.File]::OpenRead($manyPath))
+    try {
+        $manyResult=Get-ChappyCarvingCandidates -Stream $manyStream -MaxScanBytes $many.Length -MaxFileBytes 1048576 -MaxProbeBytes 1048576 -MaxProbes 64 -MaxCandidates 32 -ExtraValidationReadBytes 1048576 -EnableSmallDeflateCrc
+        $allZip=@($manyResult.items | Where-Object {$_.format -eq 'zip'})
+        Assert ($allZip.Count -eq $archiveCount) 'all eighteen non-overlapping small synthetic ZIPs still discovered'
+        Assert (@($allZip | Where-Object {$_.crc32Status -eq 'match'}).Count -eq 16) 'only first sixteen ZIP payloads CRC-checked globally'
+        Assert (@($allZip | Where-Object {$_.crc32Status -eq 'not_checked'}).Count -eq 2) 'global compressed/expanded entry limit marks remaining as unchecked'
+        Assert ($manyStream.BytesRead -eq $manyResult.metrics.bytesRead -and $manyResult.metrics.bytesRead -le ($many.Length+1048576)) 'global source-byte budget includes all attempted inflate reads'
+        Assert ($manyResult.metrics.entriesChecked -le 64 -and -not $manyStream.CanWrite) 'global probes bounded and stream read only'
+    } finally {$manyStream.Dispose()}
+    Write-Host 'PASS: DEFLATE global entry cap applies across ZIP candidates with bounded reads'
+
     # Truncated ZIP still remains signature-only even with inflate opted in.
     $cutDeflate=New-Object byte[] ($z.Length-9)
     [Array]::Copy($z,0,$cutDeflate,0,$cutDeflate.Length)
