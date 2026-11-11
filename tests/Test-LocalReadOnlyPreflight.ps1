@@ -80,6 +80,8 @@ try {
     Assert-A ($result.directory.candidateRecords -ge 1 -and $result.hierarchy.nodes -ge 1) 'Directory metadata and hierarchy candidate integration'
     Assert-A ($result.fatMirrors.differentEntries -eq 0 -and $result.fatMirrors.bytesRead -le 8192) 'FAT mirror comparison obeys read budget'
     Assert-A ($result.eb58.observedPatternRuns -ge 2 -and $result.eb58.bytesRead -le 2560) 'EB58 mapping obeys read budget'
+    Assert-A ($result.rootChain.sampledTraces -eq 2 -and $result.rootChain.incompleteTraces -eq 0 -and $result.rootChain.anomalousTraces -eq 0) 'Root FAT chain sampled independently in both mirrors; synthetic EOC normal'
+    Assert-A ($result.rootChain.bytesRead -le 256 -and $result.rootChain.interpretation -eq 'root_chain_sample_only_not_original_data_integrity') 'Root chain reads capped and file integrity never claimed'
     Assert-A (-not $result.extractionAttempted -and -not $result.repairAttempted -and -not $result.reportFileWritten -and -not $result.privateNamesIncluded) 'No recovery, repair, report or filenames'
     Assert-A ($result.scanIncomplete -and $result.status -eq 'partial') 'Bounded partial scan cannot claim whole image inspected'
     $json=ConvertTo-Json -InputObject $result -Depth 9
