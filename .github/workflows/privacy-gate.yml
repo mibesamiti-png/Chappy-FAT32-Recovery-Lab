@@ -19,18 +19,9 @@ jobs:
       - name: Check tracked files for disallowed formats and large payloads
         shell: powershell
         run: .\tools\Check-RepoSafety.ps1 -CheckTracked
-      - name: Synthetic FAT32 QuickProbe regression test
+      - name: Run isolated synthetic-only QuickProbe + B + D R1/R2/R3 regressions
         shell: powershell
-        run: .\tests\Test-QuickProbe.ps1
-      - name: Integrated Team B directory synthetic regression
-        shell: powershell
-        run: .\tests\Test-DirectoryScanner.ps1
-      - name: Integrated Team D FAT forensic synthetic regression
-        shell: powershell
-        run: .\modules\fat-analysis\tests\Run-TeamD.Tests.ps1
-      - name: Integrated Team D synthetic patch and rollback regression
-        shell: powershell
-        run: .\modules\fat-analysis\tests\Run-TeamD-R2.Tests.ps1
+        run: .\runner\Invoke-ChappySyntheticRegression.ps1
       - name: Confirm this gate is not a security audit
         shell: powershell
         run: Write-Host 'Manual review still required; do not commit any user data.'
