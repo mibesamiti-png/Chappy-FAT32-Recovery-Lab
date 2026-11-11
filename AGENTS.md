@@ -10,3 +10,7 @@
 8. Use a distinct branch and draft PR; do not modify other teams' modules without coordinating.
 9. Every PR reports changes, safety implications, tests actually executed, limitations, next actions, and progress as estimates not proof.
 10. Never merge unreviewed destructive actions or publish real user content.
+
+## Universal bootstrap behavior
+
+The authoritative shared startup / continuation instructions are `docs/UNIVERSAL_WORK_INSTRUCTION.md`; the copy/paste message is `docs/UNIVERSAL_BOOTSTRAP_PROMPT.md`. Teams must consult `docs/TEAM_DISPATCH.md` and **keep the role already assigned to their conversation**. A fresh unassigned conversation cannot safely infer a unique team from the same generic prompt; require an explicit one-time role assignment. Read current GitHub state on each continuation; do not trust old branch/Issue summaries.
