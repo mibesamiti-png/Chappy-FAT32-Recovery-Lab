@@ -165,7 +165,10 @@ function Test-CGcode {
     }
     if ($commands -lt 4 -or $lines -lt 6 -or $lastGood -le $Offset) { return $null }
     $windowEnd=$Offset+$limit
-    $bounded = (-not $stopped -and ($lastGood -ge ($windowEnd-4096)))
+    # Trailing zero-filled slack is not a file fragment by itself.
+    $zeroPaddedTail = ($partial.Count -gt 0)
+    foreach ($tailByte in $partial) { if ($tailByte -ne 0) { $zeroPaddedTail=$false; break } }
+    $bounded = (-not $stopped -and -not $zeroPaddedTail -and ($lastGood -ge ($windowEnd-4096)))
     $incomplete = $bounded -or $fragmentationSuspected
     return [pscustomobject]@{
         offsetBytes=$Offset; lengthBytes=($lastGood-$Offset); format='gcode'
