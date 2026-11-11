@@ -316,6 +316,7 @@ function Get-ChappyDirectoryCandidates {
           [switch]$IncludeNames,
           [switch]$IncludeDeleted)
     $items = New-Object System.Collections.ArrayList
+    $directoryContainers = New-Object System.Collections.ArrayList
     $warnings = New-Object System.Collections.ArrayList
     $errors = New-Object System.Collections.ArrayList
     $bytesRead = 0L
@@ -366,6 +367,13 @@ function Get-ChappyDirectoryCandidates {
                 $checked += [long]$parsed.validCount
                 if ($parsed.accepted) {
                     $directoriesAccepted++
+                    [void]$directoryContainers.Add([pscustomobject]@{
+                        cluster = $root
+                        isRoot = $true
+                        decisionReason = $parsed.decisionReason
+                        parentClusterHint = $parsed.parentClusterHint
+                        entryCount = $parsed.validCount
+                    })
                     foreach ($item in $parsed.entries) {
                         if ($items.Count -ge $MaxCandidates) { $incomplete = $true; break }
                         [void]$items.Add($item)
@@ -395,6 +403,13 @@ function Get-ChappyDirectoryCandidates {
                     continue
                 }
                 $directoriesAccepted++
+                [void]$directoryContainers.Add([pscustomobject]@{
+                    cluster = $c
+                    isRoot = $false
+                    decisionReason = $parsed.decisionReason
+                    parentClusterHint = $parsed.parentClusterHint
+                    entryCount = $parsed.validCount
+                })
                 foreach ($item in $parsed.entries) {
                     if ($items.Count -ge $MaxCandidates) { $incomplete = $true; break }
                     [void]$items.Add($item)
@@ -413,6 +428,7 @@ function Get-ChappyDirectoryCandidates {
         status = $status
         scanIncomplete = [bool]$incomplete
         items = @($items.ToArray())
+        directoryContainers = @($directoryContainers.ToArray())
         warnings = @($warnings.ToArray())
         errors = @($errors.ToArray())
         metrics = [pscustomobject]@{

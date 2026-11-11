@@ -4,6 +4,7 @@
 param()
 $ErrorActionPreference='Stop'
 . (Join-Path (Join-Path $PSScriptRoot '..\modules\directory') 'DirectoryScanner.ps1')
+. (Join-Path (Join-Path $PSScriptRoot '..\modules\directory') 'DirectoryHierarchy.ps1')
 
 function Assert-B([bool]$Pass, [string]$Label) {
     if (-not $Pass) { throw "FAIL: $Label" }
@@ -68,6 +69,24 @@ function Write-DirectoryB([System.IO.Stream]$S,[long]$At,[System.Collections.ILi
         $entryIndex++
     }
     Write-B $S $At $cluster
+}
+function New-HierarchyContainerB([long]$Cluster,[object]$Hint,[bool]$Root) {
+    return [pscustomobject]@{
+        cluster = $Cluster
+        parentClusterHint = $Hint
+        isRoot = $Root
+        decisionReason = 'synthetic_container'
+    }
+}
+function New-HierarchyLinkB([long]$Parent,[long]$Child,[long]$At) {
+    return [pscustomobject]@{
+        containerCluster = $Parent
+        startCluster = $Child
+        isDirectory = $true
+        deleted = $false
+        offsetBytes = $At
+        name = 'SYNTHETIC_ONLY'
+    }
 }
 function Hash-B([string]$Path) {
     $sha=[Security.Cryptography.SHA256]::Create()
@@ -186,6 +205,25 @@ try {
         Assert-B (@($all.items|Where-Object {$_.name -eq '復旧候補_機械部品_長いファイル名🌟.gcode' -and $_.nameSource -eq 'lfn_validated'}).Count -eq 1) 'Multi-entry UTF-16LE Japanese LFN including surrogate pair'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'CHILD.TXT' -and $_.containerCluster -eq 7 -and $_.parentClusterHint -eq 2}).Count -eq 1) 'Subdirectory parent hint'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'INNER.TXT' -and $_.containerCluster -eq 10}).Count -eq 1) 'Nested independent cluster discovery'
+        $beforeHierarchyPos = $read.Position
+        $hierarchy = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $all
+        Assert-B ($hierarchy.status -eq 'ok' -and $hierarchy.metrics.nodes -ge 5 -and
+                  $hierarchy.metrics.unresolvedTargetReferences -eq 0) 'Hierarchy uses accepted scanned containers'
+        Assert-B (@($hierarchy.edges|Where-Object {
+            $_.parentCluster -eq 2 -and $_.childCluster -eq 7 -and
+            $_.relationStatus -eq 'parent_hint_corroborated' -and $_.confidence -eq 'probable'
+        }).Count -eq 1) 'Parent directory entry and dotdot hint corroborate candidate'
+        Assert-B (@($hierarchy.edges|Where-Object {
+            $_.parentCluster -eq 7 -and $_.childCluster -eq 10
+        }).Count -eq 1) 'Nested edge uses directly observed entry'
+        Assert-B (@($hierarchy.nodes|Where-Object {
+            $_.cluster -eq 19 -and $_.linkStatus -eq 'orphan_candidate'
+        }).Count -eq 1 -and @($hierarchy.parentHints|Where-Object {
+            $_.childCluster -eq 19 -and $_.relationStatus -eq 'root_marker_not_path'
+        }).Count -eq 1) 'Unreferenced orphan retains separate dotdot marker'
+        Assert-B (@($hierarchy.edges|Where-Object {$_.childCluster -eq 23}).Count -eq 0) 'Dotdot hint alone does not fabricate a hierarchy edge'
+        Assert-B ($read.Position -eq $beforeHierarchyPos) 'Hierarchy computation does no IMG reads'
+        Assert-B ((ConvertTo-Json -InputObject $hierarchy -Depth 8) -notmatch '日本語テスト|SYNTHETIC_ONLY') 'Hierarchy output excludes file names'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'ORPHAN.TXT' -and $_.containerCluster -eq 19}).Count -eq 1) 'Orphan directory discovery'
         Assert-B (@($all.items|Where-Object {$_.name -eq 'BROKEN.TXT' -and $_.confidence -eq 'partial'}).Count -eq 1) 'Broken LFN falls back to short name'
         Assert-B (@($all.items|Where-Object {$_.name -eq '../ESCAPE.txt'}).Count -eq 0) 'Traversal name rejected'
@@ -203,6 +241,58 @@ try {
         $redacted=Get-ChappyDirectoryCandidates -Stream $read -Geometry $geo -MaxScanBytes 1024
         Assert-B ($redacted.scanIncomplete -and $redacted.metrics.bytesRead -eq 1024 -and @($redacted.items|Where-Object {$null -ne $_.name}).Count -eq 0) 'Budget stop plus default name redaction'
         Assert-B ((ConvertTo-Json -InputObject $all -Depth 9) -match '"startCluster"') 'JSON metadata serializes'
+
+        # Synthetic metadata graph negatives; no real image or private names.
+        $graphFixture = [pscustomobject]@{
+            scanIncomplete = $false
+            directoryContainers = @(
+                (New-HierarchyContainerB 2 $null $true)
+                (New-HierarchyContainerB 7 2 $false)
+                (New-HierarchyContainerB 25 26 $false)
+                (New-HierarchyContainerB 26 25 $false)
+                (New-HierarchyContainerB 31 2 $false)
+                (New-HierarchyContainerB 32 2 $false)
+                (New-HierarchyContainerB 44 7 $false)
+                (New-HierarchyContainerB 55 2 $false)
+            )
+            items = @(
+                (New-HierarchyLinkB 2 31 100)
+                (New-HierarchyLinkB 7 31 200)
+                (New-HierarchyLinkB 2 32 300)
+                (New-HierarchyLinkB 2 32 332)
+                (New-HierarchyLinkB 25 26 400)
+                (New-HierarchyLinkB 26 25 500)
+                (New-HierarchyLinkB 2 44 600)
+                (New-HierarchyLinkB 2 80 700) # child never accepted as directory
+                (New-HierarchyLinkB 7 7 800) # self reference
+            )
+        }
+        $anomalies = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture
+        Assert-B (@($anomalies.edges|Where-Object {
+            $_.childCluster -eq 31 -and $_.relationStatus -eq 'ambiguous_multiple_parents'
+        }).Count -eq 2) 'Two parent assertions remain ambiguous'
+        Assert-B (@($anomalies.edges|Where-Object {
+            $_.childCluster -eq 32 -and $_.relationStatus -eq 'duplicate_parent_assertion'
+        }).Count -eq 2) 'Duplicate same-parent entries are not silently deduplicated'
+        Assert-B (@($anomalies.edges|Where-Object {
+            $_.relationStatus -eq 'cycle_detected' -and $_.childCluster -in @(25,26,7)
+        }).Count -eq 3) 'Circular and self-referencing directory entries identified'
+        Assert-B (@($anomalies.edges|Where-Object {
+            $_.childCluster -eq 44 -and $_.relationStatus -eq 'parent_hint_conflict'
+        }).Count -eq 1) 'Conflicting direct parent and dotdot kept separate'
+        Assert-B ($anomalies.metrics.unresolvedTargetReferences -eq 1 -and
+                  @($anomalies.edges|Where-Object {$_.childCluster -eq 80 -or $_.childCluster -eq 55}).Count -eq 0) 'No fabricated edges to missing child or hint-only orphan'
+        $limitedGraph = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxNodes 3 -MaxEdges 1
+        Assert-B ($limitedGraph.scanIncomplete -and $limitedGraph.status -eq 'partial' -and
+                  $limitedGraph.metrics.nodes -le 3 -and $limitedGraph.metrics.edgeAssertions -le 1) 'Hierarchy node and edge budgets bounded'
+        $badLimit = $false
+        try { $null=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxAncestorDepth 0 } catch { $badLimit = $true }
+        Assert-B $badLimit 'Invalid hierarchy traversal limit rejected'
+        $workLimited = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxAncestorSteps 1
+        Assert-B ($workLimited.scanIncomplete -and $workLimited.status -eq 'partial' -and
+                  $workLimited.metrics.ancestorSteps -le 1 -and
+                  $workLimited.warnings -contains 'hierarchy_ancestor_work_limit') 'Global ancestor work budget enforces safe cutoff'
+        Assert-B ((ConvertTo-Json -InputObject $anomalies -Depth 8) -notmatch 'SYNTHETIC_ONLY') 'Graph does not propagate entry names'
     } finally {$read.Dispose()}
     Assert-B ((Hash-B $imagePath) -eq $before) 'Source SHA-256 unchanged'
     [IO.File]::Copy($imagePath,$copyPath)
