@@ -32,7 +32,7 @@ function Get-A3DModelPayloadOffset([byte[]]$Image, $Truth) {
 function New-ChappyA3DDamagedFixture {
     [CmdletBinding(PositionalBinding = $false)]
     param(
-        [Parameter(Mandatory)][ValidateSet('M00', 'M02', 'P02', 'P03')][string]$Case,
+        [Parameter(Mandatory)][ValidateSet('M00', 'M01', 'M02', 'P02', 'P03')][string]$Case,
         [ValidateRange(1, 999999)][int]$Seed = 202611
     )
 
@@ -48,6 +48,22 @@ function New-ChappyA3DDamagedFixture {
         $layer = 'none'
         $caseId = $Case.ToUpperInvariant()
         switch ($caseId) {
+            'M01' {
+                $truth = $clean.oracle[1]
+                if ($truth.extents.Count -ne 2) { throw 'M01 requires a two-cluster generated 3MF' }
+                $layer = 'valid_fragmentation'
+                $offset = $clean.layout.fat1OffsetBytes
+                # Move the second cluster from 5 to unused cluster 7.
+                # Include both FATs and the bounded relocation window.
+                $replacement = [byte[]]$image[$offset..60927]
+                [Array]::Copy($image, 59392, $replacement, (60416 - $offset), 512)
+                [Array]::Clear($replacement, (59392 - $offset), 512)
+                foreach ($fat in @($clean.layout.fat1OffsetBytes, $clean.layout.fat2OffsetBytes)) {
+                    Set-A3DUint32 $replacement ($fat - $offset + 16) 7
+                    Set-A3DUint32 $replacement ($fat - $offset + 20) 0
+                    Set-A3DUint32 $replacement ($fat - $offset + 28) 0x0FFFFFFF
+                }
+            }
             'M02' {
                 $truth = $clean.oracle[1]
                 $layer = 'fat1'

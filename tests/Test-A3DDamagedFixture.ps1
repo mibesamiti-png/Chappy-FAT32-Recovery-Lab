@@ -122,3 +122,36 @@ foreach ($arguments in @(
 Assert-Damage ($rejected -eq 4) 'reject_external_source_or_invalid_case_seed'
 Assert-Damage ((Get-A3DSha256 $clean.image) -ceq $cleanSha) 'reference_fixture_unchanged'
 Write-Host 'PASS: A3D P0.2 isolated synthetic mutations, exact byte manifests, payload oracle and read-only sources.'
+
+# Reuse the independent bounded directory/FAT reader and format validators
+# from the clean fixture suite. It receives no oracle extent positions.
+. (Join-Path $PSScriptRoot 'Test-A3DCleanFixture.ps1')
+$fragmented = New-ChappyA3DDamagedFixture -Case M01
+$repeat = New-ChappyA3DDamagedFixture -Case M01
+$original = New-ChappyA3DCleanFixture
+$before = Get-A3DSha256 $fragmented.image
+Assert-Damage ((ConvertTo-Json $fragmented.manifest -Depth 4 -Compress) -ceq
+    (ConvertTo-Json $repeat.manifest -Depth 4 -Compress)) 'fragment_manifest_repeat'
+[byte[]]$reversed = $fragmented.image.Clone()
+foreach ($change in $fragmented.manifest.changes) {
+    Assert-Damage ($original.image[$change.offsetBytes] -eq $change.beforeByte -and
+        $fragmented.image[$change.offsetBytes] -eq $change.afterByte) 'fragment_manifest_bytes'
+    $reversed[$change.offsetBytes] = $change.beforeByte
+}
+Assert-Damage ((Get-A3DSha256 $reversed) -ceq (Get-A3DSha256 $original.image)) 'fragment_manifest_complete'
+foreach ($fat in @(16896, 37376)) {
+    Assert-Damage ([BitConverter]::ToUInt32($fragmented.image, $fat + 16) -eq 7 -and
+        [BitConverter]::ToUInt32($fragmented.image, $fat + 20) -eq 0 -and
+        [BitConverter]::ToUInt32($fragmented.image, $fat + 28) -eq 0x0FFFFFFF) 'fragment_chain'
+}
+foreach ($truth in $original.oracle) {
+    [byte[]]$bytes = Read-A3DRecord $fragmented.image $truth.shortName
+    Assert-Damage ((Get-A3DSha256 $bytes) -ceq $truth.sha256) 'fragment_full_file_sha'
+    if ($truth.format -eq '3mf') { Confirm-A3D3Mf $bytes }
+}
+$length = $original.oracle[1].lengthBytes
+[byte[]]$contiguous = $fragmented.image[58880..(58880 + $length - 1)]
+Assert-Damage ((Get-A3DSha256 $contiguous) -cne $original.oracle[1].sha256) 'contiguous_negative'
+Assert-Damage ((Get-A3DSha256 $fragmented.image) -ceq $before -and
+    $fragmented.manifest.sourceSha256Before -ceq $fragmented.manifest.sourceSha256After) 'fragment_source_unchanged'
+Write-Host 'PASS: M01 fragmented 3MF chain 4->7, full-file SHA 3/3, ZIP/XML valid, contiguous negative, complete mutation manifest.'
