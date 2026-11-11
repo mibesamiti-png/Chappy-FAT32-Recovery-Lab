@@ -78,7 +78,7 @@ function New-A3DBinaryStlBytes {
 }
 function Set-A3DRootEntry([byte[]]$Image, [int]$Index, [string]$ShortName,
                            [uint16]$FirstCluster, [uint32]$Size) {
-    if ($ShortName.Length -ne 11 -or $Index -lt 0 -or $Index -gt 5) {
+    if ($ShortName.Length -ne 11 -or $Index -lt 0 -or $Index -gt 6) {
         throw 'Invalid bounded synthetic directory entry'
     }
     $off = 57856 + (32 * $Index)
@@ -86,6 +86,20 @@ function Set-A3DRootEntry([byte[]]$Image, [int]$Index, [string]$ShortName,
     $Image[$off + 11] = 0x20
     Set-A3DUint16 $Image ($off + 26) $FirstCluster
     Set-A3DUint32 $Image ($off + 28) $Size
+}
+function Set-A3DAsciiControlLongName([byte[]]$Image, [int]$Offset, [string]$ShortName) {
+    $checksum = 0
+    foreach ($value in [Text.Encoding]::ASCII.GetBytes($ShortName)) {
+        $checksum = ((($checksum -band 1) -shl 7) + ($checksum -shr 1) + $value) -band 0xFF
+    }
+    $Image[$Offset] = 0x41
+    $Image[$Offset + 11] = 0x0F
+    $Image[$Offset + 13] = $checksum
+    $characterOffsets = @(1,3,5,7,9,14,16,18,20,22,24,28,30)
+    $longName = 'flat-mesh.stl'
+    for ($i = 0; $i -lt $characterOffsets.Count; $i++) {
+        Set-A3DUint16 $Image ($Offset + $characterOffsets[$i]) ([uint16][char]$longName[$i])
+    }
 }
 function New-A3DOracle([string]$Id, [string]$Format, [string]$ShortName,
                        [byte[]]$Content, [int]$StartCluster) {
@@ -178,7 +192,7 @@ function New-ChappyA3DCleanFixture {
     )
     $version = 'A3D-clean-r1'
     if ($IncludeFormatControls) {
-        $version = 'A3D-clean-r2-format-controls'
+        $version = 'A3D-clean-r2-lfn-controls'
         $asciiStl = @(
             'solid artificial', 'facet normal 0 0 1', 'outer loop',
             'vertex 0 0 0', 'vertex 1 0 0', 'vertex 0 1 0',
@@ -197,12 +211,13 @@ function New-ChappyA3DCleanFixture {
             $cluster = 9 + $i
             $length = $control.content.Length
             if ($length -gt 512) { throw 'Format control exceeds one cluster' }
-            Set-A3DRootEntry $image (3 + $i) $control.name $cluster $length
+            Set-A3DRootEntry $image (4 + $i) $control.name $cluster $length
             Set-A3DUint32 $image (16896 + 4 * $cluster) 0x0FFFFFFF
             Set-A3DUint32 $image (37376 + 4 * $cluster) 0x0FFFFFFF
             Copy-A3DBytes $image (57856 + 512 * ($cluster - 2)) $control.content
             $oracle += New-A3DOracle $control.id $control.format $control.name $control.content $cluster
         }
+        Set-A3DAsciiControlLongName $image (57856 + 3 * 32) $controls[0].name
     }
     return [pscustomobject]@{
         generatorVersion = $version

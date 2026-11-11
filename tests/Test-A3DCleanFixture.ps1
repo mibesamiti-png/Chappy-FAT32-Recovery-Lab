@@ -22,7 +22,7 @@ function Read-A3DRecord([byte[]]$Image, [string]$Alias, [int]$MaxPayloadBytes = 
     Assert-A3D ($bps -eq 512 -and $spc -eq 1 -and $copies -eq 2 -and
                 $fatSectors -eq 40 -and $dataStart -eq 57856) 'fixture_geometry'
     $record = $null
-    for ($i = 0; $i -lt 6; $i++) {
+    for ($i = 0; $i -lt 7; $i++) {
         $off = $dataStart + (32 * $i)
         $name = [Text.Encoding]::ASCII.GetString($Image, $off, 11)
         if ($name -ceq $Alias) { $record = $off; break }

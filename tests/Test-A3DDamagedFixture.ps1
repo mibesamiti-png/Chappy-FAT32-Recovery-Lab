@@ -227,3 +227,54 @@ foreach ($result in @($directoryDamage, $eocdDamage, $truncated)) {
         $result.manifest.sourceSha256Before -ceq $result.manifest.sourceSha256After) 'source_sha_unchanged'
 }
 Write-Host 'PASS: M04 zero directory size, original payload SHA 3/3; P01 missing ZIP end record rejected; X02 truncated extent rejected with 2048-byte budget and clean/fragmented/truncated payload budget stops at 512.'
+
+$cycle = New-ChappyA3DDamagedFixture -Case M03
+$crossLink = New-ChappyA3DDamagedFixture -Case M05
+$tailLoss = New-ChappyA3DDamagedFixture -Case M05L
+$combined = New-ChappyA3DDamagedFixture -Case M02-P02
+$lfnDamage = New-ChappyA3DDamagedFixture -Case M04L
+$expanded = New-ChappyA3DCleanFixture -IncludeFormatControls
+
+. (Join-Path $PSScriptRoot '..\modules\directory\DirectoryScanner.ps1')
+$entry = [byte[]]$expanded.image[57952..57983]
+$brokenEntry = [byte[]]$lfnDamage.image[57952..57983]
+# The expected VFAT checksum for ASCII   STL is 5.
+Assert-Damage ((Get-ChappyBLfnName -Segments (,$entry) -Checksum 5) -ceq 'flat-mesh.stl' -and
+    $null -eq (Get-ChappyBLfnName -Segments (,$brokenEntry) -Checksum 5)) 'M04L_name_validation'
+[byte[]]$ascii = Read-A3DRecord $lfnDamage.image $expanded.oracle[3].shortName
+Assert-Damage ((Get-A3DSha256 $ascii) -ceq $expanded.oracle[3].sha256) 'M04L_short_alias_payload'
+foreach ($fat in @(16896, 37376)) {
+    Assert-Damage ([BitConverter]::ToUInt32($cycle.image, $fat + 16) -eq 5 -and
+        [BitConverter]::ToUInt32($cycle.image, $fat + 20) -eq 4) 'M03_both_fats_cycle'
+    Assert-Damage ([BitConverter]::ToUInt32($crossLink.image, $fat + 16) -eq 8) 'M05_both_fats_shared_cluster'
+}
+Assert-A3DReadStops $cycle.image $modelTruth.shortName 2048 'test_fat_chain_not_terminated'
+[byte[]]$shared = Read-A3DRecord $crossLink.image $modelTruth.shortName
+Assert-Damage ((Get-A3DSha256 $shared) -cne $modelTruth.sha256) 'M05_cross_link_wrong_content'
+[byte[]]$lost = Read-A3DRecord $tailLoss.image $modelTruth.shortName
+Assert-Damage ((Get-A3DSha256 $lost) -cne $modelTruth.sha256 -and
+    @($lost[512..($lost.Length - 1)] | Where-Object { $_ -ne 0 }).Count -eq 0) 'M05L_erased_tail'
+Assert-A3DReadStops $combined.image $modelTruth.shortName 2048 'test_fat_chain_truncated'
+$singleCases = @((New-ChappyA3DDamagedFixture -Case M02), (New-ChappyA3DDamagedFixture -Case P02))
+$expectedCombined = @(foreach ($single in $singleCases) { $single.manifest.changes })
+Assert-Damage ((ConvertTo-Json -InputObject $combined.manifest.changes -Compress) -ceq
+    (ConvertTo-Json -InputObject $expectedCombined -Compress)) 'combined_only_independent_mutations'
+
+foreach ($result in @($cycle, $crossLink, $tailLoss, $combined, $lfnDamage)) {
+    $reference = if ($result.manifest.caseId -eq 'M04L') { $expanded } else { $original }
+    $sourceSha = Get-A3DSha256 $reference.image
+    $repeat = New-ChappyA3DDamagedFixture -Case $result.manifest.caseId
+    Assert-Damage ((ConvertTo-Json $result.manifest -Depth 4 -Compress) -ceq
+        (ConvertTo-Json $repeat.manifest -Depth 4 -Compress)) 'extended_manifest_repeat'
+    [byte[]]$reversed = $result.image.Clone()
+    foreach ($change in $result.manifest.changes) {
+        Assert-Damage ($reversed[$change.offsetBytes] -eq $change.afterByte -and
+            $reference.image[$change.offsetBytes] -eq $change.beforeByte) 'extended_manifest_byte'
+        $reversed[$change.offsetBytes] = $change.beforeByte
+    }
+    Assert-Damage ((Get-A3DSha256 $reversed) -ceq $sourceSha -and
+        (Get-A3DSha256 $result.image) -ceq $result.manifest.imageSha256 -and
+        $result.manifest.sourceSha256Before -ceq $sourceSha -and
+        $result.manifest.sourceSha256After -ceq $sourceSha) 'extended_manifest_complete_and_sources_unchanged'
+}
+Write-Host 'PASS: R2 LFN checksum loss, identical mirror cycle, cross-link, missing tail and combined FAT1/payload corruption.'
