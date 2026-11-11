@@ -363,19 +363,63 @@ function Get-ChappyCarvingCandidates {
     }
     return [pscustomobject]$out
 }
+# Fail closed: no physical drives, device namespaces, UNC shares, relative drive paths,
+# symlinks, directory junctions, mount-point aliases, or paths under reparse ancestors.
+# Existing local drive-letter paths only; access checks are done before creating output.
+function Assert-CSafeCarvingPath {
+    param([string]$Path,[bool]$Directory)
+    if ([string]::IsNullOrWhiteSpace($Path) -or
+        $Path -notmatch '^[A-Za-z]:[\\/]' -or
+        $Path -match '[*?"<>|]' -or
+        $Path.Substring(2).Contains(':')) {
+        throw 'Only absolute regular drive-letter paths are permitted'
+    }
+    $full=[IO.Path]::GetFullPath($Path)
+    if ($full -notmatch '^[A-Za-z]:\\') { throw 'Invalid path namespace' }
+    if ($Directory) {
+        if (-not [IO.Directory]::Exists($full)) { throw 'Destination directory must already exist' }
+    } else {
+        if (-not [IO.File]::Exists($full)) { throw 'Source must be an existing regular file' }
+    }
+    $attrs=[IO.File]::GetAttributes($full)
+    if (($attrs -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Reparse/alias paths are forbidden' }
+    if ($Directory) {
+        if (($attrs -band [IO.FileAttributes]::Directory) -eq 0) { throw 'A regular directory is required' }
+    } elseif (($attrs -band [IO.FileAttributes]::Directory) -ne 0) {
+        throw 'A regular source file is required'
+    }
+    $root=[IO.Path]::GetPathRoot($full)
+    $part=if($Directory){$full}else{[IO.Path]::GetDirectoryName($full)}
+    while (-not [string]::IsNullOrWhiteSpace($part)) {
+        $attributes=[IO.File]::GetAttributes($part)
+        if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'Reparse/alias parent is forbidden'
+        }
+        if ([string]::Equals($part.TrimEnd('\'),$root.TrimEnd('\'),[StringComparison]::OrdinalIgnoreCase)) { break }
+        $part=[IO.Path]::GetDirectoryName($part.TrimEnd('\'))
+    }
+    return $full
+}
+
 function Export-ChappyCarvingCandidate {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)][string]$ImagePath,
         [Parameter(Mandatory=$true)][psobject]$Candidate,
         [Parameter(Mandatory=$true)][string]$OutputDirectory,
-        [ValidateRange(1,1073741824)][long]$MaxFileBytes=134217728
+        [ValidateRange(1,1073741824)][long]$MaxFileBytes=134217728,
+        [switch]$EnableFileExport
     )
-    $source=[IO.Path]::GetFullPath($ImagePath)
-    $destination=[IO.Path]::GetFullPath($OutputDirectory)
-    if (-not [IO.File]::Exists($source)) {throw 'Source file not found'}
-    if (-not [IO.Directory]::Exists($destination)) {throw 'Output directory must already exist'}
-    if ([string]::Equals([IO.Path]::GetDirectoryName($source).TrimEnd('\','/'),$destination.TrimEnd('\','/'),[StringComparison]::OrdinalIgnoreCase)) {throw 'Output must be in another directory'}
+    if (-not $EnableFileExport) { throw 'File extraction is disabled unless explicitly enabled' }
+    $source=Assert-CSafeCarvingPath -Path $ImagePath -Directory $false
+    $destination=Assert-CSafeCarvingPath -Path $OutputDirectory -Directory $true
+    # Do not mix recovered output with the source/backup directory tree.
+    $sourceParent=([IO.Path]::GetDirectoryName($source).TrimEnd('\\')+'\\')
+    $destPrefix=($destination.TrimEnd('\\')+'\\')
+    if ($sourceParent.StartsWith($destPrefix,[StringComparison]::OrdinalIgnoreCase) -or
+        $destPrefix.StartsWith($sourceParent,[StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Destination must be in a separate directory tree'
+    }
     $start=[long]$Candidate.offsetBytes; $length=[long]$Candidate.lengthBytes
     if ($start -lt 0 -or $length -le 0 -or $length -gt $MaxFileBytes) {throw 'Invalid or unbounded candidate length'}
     if ($Candidate.confidence -notin @('verified','probable','partial')) {throw 'Unrecognized confidence'}
@@ -384,6 +428,7 @@ function Export-ChappyCarvingCandidate {
     $group=if ($Candidate.confidence -eq 'partial') {'partial'} elseif ($Candidate.confidence -eq 'verified') {'structurally_verified'} else {'probable'}
     $subdir=Join-Path $destination $group
     [void][IO.Directory]::CreateDirectory($subdir)
+    [void](Assert-CSafeCarvingPath -Path $subdir -Directory $true)
     $name=('carved_{0:X16}{1}' -f $start,$suffix)
     $target=Join-Path $subdir $name
     $input=[IO.File]::Open($source,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
