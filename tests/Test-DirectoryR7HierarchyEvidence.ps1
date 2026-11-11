@@ -81,14 +81,14 @@ $r7VariantMillis=0L
 foreach($id in $r7Truth.Keys) {
     if(-not $r7Unique.Add($id)) { throw 'Duplicate R7 scenario ID' }
     $fixture=New-R7GraphFixture $id
-    $before=ConvertTo-Json -InputObject $fixture -Depth 8 -Compress
+    $r7FixtureBefore=ConvertTo-Json -InputObject $fixture -Depth 8 -Compress
     $t=[System.Diagnostics.Stopwatch]::StartNew()
     $old=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $fixture -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
     $t.Stop();$r7BaselineMillis += $t.ElapsedMilliseconds
     $t=[System.Diagnostics.Stopwatch]::StartNew()
     $new=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $fixture -DetectConflictingContainerObservations -MaxContainerObservations 16 -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
     $t.Stop();$r7VariantMillis += $t.ElapsedMilliseconds
-    if((ConvertTo-Json -InputObject $fixture -Depth 8 -Compress) -cne $before) {
+    if((ConvertTo-Json -InputObject $fixture -Depth 8 -Compress) -cne $r7FixtureBefore) {
         throw 'R7 A/B modified an artificial input fixture'
     }
     $oldProbable=(@($old.edges | Where-Object { $_.parentCluster -eq 2 -and $_.childCluster -eq 7 -and $_.confidence -eq 'probable' }).Count -gt 0)
