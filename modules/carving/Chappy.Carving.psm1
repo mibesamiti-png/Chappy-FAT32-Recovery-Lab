@@ -420,32 +420,100 @@ function Export-ChappyCarvingCandidate {
 }
 Export-ModuleMember -Function Get-ChappyCarvingCandidates,Export-ChappyCarvingCandidate
 
+# Report values are untrusted (including metadata added by callers).
+# Never serialize arbitrary strings or arbitrary metric keys into a "safe" report.
+function Convert-CReportEnum {
+    param([object]$Value,[string[]]$Allowed,[string]$Fallback='unknown')
+    if ($null -eq $Value -or $Value -isnot [string] -or $Value.Length -gt 80) { return $Fallback }
+    if ($Allowed -ccontains $Value) { return $Value }
+    return $Fallback
+}
+
+function Convert-CReportUnsigned {
+    param([object]$Value,[long]$Maximum=9223372036854775807L)
+    if ($null -eq $Value) { return [long]0 }
+    $raw=[string]$Value
+    if ($raw.Length -gt 19 -or $raw -cnotmatch '^(0|[1-9][0-9]{0,18})$') { return [long]0 }
+    [long]$number=0
+    if (-not [long]::TryParse($raw,[ref]$number)) { return [long]0 }
+    if ($number -lt 0 -or $number -gt $Maximum) { return [long]0 }
+    return $number
+}
+
+function Convert-CReportCodes {
+    param([object[]]$Values,[string[]]$Allowed,[int]$MaxCodes=32,[switch]$GcodeCounts)
+    $safe=New-Object 'System.Collections.Generic.List[string]'
+    if ($null -eq $Values) { return }
+    foreach ($rawCode in $Values) {
+        if ($safe.Count -ge $MaxCodes) { break }
+        if ($rawCode -isnot [string] -or $rawCode.Length -gt 80) { continue }
+        if ($Allowed -ccontains $rawCode) {
+            $safe.Add($rawCode)
+        } elseif ($GcodeCounts -and $rawCode -cmatch '^gcode\.command_count_([0-9]{1,6})$') {
+            $count=[int]$Matches[1]
+            if ($count -le 200000) { $safe.Add(('gcode.command_count_{0}' -f $count)) }
+        }
+    }
+    return $safe.ToArray()
+}
+
 function Write-ChappyCarvingReport {
     [CmdletBinding()]
     param([Parameter(Mandatory=$true)][psobject]$Result,
           [Parameter(Mandatory=$true)][string]$ReportPath)
     $path=[IO.Path]::GetFullPath($ReportPath)
     if (-not [IO.Directory]::Exists([IO.Path]::GetDirectoryName($path))) {throw 'Report directory must already exist'}
-    # Whitelist fields: no source path, original filenames, snippets, or contents.
-    $safeItems=@(foreach($candidate in $Result.items) {
-        [pscustomobject]@{
-            offsetBytes=[long]$candidate.offsetBytes
-            lengthBytes=[long]$candidate.lengthBytes
-            format=[string]$candidate.format
-            confidence=[string]$candidate.confidence
-            evidence=@($candidate.evidence)
-            checks=[string]$candidate.checks
-            crc32Status=$(if($null -ne $candidate.PSObject.Properties['crc32Status']){[string]$candidate.crc32Status}else{'not_applicable'})
-            crc32CheckedEntries=$(if($null -ne $candidate.PSObject.Properties['crc32CheckedEntries']){[int]$candidate.crc32CheckedEntries}else{0})
-            crc32UncheckedEntries=$(if($null -ne $candidate.PSObject.Properties['crc32UncheckedEntries']){[int]$candidate.crc32UncheckedEntries}else{0})
-            truncated=[bool]$candidate.truncated
-        }
-    })
+
+    $evidenceCodes=@(
+        'zip.local_header','zip.eocd','zip.central_directory','zip.local_references',
+        'zip.stored_crc_checked','zip.stored_crc_mismatch','zip.central_directory_not_validated',
+        'gcode.printable_lines','gcode.command_sequence'
+    )
+    $checkCodes=@(
+        'zip_stored_crc_mismatch','zip_structure_and_stored_crc32',
+        'zip_structure_with_crc_unchecked','signature_only','text_syntax_only'
+    )
+    $diagnosticCodes=@(
+        'scan.read_budget_exhausted','scan.probe_budget_exhausted','scan.time_budget_exhausted',
+        'scan.validation_window_limit','scan.bounds_reached','scan.offset_out_of_range',
+        'stream.not_seekable_readable'
+    )
+    $safeItems=New-Object 'System.Collections.Generic.List[object]'
+    foreach($candidate in $Result.items) {
+        if ($safeItems.Count -ge 10000) { break }
+        if ($null -eq $candidate) { continue }
+        $safeEvidence=@(Convert-CReportCodes -Values @($candidate.evidence) -Allowed $evidenceCodes -GcodeCounts -MaxCodes 32)
+        $safeItems.Add([pscustomobject]@{
+            offsetBytes=(Convert-CReportUnsigned $candidate.offsetBytes)
+            lengthBytes=(Convert-CReportUnsigned $candidate.lengthBytes)
+            format=(Convert-CReportEnum $candidate.format @('zip','3mf','gcode'))
+            confidence=(Convert-CReportEnum $candidate.confidence @('verified','probable','partial','unknown'))
+            evidence=$safeEvidence
+            checks=(Convert-CReportEnum $candidate.checks $checkCodes 'not_validated')
+            crc32Status=(Convert-CReportEnum $candidate.crc32Status @('match','mismatch','partial','not_checked','not_applicable') 'not_applicable')
+            crc32CheckedEntries=(Convert-CReportUnsigned $candidate.crc32CheckedEntries 4096)
+            crc32UncheckedEntries=(Convert-CReportUnsigned $candidate.crc32UncheckedEntries 4096)
+            truncated=($candidate.truncated -eq $true)
+        })
+    }
+    # Fixed schema with numeric-only metrics. Unexpected properties cannot reach JSON.
+    $rawMetrics=$Result.metrics
+    $safeMetrics=[ordered]@{
+        bytesRead=(Convert-CReportUnsigned $rawMetrics.bytesRead 2147483648L)
+        entriesChecked=(Convert-CReportUnsigned $rawMetrics.entriesChecked 4096)
+        readRequests=(Convert-CReportUnsigned $rawMetrics.readRequests 2147483647L)
+        scannedBytes=(Convert-CReportUnsigned $rawMetrics.scannedBytes 1073741824L)
+        scanWindowBytes=(Convert-CReportUnsigned $rawMetrics.scanWindowBytes 1073741824L)
+        elapsedMilliseconds=(Convert-CReportUnsigned $rawMetrics.elapsedMilliseconds 120000)
+    }
     $safe=[ordered]@{
-        schemaVersion='1'; team='C'; status=[string]$Result.status
-        scanIncomplete=[bool]$Result.scanIncomplete;items=$safeItems
-        warnings=@($Result.warnings); errors=@($Result.errors)
-        metrics=$Result.metrics
+        schemaVersion='1'; team='C'
+        status=(Convert-CReportEnum $Result.status @('ok','partial','error') 'error')
+        scanIncomplete=($Result.scanIncomplete -eq $true)
+        items=@($safeItems.ToArray())
+        warnings=@(Convert-CReportCodes -Values @($Result.warnings) -Allowed $diagnosticCodes -MaxCodes 32)
+        errors=@(Convert-CReportCodes -Values @($Result.errors) -Allowed $diagnosticCodes -MaxCodes 32)
+        metrics=$safeMetrics
     }
     $json=ConvertTo-Json -InputObject $safe -Depth 8
     $utf8=New-Object System.Text.UTF8Encoding($false)
