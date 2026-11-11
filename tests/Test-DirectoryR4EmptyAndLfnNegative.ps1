@@ -5,8 +5,11 @@
 
 $r4NSeed = 202611
 $r4NGood = New-ChappyA3DDamagedFixture -Case M00 -Seed $r4NSeed
+# The damaged-fixture wrapper exposes image/manifest only; take layout
+# from the same-seed standalone clean synthetic generator (test-side only).
+$r4NLayout = (New-ChappyA3DCleanFixture -Seed $r4NSeed).layout
 [byte[]]$r4NBytes = [byte[]]$r4NGood.image.Clone()
-$r4NRootAt = [int]$r4NGood.layout.rootOffsetBytes
+$r4NRootAt = [int]$r4NLayout.rootOffsetBytes
 if ($r4NRootAt -lt 0 -or ($r4NRootAt + 160) -gt $r4NBytes.Length -or
     $r4NBytes[$r4NRootAt+96] -ne 0 -or
     $r4NBytes[$r4NRootAt+128] -ne 0) {
@@ -24,8 +27,8 @@ if ($r4NRootAt -lt 0 -or ($r4NRootAt + 160) -gt $r4NBytes.Length -or
 # External synthetic truth says cluster 9 is allocated in both FAT copies.
 # This mutation only prepares an invented TEST IMAGE. B scanner never
 # reads the FAT; the truth does not become an algorithm input.
-foreach($r4NFatStart in @([int]$r4NGood.layout.fat1OffsetBytes,
-                          [int]$r4NGood.layout.fat2OffsetBytes)) {
+foreach($r4NFatStart in @([int]$r4NLayout.fat1OffsetBytes,
+                          [int]$r4NLayout.fat2OffsetBytes)) {
     $r4NFatEntryAt = $r4NFatStart + 9*4
     if ($r4NFatEntryAt -lt 0 -or $r4NFatEntryAt+4 -gt $r4NBytes.Length -or
         [BitConverter]::ToUInt32($r4NBytes,$r4NFatEntryAt) -ne 0) {
