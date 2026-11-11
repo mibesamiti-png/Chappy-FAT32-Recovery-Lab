@@ -82,6 +82,7 @@ function Run-D11 {
             Fat2OffsetBytes=[long]$g.geometry.fat2OffsetBytes
             FatLengthBytes=[long]$g.geometry.fatLengthBytes
         }
+        $candidateMirror=$null
         if($Mode -eq 'mirror') {
             $args=$common.Clone()
             $args.WindowEntries=128
@@ -89,18 +90,27 @@ function Run-D11 {
             $args.MaxReadBytes=1024
             $finding=Get-ChappyFatMirrorWindows @args
         }else{
+            # Independent one-pass candidate, not a decision assembled from two
+            # separate source runs. Both samples share one 2048-byte ceiling:
+            # up to 1024 geometry + 512 mirror + 512 chain bytes.
+            $mirrorArgs=$common.Clone()
+            $mirrorArgs.WindowEntries=64
+            $mirrorArgs.MaxWindows=1
+            $mirrorArgs.MaxReadBytes=512
+            $candidateMirror=Get-ChappyFatMirrorWindows @mirrorArgs
             $args=$common.Clone()
-            $args.MaxDataCluster=[long]$g.geometry.dataClusterCount+1L
+            $args.MaxDataCluster=([long]$g.geometry.dataClusterCount + 1L)
             # No case-specific cluster choice, no oracle truth leak.
             $args.StartClusters=[long[]]@(2,3,4,5,6,7,8)
             $args.MaxStepsPerChain=16
             $args.MaxTotalEntries=32
-            $args.MaxReadBytes=1024
+            $args.MaxReadBytes=512
             $finding=Get-ChappyFatChainAnomalyStats @args
         }
         return [pscustomobject]@{
             trust=$g.trustDecision
             geometryReasons=@($g.reasons)
+            mirrorEvidence=$candidateMirror
             evidence=$finding
             actualBytes=[long]$source.ActualBytes
             uniqueBytes=[long]$source.UniqueBytes
@@ -139,9 +149,11 @@ foreach($item in $cases){
     Check-D11 ($base.trust -eq 'reject' -and $variant.trust -eq 'reject') ("Untrusted FAT32-like BPB not promoted: "+$item.id)
     $different=([long]$base.evidence.metrics.differentEntries -gt 0)
     $cycles=Count-D11Cycles $variant.evidence
-    $detected=($different -or $cycles -gt 0)
-    Check-D11 (-not $base.evidence.writePermitted -and -not $variant.evidence.writePermitted) ("No write surface: "+$item.id)
-    Check-D11 ($base.evidence.metrics.entriesChecked -eq 128) ("Fixed FAT1/FAT2 comparison entries: "+$item.id)
+    $detected=([long]$variant.mirrorEvidence.metrics.differentEntries -gt 0 -or $cycles -gt 0)
+    Check-D11 (-not $base.evidence.writePermitted -and -not $variant.evidence.writePermitted -and
+        -not $variant.mirrorEvidence.writePermitted) ("No write surface: "+$item.id)
+    Check-D11 ($base.evidence.metrics.entriesChecked -eq 128 -and
+        $variant.mirrorEvidence.metrics.entriesChecked -eq 64) ("Baseline 128 and candidate 64 mirror entries: "+$item.id)
     if($null -ne $item.anomaly){
         if($item.anomaly){
             if($different){$oldTP++}else{$oldFN++}
