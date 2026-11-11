@@ -221,7 +221,7 @@ try{
     Check-D7 ($r.metrics.bytesRead -le 96) 'Partial reads count actual data, not requested bytes'
 }finally{$s.Dispose()}
 $s=[IO.MemoryStream]::new($good,$true)
-try{Check-D7 (Throws-D7 {Get-ChappyFatStratifiedAnomalyEvidence -Stream $s -Candidates $candidates}) 'Writable stream rejected')}
+try{Check-D7 (Throws-D7 {Get-ChappyFatStratifiedAnomalyEvidence -Stream $s -Candidates $candidates}) 'Writable stream rejected'}
 finally{$s.Dispose()}
 $s=[IO.MemoryStream]::new($good,$false)
 try{
