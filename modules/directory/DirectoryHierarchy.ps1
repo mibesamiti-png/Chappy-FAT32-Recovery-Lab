@@ -20,7 +20,10 @@ function Get-ChappyDirectoryHierarchyEvidence {
         [int]$MaxAncestorDepth = 64,
         [int]$MaxAncestorSteps = 200000,
         [switch]$DetectConflictingContainerObservations,
-        [int]$MaxContainerObservations = 200000
+        [int]$MaxContainerObservations = 200000,
+        # Experimental R8 opt-in: a caller-composed/partial metadata graph
+        # must not be mistaken for full-volume evidence. No raw reads.
+        [switch]$RequireCompleteClusterCoverageEvidence
     )
     if ($MaxNodes -lt 1 -or $MaxNodes -gt 100000 -or
         $MaxEdges -lt 1 -or $MaxEdges -gt 200000 -or
@@ -47,6 +50,46 @@ function Get-ChappyDirectoryHierarchyEvidence {
     $conflictingContainerKeys = @{}
     $containerObservationsVisited = 0L
     $incomplete = [bool]$DirectoryResult.scanIncomplete
+    $coverageEvidence = 'not_requested'
+    if ($RequireCompleteClusterCoverageEvidence) {
+        $coverageEvidence = 'unproven'
+        # A byte count is necessary, never sufficient to establish all
+        # original directory relationships: corrupted or unrecognized records
+        # may still be invisible. This guard only checks *numeric* coverage.
+        $geometryProperty = $DirectoryResult.PSObject.Properties['geometry']
+        $metricsProperty = $DirectoryResult.PSObject.Properties['metrics']
+        if (-not $incomplete -and $null -ne $geometryProperty -and
+            $null -ne $metricsProperty -and $null -ne $geometryProperty.Value -and
+            $null -ne $metricsProperty.Value) {
+            $geo = $geometryProperty.Value
+            $met = $metricsProperty.Value
+            if ($null -ne $geo.PSObject.Properties['clusterCount'] -and
+                $null -ne $geo.PSObject.Properties['clusterSizeBytes'] -and
+                $null -ne $geo.PSObject.Properties['maxCluster'] -and
+                $null -ne $met.PSObject.Properties['bytesRead']) {
+                try {
+                    $clusterCount = [long]$geo.clusterCount
+                    $clusterBytes = [long]$geo.clusterSizeBytes
+                    $maxCluster = [long]$geo.maxCluster
+                    $actualRead = [long]$met.bytesRead
+                    if ($clusterCount -gt 0 -and $clusterBytes -ge 512 -and
+                        $clusterBytes -le 131072 -and ($clusterBytes % 32) -eq 0 -and
+                        $clusterCount -lt ([long]::MaxValue / $clusterBytes) -and
+                        $maxCluster -eq ($clusterCount + 1L) -and
+                        $actualRead -eq ($clusterCount * $clusterBytes)) {
+                        $coverageEvidence = 'numeric_cluster_coverage_consistent'
+                    }
+                } catch {
+                    # Invalid, overflowing or missing counts are unknown, not
+                    # a reason to inspect original media or invent evidence.
+                }
+            }
+        }
+        if ($coverageEvidence -eq 'unproven') {
+            $incomplete = $true
+            [void]$warnings.Add('hierarchy_cluster_coverage_unproven')
+        }
+    }
     $unobservedTargets = 0L
     $metadataSeen = 0L
 
@@ -337,6 +380,7 @@ function Get-ChappyDirectoryHierarchyEvidence {
             ancestorSteps = $ancestorSteps
             containerObservationsVisited = $containerObservationsVisited
             conflictingContainerClusters = $conflictingContainerKeys.Count
+            coverageEvidence = $coverageEvidence
         }
         notes = @('candidate graph only', 'no path reconstruction', 'no FAT reads', 'no file content validation')
     }
