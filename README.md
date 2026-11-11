@@ -37,3 +37,9 @@ See: [State](docs/STATE.md) · [Team protocol](docs/TEAM_PROTOCOL.md) · [Test p
 既存のチームA/B/C/Dチャットに、**[共通起動プロンプト](docs/UNIVERSAL_BOOTSTRAP_PROMPT.md)** をそのまま貼り付ける。全チャットで同一文面を使用できる。
 
 指示の正本は [共通運用ルール](docs/UNIVERSAL_WORK_INSTRUCTION.md) と [チーム担当表](docs/TEAM_DISPATCH.md)。担当は各チャットの既存の役割を維持する。新規チャットで担当が未設定の場合は初回だけ担当指定が必要。
+
+## 既存アルゴリズム調査・比較開発（2026-11-11から）
+
+次のB/C/Dラウンドは、[既存手法の調査・A/B比較ルール](docs/ALGORITHM_RESEARCH_PROTOCOL.md)に従い、公式仕様・論文・既存実装の**出典とライセンス**を確認してから、人工データで旧方式と新方式を比較する。研究記録は[共通テンプレート](docs/ALGORITHM_RESEARCH_TEMPLATE.md)を使い、[参考資料集](docs/ALGORITHM_RESEARCH_STARTER_REFERENCES.md)を調査の出発点にする。
+
+従来のB #45、C #46、D #47の担当Issue・ブランチはそのまま。各チームの既存チャットでは、上記の**同じ共通起動プロンプトを引き続き使える**。Aだけが比較結果を審査して採否・統合を判断し、人工ベンチマークの結果を実データの復旧率とは呼ばない。
