@@ -130,6 +130,17 @@ $r7TP=0;$r7FP=0;$r7FN=0;$r7TN=0
 $r7Unique=0;$r7Ambiguous=0;$r7Unknown=0;$r7Incomplete=0
 $r7Source=0L;$r7ScoutRead=0L;$r7MemoryRead=0L;$r7Grid=0;$r7Pairs=0;$r7Starts=0
 $r7ReferenceReads=0L
+# Frozen case-level expectations from prior exact-head synthetic CI. These
+# values belong exclusively to this external test oracle, NEVER to either
+# experimental candidate-discovery function.
+$r7Expected=@{
+    'gcode_unique'                   = @{starts=1;decision='one_possible';accepted=1;correct=1}
+    'gcode_decoy'                    = @{starts=1;decision='ambiguous';accepted=2;correct=1}
+    '3mf_unique'                     = @{starts=2;decision='one_possible';accepted=1;correct=1}
+    '3mf_structural_decoy'           = @{starts=2;decision='ambiguous';accepted=2;correct=1}
+    '3mf_true_tail_outside_scan'     = @{starts=1;decision='unknown';accepted=0;correct=0}
+}
+Assert ($r6Cases.Count -eq 5 -and $r7Expected.Count -eq 5) 'R7 external scorer has exactly five frozen synthetic scenarios'
 foreach($case in $r6Cases){
     $sha=[Security.Cryptography.SHA256]::Create()
     try{$before=[BitConverter]::ToString($sha.ComputeHash($case.bytes)).Replace('-','')}
@@ -138,6 +149,7 @@ foreach($case in $r6Cases){
     try{
         $originalR6=Test-R6NonOracleSyntheticTailSearch -Source $reference -FirstOffset $case.first -FirstBytes 512 -SecondBytes $case.tailBytes -ExpectedFormat $case.kind -SearchBytes $case.searchBytes -MaxOffsets 256 -MaxPairs 8 -MaxSourceBytes 135168 -MaxValidationBytes 73728 -MaxMilliseconds 30000
         Assert ($reference.BytesRead -eq $originalR6.metrics.sourceBytesRead -and $reference.BytesRead -le 401408) ($case.name+': R6 known-first-offset reference is counted')
+        Assert ($originalR6.status -eq 'ok' -and $originalR6.decision -eq $case.expected) ($case.name+': R6 reference must retain its frozen decision')
         $r7ReferenceReads += $reference.BytesRead
     }finally{$reference.Dispose()}
     $input=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.bytes,$false))
@@ -154,6 +166,14 @@ foreach($case in $r6Cases){
         $r7Starts += [int]$result.metrics.startsProposed
         $accepted=@($result.candidates | Where-Object {$_.possible})
         $correct=@($accepted | Where-Object {$_.sha256 -eq $case.originalHash -and $_.firstOffset -eq $case.first}).Count
+        $expect=$r7Expected[$case.name]
+        Assert ($null -ne $expect) ($case.name+': no unknown or silently skipped R7 case')
+        Assert ($result.status -eq 'ok' -and $result.decision -eq $expect.decision) ($case.name+': R7 frozen format-only decision')
+        Assert ($result.metrics.startsProposed -eq $expect.starts -and
+                $result.metrics.startsEvaluated -eq $expect.starts) ($case.name+': all candidate starts, including false ZIP headers, must be examined')
+        Assert ($accepted.Count -eq $expect.accepted -and $correct -eq $expect.correct) ($case.name+': exact independent artificial-byte truth and false candidate count')
+        Assert (@($accepted | Where-Object {$_.code -ne 'pair.format_consistent'}).Count -eq 0) ($case.name+': no invented original-verified label for format-consistent candidates')
+        Assert (@($result.candidates | Where-Object {$null -ne $_.PSObject.Properties['verifiedOriginal']}).Count -eq 0) ($case.name+': test helper cannot assert unobserved original-file provenance')
         $r7TP += $correct
         $r7FP += ($accepted.Count-$correct)
         if($correct -eq 0){$r7FN++}
@@ -171,7 +191,11 @@ foreach($case in $r6Cases){
     finally{$sha.Dispose()}
     Assert ($before -eq $after) ($case.name+': artificial bytes unchanged')
 }
-Assert ($r7TP -le 4 -and $r7FP -ge 0 -and $r7FN -ge 1) 'R7 cannot exceed known candidate truth'
+Assert ($r7TP -eq 4 -and $r7FP -eq 2 -and $r7FN -eq 1 -and $r7TN -eq 3) 'R7 frozen pair-scoped confusion totals TP4 FP2 FN1 TN3; changed results need deliberate review'
+Assert ($r7Unique -eq 2 -and $r7Ambiguous -eq 2 -and $r7Unknown -eq 1 -and $r7Incomplete -eq 0) 'R7 exactly two possible/ambiguous, one unknown, zero incomplete on frozen corpus'
+Assert ($r7Starts -eq 7 -and $r7Grid -eq 1657 -and $r7Pairs -eq 9) 'R7 candidate start/grid/pair counts remain stable on deterministic fixture'
+Assert ($r7Source -gt $r7ReferenceReads -and $r7ScoutRead -gt 0 -and $r7MemoryRead -gt 0) 'R7 must record additional scout and in-memory validation work rather than claiming free improvement'
+Write-Host 'PASS: R7 all five frozen case outcomes, original-byte truth and ambiguity totals match independent scorer'
 Write-Host ("R7 SYNTHETIC ABLATION METRICS cases=5 TP={0} FP={1} FN={2} TN={3} unique={4} ambiguous={5} unknown={6} incomplete={7} start_proposals={8} pair_trials={9} grid_probes={10} scout_bytes={11} source_bytes={12} in_memory_bytes={13} r6_reference_bytes={14}" -f $r7TP,$r7FP,$r7FN,$r7TN,$r7Unique,$r7Ambiguous,$r7Unknown,$r7Incomplete,$r7Starts,$r7Pairs,$r7Grid,$r7ScoutRead,$r7Source,$r7MemoryRead,$r7ReferenceReads)
 Write-Host 'PASS: R7 synthetic first-offset ablation, measured reference, bounded starts and independent truth'
 
