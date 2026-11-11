@@ -68,22 +68,26 @@ function Find-CSignature {
 }
 
 
+# CRC table shared by bounded STORED and opt-in DEFLATE payload CRC checks.
+function Initialize-CCrcTable {
+    if ($null -ne $script:CStoredCrcTable) { return }
+    $script:CStoredCrcTable = New-Object 'uint32[]' 256
+    for ($n=0; $n -lt 256; $n++) {
+        $c=[uint32]$n
+        for ($k=0; $k -lt 8; $k++) {
+            if (($c -band 1) -ne 0) { $c=[uint32](($c -shr 1) -bxor 3988292384L) }
+            else { $c=[uint32]($c -shr 1) }
+        }
+        $script:CStoredCrcTable[$n]=$c
+    }
+}
+
 # Bounded CRC32 for ZIP STORED (method 0) entries only.
 # This is content evidence, never proof of the original filesystem's integrity.
 function Get-CStoredCrc32 {
     param([IO.Stream]$Stream,[long]$Offset,[long]$Length,[psobject]$Budget=$null)
     if ($Length -lt 0 -or $Length -gt 65536L -or $Offset -lt 0 -or $Offset -gt ($Stream.Length-$Length)) { return $null }
-    if ($null -eq $script:CStoredCrcTable) {
-        $script:CStoredCrcTable = New-Object 'uint32[]' 256
-        for ($n=0; $n -lt 256; $n++) {
-            $c=[uint32]$n
-            for ($k=0; $k -lt 8; $k++) {
-                if (($c -band 1) -ne 0) { $c=[uint32](($c -shr 1) -bxor 3988292384L) }
-                else { $c=[uint32]($c -shr 1) }
-            }
-            $script:CStoredCrcTable[$n]=$c
-        }
-    }
+    Initialize-CCrcTable
     $crc=[uint32]4294967295L
     $cursor=$Offset; $remaining=$Length
     while ($remaining -gt 0) {
@@ -99,8 +103,63 @@ function Get-CStoredCrc32 {
     return [uint32]($crc -bxor 4294967295L)
 }
 
+
+# Experimental opt-in only: check one small raw ZIP method-8 payload with built-in
+# DeflateStream (ZIP uses raw DEFLATE, not a zlib header). No path/output APIs.
+# The caller enforces per-entry compressed <=32KiB, expanded <=64KiB, ratio <=64,
+# 16 checked entries, aggregate compressed <=128KiB and expanded <=64KiB.
+# Compressed bytes are acquired ONLY by Read-CBytes, shared with global scan I/O caps.
+# No decompressed content is returned or logged. The loop reads <=4096 bytes/call.
+function Get-CDeflateCrc32 {
+    param([IO.Stream]$Stream,[long]$Offset,[long]$CompressedBytes,
+          [long]$ExpectedExpandedBytes,[psobject]$Budget=$null)
+    if ($CompressedBytes -le 0 -or $CompressedBytes -gt 32768L -or
+        $ExpectedExpandedBytes -lt 0 -or $ExpectedExpandedBytes -gt 65536L) {
+        return [pscustomobject]@{status='skipped';crc32=$null}
+    }
+    $raw=Read-CBytes $Stream $Offset ([int]$CompressedBytes) $Budget
+    if ($null -eq $raw) { return [pscustomobject]@{status='aborted';crc32=$null} }
+    Initialize-CCrcTable
+    $memory=New-Object IO.MemoryStream(,$raw)
+    $inflater=$null
+    $crc=[uint32]4294967295L
+    $produced=0L
+    try {
+        $inflater=New-Object IO.Compression.DeflateStream($memory,[IO.Compression.CompressionMode]::Decompress,$false)
+        $buf=New-Object byte[] 4096
+        # A fixed 65,536-byte maximum is checked before every read. An attempted
+        # overrun performs at most one 4 KiB read and never stores that output.
+        while ($true) {
+            if ($null -ne $Budget -and $Budget.Timer.ElapsedMilliseconds -gt $Budget.MaxElapsedMilliseconds) {
+                $Budget.StopCode='scan.time_budget_exhausted'
+                return [pscustomobject]@{status='aborted';crc32=$null}
+            }
+            $n=$inflater.Read($buf,0,$buf.Length)
+            if ($n -eq 0) { break }
+            $produced += [long]$n
+            if ($produced -gt $ExpectedExpandedBytes -or $produced -gt 65536L) {
+                return [pscustomobject]@{status='failed';crc32=$null}
+            }
+            for($k=0;$k -lt $n;$k++){
+                $idx=[int](($crc -bxor [uint32]$buf[$k]) -band 255L)
+                $crc=[uint32](($crc -shr 8) -bxor $script:CStoredCrcTable[$idx])
+            }
+        }
+        if ($produced -ne $ExpectedExpandedBytes -or $memory.Position -ne $memory.Length) {
+            return [pscustomobject]@{status='failed';crc32=$null}
+        }
+        return [pscustomobject]@{status='checked';crc32=([uint32]($crc -bxor 4294967295L))}
+    } catch [IO.InvalidDataException] {
+        return [pscustomobject]@{status='failed';crc32=$null}
+    } catch [IO.IOException] {
+        return [pscustomobject]@{status='failed';crc32=$null}
+    } finally {
+        if ($null -ne $inflater) {$inflater.Dispose()} else {$memory.Dispose()}
+    }
+}
+
 function Test-CZip {
-    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null,[long]$MaxProbeBytes=16777216)
+    param([IO.Stream]$Stream,[long]$Offset,[long]$MaxFileBytes,[psobject]$Budget=$null,[long]$MaxProbeBytes=16777216,[switch]$EnableSmallDeflateCrc)
     $first = Read-CBytes $Stream $Offset 30 $Budget
     if ($null -eq $first -or (Get-CU32 $first 0) -ne 0x04034b50) { return $null }
     $flags = Get-CU16 $first 6
@@ -128,6 +187,8 @@ function Test-CZip {
         $cdEnd = $pos + $cdSize
         $valid = $true
         $crcChecked=0; $crcUnchecked=0; $crcMismatch=$false; $crcBudget=65536L
+        $deflateChecked=0; $deflateMismatch=$false; $deflateFailure=$false
+        $deflateCompressedBudget=131072L; $deflateAttempts=0
         $names = New-Object 'System.Collections.Generic.List[string]'
         for ($j=0; $j -lt $entries; $j++) {
             $entry = Read-CBytes $Stream $pos 46 $Budget
@@ -156,13 +217,35 @@ function Test-CZip {
                 $dataEnd -gt ($Offset+$cdRel) -or $dataEnd -lt ($Offset+$localRel)) { $valid=$false; break }
             $localName = Read-CBytes $Stream ($Offset+$localRel+30) ([int]$localNameLen) $Budget
             if ($null -eq $localName -or -not [Collections.StructuralComparisons]::StructuralEqualityComparer.Equals($nameBytes,$localName)) { $valid=$false; break }
-            # CRC budget is per archive, 64 KiB maximum; deflate and oversized entries are NOT checked.
+            # Both CRC modes share a fixed 64KiB decompressed-byte budget.
+            # DEFLATE remains OFF by default. Do not allocate or inflate huge claims.
             if ($emode -eq 0 -and $comp -eq $uncomp -and $comp -le $crcBudget) {
                 $actualCrc = Get-CStoredCrc32 $Stream $dataStart $comp $Budget
                 if ($null -eq $actualCrc) { $valid=$false; break }
                 $crcChecked++
                 $crcBudget-=$comp
                 if ([uint32]$actualCrc -ne $expectedCrc) { $crcMismatch=$true }
+            } elseif ($emode -eq 8 -and $EnableSmallDeflateCrc -and
+                      $deflateAttempts -lt 16 -and $comp -gt 0 -and $comp -le 32768L -and
+                      $comp -le $deflateCompressedBudget -and $uncomp -le 65536L -and
+                      $uncomp -le $crcBudget -and $uncomp -le ($comp * 64L)) {
+                $deflateAttempts++
+                $deflateCompressedBudget-=$comp
+                $inflate=Get-CDeflateCrc32 $Stream $dataStart $comp $uncomp $Budget
+                if ($inflate.status -eq 'checked') {
+                    $crcChecked++; $deflateChecked++
+                    $crcBudget-=$uncomp
+                    if ([uint32]$inflate.crc32 -ne $expectedCrc) {
+                        $crcMismatch=$true; $deflateMismatch=$true
+                    }
+                } elseif ($inflate.status -eq 'aborted') {
+                    $valid=$false; break
+                } else {
+                    # A structurally present but invalid compressed body is not
+                    # a valid content check and must never be called verified.
+                    $deflateFailure=$true
+                    $crcUnchecked++
+                }
             } else { $crcUnchecked++ }
             # Names are used for *classification only* and never returned or logged.
             $names.Add([Text.Encoding]::UTF8.GetString($nameBytes))
@@ -176,19 +259,22 @@ function Test-CZip {
             if ($entryName -match '(?i)^3D/[^/]+\.model$') { $model = $true }
         }
         $is3mf = $contentTypes -and $model -and $relationships
-        $crcStatus=if($crcMismatch){'mismatch'}elseif($crcChecked -eq 0){'not_checked'}elseif($crcUnchecked -gt 0){'partial'}else{'match'}
+        $crcStatus=if($crcMismatch){'mismatch'}elseif($deflateFailure){'partial'}elseif($crcChecked -eq 0){'not_checked'}elseif($crcUnchecked -gt 0){'partial'}else{'match'}
         $evidence=@('zip.local_header','zip.eocd','zip.central_directory','zip.local_references')
-        if($crcChecked -gt 0){$evidence+= 'zip.stored_crc_checked'}
-        if($crcMismatch){$evidence+= 'zip.stored_crc_mismatch'}
+        if(($crcChecked-$deflateChecked) -gt 0){$evidence+= 'zip.stored_crc_checked'}
+        if($deflateChecked -gt 0){$evidence+= 'zip.deflate_crc_checked'}
+        if($crcMismatch -and -not $deflateMismatch){$evidence+= 'zip.stored_crc_mismatch'}
+        if($deflateMismatch){$evidence+= 'zip.deflate_crc_mismatch'}
+        if($deflateFailure){$evidence+= 'zip.deflate_inflate_failed'}
         return [pscustomobject]@{
             offsetBytes=$Offset; lengthBytes=($endOffset-$Offset)
             format=$(if($is3mf){'3mf'}else{'zip'})
-            confidence=$(if($crcMismatch){'partial'}else{'verified'})
+            confidence=$(if($crcMismatch -or $deflateFailure){'partial'}else{'verified'})
             # ZIP references may be structurally valid while payload CRC/deflate is unverified.
             # CRC match on selected STORED entries is not proof of the original file integrity.
             integrityScope='structural_only_not_original_file_integrity'
             evidence=$evidence
-            checks=$(if($crcMismatch){'zip_stored_crc_mismatch'}elseif($crcStatus -eq 'match'){'zip_structure_and_stored_crc32'}else{'zip_structure_with_crc_unchecked'})
+            checks=$(if($deflateFailure){'zip_deflate_inflate_failed'}elseif($deflateMismatch){'zip_deflate_crc_mismatch'}elseif($crcMismatch){'zip_stored_crc_mismatch'}elseif($deflateChecked -gt 0){'zip_structure_and_optin_deflate_crc32'}elseif($crcStatus -eq 'match'){'zip_structure_and_stored_crc32'}else{'zip_structure_with_crc_unchecked'})
             crc32Status=$crcStatus; crc32CheckedEntries=$crcChecked; crc32UncheckedEntries=$crcUnchecked
             truncated=$false
         }
@@ -264,7 +350,8 @@ function Get-ChappyCarvingCandidates {
         [ValidateRange(1,4096)][int]$MaxProbes=128,
         [ValidateRange(1024,268435456)][long]$MaxProbeBytes=16777216,
         [ValidateRange(0,1073741824)][long]$ExtraValidationReadBytes=0,
-        [ValidateRange(100,120000)][int]$MaxWorkMilliseconds=30000
+        [ValidateRange(100,120000)][int]$MaxWorkMilliseconds=30000,
+        [switch]$EnableSmallDeflateCrc
     )
     $out=[ordered]@{
         schemaVersion='1'; team='C'; status='ok'; scanIncomplete=$false; items=@(); warnings=@(); errors=@();
@@ -342,7 +429,7 @@ function Get-ChappyCarvingCandidates {
             $budget.Probes++
             if ($event.kind -eq 'zip') {
                 $lastZipProbed=$at
-                $item=Test-CZip $Stream $at $MaxFileBytes $budget $MaxProbeBytes
+                $item=Test-CZip $Stream $at $MaxFileBytes $budget $MaxProbeBytes -EnableSmallDeflateCrc:$EnableSmallDeflateCrc
                 if ($null -ne $item) {
                     $candidates.Add($item)
                     if ($item.lengthBytes -gt 0) { $skipZip=$at+[long]$item.lengthBytes }
@@ -545,10 +632,12 @@ function Write-ChappyCarvingReport {
     $evidenceCodes=@(
         'zip.local_header','zip.eocd','zip.central_directory','zip.local_references',
         'zip.stored_crc_checked','zip.stored_crc_mismatch','zip.central_directory_not_validated',
+        'zip.deflate_crc_checked','zip.deflate_crc_mismatch','zip.deflate_inflate_failed',
         'gcode.printable_lines','gcode.command_sequence'
     )
     $checkCodes=@(
         'zip_stored_crc_mismatch','zip_structure_and_stored_crc32',
+        'zip_deflate_inflate_failed','zip_deflate_crc_mismatch','zip_structure_and_optin_deflate_crc32',
         'zip_structure_with_crc_unchecked','signature_only','text_syntax_only'
     )
     $diagnosticCodes=@(
