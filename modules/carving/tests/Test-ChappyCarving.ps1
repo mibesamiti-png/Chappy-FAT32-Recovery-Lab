@@ -66,7 +66,8 @@ function WriteSynthetic([string]$path,[byte[]]$content,[int]$size=0) {
 }
 function Scan([string]$file,[long]$start=0,[long]$count=1048576) {
     $s=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
-    try {return Get-ChappyCarvingCandidates -Stream $s -StartOffset $start -MaxScanBytes $count -MaxFileBytes 1048576} finally {$s.Dispose()}
+    # Synthetic regression fixture: explicitly permit rereads, never access beyond scan window.
+    try {return Get-ChappyCarvingCandidates -Stream $s -StartOffset $start -MaxScanBytes $count -MaxFileBytes 1048576 -ExtraValidationReadBytes 1048576} finally {$s.Dispose()}
 }
 try {
     # Valid 3MF: central directory and all three required part names.
@@ -182,6 +183,31 @@ try {
     Assert ($r7.scanIncomplete -and $r7.metrics.bytesRead -eq 4096) 'scan is range bounded'
     Write-Host 'PASS: bounded scan reports incomplete coverage'
 
+    # Read-budget stress: adversarial dense local headers cannot induce cumulative I/O amplification.
+    $spam=New-Object byte[] (256*1024)
+    for ($p=0; $p -lt $spam.Length-8; $p+=8) { $spam[$p]=0x50; $spam[$p+1]=0x4b; $spam[$p+2]=3; $spam[$p+3]=4 }
+    $spamPath=Join-Path $fixtureRoot 'dense_fake_signatures.img'; WriteSynthetic $spamPath $spam
+    $spamStream=[IO.File]::OpenRead($spamPath)
+    try {
+        $stress=Get-ChappyCarvingCandidates -Stream $spamStream -StartOffset 0 -MaxScanBytes 65536 -MaxFileBytes 1048576 -MaxCandidates 128 -MaxProbes 16
+        Assert ($stress.status -eq 'partial' -and $stress.scanIncomplete) 'dense fake ZIP results in partial scan'
+        Assert ($stress.metrics.entriesChecked -le 16) 'global candidate-probe cap enforced'
+        Assert ($stress.metrics.bytesRead -le 65536) 'cumulative real reads fit default MaxScanBytes'
+        Assert (@($stress.warnings | Where-Object { $_ -in @('scan.probe_budget_exhausted','scan.read_budget_exhausted') }).Count -gt 0) 'explicit resource-limit reason'
+    } finally { $spamStream.Dispose() }
+    Write-Host 'PASS: dense fake ZIPs bounded by global byte and probe limits'
+
+    # Malformed local file header with plausible name causes EOCD search; capped globally.
+    $longFake=New-Object byte[] 262144
+    $longFake[0]=0x50;$longFake[1]=0x4b;$longFake[2]=3;$longFake[3]=4;$longFake[26]=8
+    $longPath=Join-Path $fixtureRoot 'malformed_zip_eocd_stress.img'; WriteSynthetic $longPath $longFake
+    $longStream=[IO.File]::OpenRead($longPath)
+    try {
+        $stress2=Get-ChappyCarvingCandidates -Stream $longStream -MaxScanBytes 32768 -MaxFileBytes 1048576 -MaxProbes 128
+        Assert ($stress2.metrics.bytesRead -le 32768) 'repeated EOCD search fits cumulative read budget'
+        Assert ($stress2.scanIncomplete -and ($stress2.warnings -contains 'scan.read_budget_exhausted')) 'malformed ZIP exhausts budget safely'
+    } finally { $longStream.Dispose() }
+    Write-Host 'PASS: malformed ZIP EOS search safely consumes shared read budget'
     # False positive starts and invalid stream ranges.
     $f5=Join-Path $fixtureRoot 'fixture_e.img'
     WriteSynthetic $f5 ([Text.Encoding]::ASCII.GetBytes('trash PK' + [char]3 + [char]4 + ' nonzip'))
