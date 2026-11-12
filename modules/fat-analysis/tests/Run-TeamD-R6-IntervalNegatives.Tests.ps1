@@ -232,8 +232,8 @@ foreach($item in $cases){
             $result.metrics.readRequests,$result.scanIncomplete,$watch.ElapsedMilliseconds)
     }finally{$source.Dispose()}
 }
-Check-D14 ($bTP -eq 0 -and $bFP -eq 0 -and $bFN -gt 0 -and $bTN -gt 0) 'Naive sum-of-reads fails to flag duplicate-coverage positives without false alerts')
-Check-D14 ($vTP -eq $bFN -and $vFP -eq 0 -and $vFN -eq 0 -and $vTN -eq $bTN) 'Observed unique interval union matches external physical read oracle on every case')
+Check-D14 ($bTP -eq 0 -and $bFP -eq 0 -and $bFN -gt 0 -and $bTN -gt 0) 'Naive sum-of-reads fails to flag duplicate-coverage positives without false alerts'
+Check-D14 ($vTP -eq $bFN -and $vFP -eq 0 -and $vFN -eq 0 -and $vTN -eq $bTN) 'Observed unique interval union matches external physical read oracle on every case'
 Check-D14 ($expectedUnknown -eq 5) 'Expected uncertainty cases reported separately, never scored as recovered files'
 Write-Host ('D14 read-repeat A/B TP/FP/FN/TN naive={0}/{1}/{2}/{3} union={4}/{5}/{6}/{7}, expectedUnknownControls={8}' -f
     $bTP,$bFP,$bFN,$bTN,$vTP,$vFP,$vFN,$vTN,$expectedUnknown)
