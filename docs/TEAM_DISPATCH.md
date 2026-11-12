@@ -5,9 +5,22 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-synthetic-directory-evidence-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
-| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-synthetic-format-evidence-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
-| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-synthetic-fat-evidence-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-metadata-fp-provenance-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-multiformat-negatives-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-observed-io-evidence-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+
+## Active B/C/D next bounded assignments — 2026-11-12 JST (supersedes historical dispatch notes)
+
+Team A reviewed/merged B [#84](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/84), C [#86](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/86), D [#85](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/85) as **research_only**, then merged A [#87](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/87). Exact-head [A CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43136922790) and [post-main CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43137106907) **PASS, 22 isolated synthetic Windows PowerShell 5.1 suites**. All tests use artificial data. Current accepted A baseline: `77743db19048c5e00601aa80e61a67ca41fdaac0`.
+
+The **same original B/C/D chats** retain their identities. Continue within existing open Issues B #71, C #72, D #73; A's new **one-issue-at-a-time P1 comments** are the authoritative next scope:
+- **B / #71:** New branch `feature/b-r4-metadata-fp-provenance-20261112`. Test the legitimate zero-length/nonzero-start-field **FP1**, corrupted size and LFN/incomplete coverage; preserve records/uncertainty, no FAT ownership/path claims. [A dispatch comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71#issuecomment-6812023169).
+- **C / #72:** New branch `feature/c-r5-multiformat-negatives-20261112`. One bounded binary/ASCII STL, ordinary ZIP and signature-decoy negative-control experiment. Record structural-only vs external original SHA, false claims, I/O costs; no production extraction. [A dispatch comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72#issuecomment-6812023827).
+- **D / #73:** New branch `research/d-r6-observed-io-evidence-20261112`. One bounded read-provenance experiment for FAT mirror and chain spans under one shared source quota; no FAT winner, crosslink-owner or verified-original claim. [A dispatch comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73#issuecomment-6812025512).
+
+All three continuation branches were created at `77743db19048c5e00601aa80e61a67ca41fdaac0`; fetch latest `main` and reconcile safely before editing, never force-push the superseded historical branches. A owns R7 observed evidence origin and common budget; request schema changes from A instead of editing shared runner. No new P1 begins until its own Issue's current state and competing PRs are reviewed. R4–R7 remain partial; fully gated weighted overall progress **39%**. Actual original 31GB IMG and physical microSD remain off limits, **NOT APPROVED**.
+
+**Historical dispatch sections below are archived checkpoints and do not override the live roster or current Issue comments above.**
 
 The **authoritative** current task list is in each Issue and any linked Draft PR, not a static checklist in this file. Before starting, inspect the branch and open PRs to avoid reimplementing finished work.
 
