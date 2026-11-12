@@ -210,6 +210,41 @@ function Invoke-CFirst560AblationRegression {
     [Array]::Copy($original,$cut,$reversed,0,($original.Length-$cut))
     [Array]::Copy($original,0,$reversed,($original.Length-$cut),$cut)
     Assert-CFirst560 ((Get-A3DSha256 $reversed) -cne $truth.sha256) 'reverse-order data cannot equal known artificial original'
+    # Actually rerun the bounded in-memory 3MF parser after reversing
+    # SOURCE candidate span order (not merely SHA compare). The chosen
+    # candidate comes from the scanner, never from independent truth.
+    $orderCase=New-CVariableSyntheticCase -CleanImage $clean.image -Original $original -Kind 'alternate_zip_metadata'
+    $orderStream=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($orderCase.image,$false))
+    try{
+        $orderScan=Test-CVariableZipPairs -Source $orderStream -IncludeFirstPiece560
+        Assert-CFirst560 ($orderScan.status -eq 'ok') 'independent order regression scan'
+        $acceptedOrder=@($orderScan.items | Where-Object {$_.possible -and $_.firstBytes -eq 544})
+        Assert-CFirst560 ($acceptedOrder.Count -eq 2) 'two baseline physically distinct CRC-consistent candidates'
+        $reverseSpans=[pscustomobject]@{sourceSpans=@($acceptedOrder[0].sourceSpans[1],$acceptedOrder[0].sourceSpans[0])}
+        $from=[long]$orderStream.BytesRead
+        $ordered=Test-CObservedCandidateValidation -Source $orderStream -Candidate $reverseSpans
+        Assert-CFirst560 ($ordered.status -ne 'format_consistent' -and
+            $ordered.originalIdentity -eq 'unknown' -and
+            $ordered.metrics.sourceBytesRead -eq ($orderStream.BytesRead-$from) -and
+            $ordered.originStatus -eq 'unattributed_pending_A_meter_receipt') 'reverse physical piece ordering fails independent ZIP check'
+    }finally{$orderStream.Dispose()}
+    # Flood 6 independent fake EOCD sectors, each with zero-length
+    # comments, so MaxTails=8 must stop before candidate selection.
+    [byte[]]$eocdStorm=[byte[]]$bad.image.Clone()
+    for($i=0;$i -lt 6;$i++){
+        $at=32768+$i*512+24
+        [Array]::Clear($eocdStorm,$at,22)
+        [Array]::Copy([byte[]]@(0x50,0x4b,0x05,0x06),0,$eocdStorm,$at,4)
+    }
+    $stormSha=Get-A3DSha256 $eocdStorm
+    $storm=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($eocdStorm,$false))
+    try{
+        $r=Test-CVariableZipPairs -Source $storm -IncludeFirstPiece560 -MaxTails 8
+        Assert-CFirst560 ($r.status -eq 'partial' -and $r.decision -eq 'incomplete' -and
+            $r.metrics.stopCode -eq 'search.tail_limit' -and
+            @($r.items).Count -eq 0 -and $storm.BytesRead -eq $r.metrics.sourceBytesRead) 'multiple fake EOCD tails fail closed without picking a CRC winner'
+    }finally{$storm.Dispose()}
+    Assert-CFirst560 ((Get-A3DSha256 $eocdStorm) -ceq $stormSha) 'flooded EOCD artificial source unchanged'
     Assert-CFirst560 ((Get-A3DSha256 $good.image) -ceq $knownSha) 'short/budget negatives did not alter input'
 
     foreach($arm in $arms){
