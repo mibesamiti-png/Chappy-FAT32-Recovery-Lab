@@ -1,5 +1,18 @@
 # Universal Work Instruction — Chappy FAT32 Recovery Lab
 
+## Current operating model (2026-11-13 JST): FOUR EXISTING CHATGPT CHATS, GATE CLOSURE
+
+**Active instructions:** [ABCD_GATE_CLOSURE_PLAYBOOK.md](ABCD_GATE_CLOSURE_PLAYBOOK.md), [ABCD_GATE_LEDGER.md](ABCD_GATE_LEDGER.md), [TEAM_DISPATCH.md](TEAM_DISPATCH.md), [formal R0-R10 roadmap](ABCD_SYNTHETIC_ROADMAP.md). This update **supersedes historical per-team experiment/branch assignments** in older sections of this document, but does NOT relax safety, algorithm research evidence gates, PR/CI checks or GitHub ownership.
+
+- No single Work session is acting as A+B+C+D. The user operates **four independent existing chats**: A coordinates/integrates, B handles R4 directory, C handles R5 carving/format/fragment, D handles R6 FAT evidence; A separately advances R7 integration. Preserve the team's existing identity in each chat.
+- Every team must **select the highest-priority incomplete formal acceptance-gate row** in its scope, not repeatedly invent the next optional experiment. Before editing inspect latest main, own Issue and PR, gate ledger, authoritative live roster and code; if currently working on a draft, complete/reconcile it first.
+- B/C/D may propose `PASS` on gate rows in own PR/Issue with evidence; A independently verifies final HEAD, Windows PowerShell 5.1 synthetic CI and privacy, accepts/rejects, merges, checks post-main CI and updates the shared ledger / top dispatch. No B/C/D self-merge. Research-only tests can be valuable but do not imply production-readiness or official stage completion.
+- Publish an auditable checklist ratio **only after actually auditing requirements**. The official full-stage weighted total is **39% at this checkpoint** (R0–R3 fully passed); R4–R7 partial. No artificial progress inflation, false original-path integrity, or invented recovery rate.
+- New B/C/D branches are owned/created in each existing team chat from freshly verified main; A does not preemptively overwrite previous branches.
+- Scope remains **generated synthetic memory/image sources only**; real microSD and sole master IMG NOT APPROVED for any use. R8 output only after R7 full gate, and only disposable synthetic separate destination pending later approval.
+
+The mandatory generic instructions below continue to apply except where they conflict with the *newer explicit four-chat gate-closure priority and active roster* above.
+
 **Status:** canonical instructions for all A/B/C/D chats. Repository: https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab
 
 ## 0. Reload on every request
