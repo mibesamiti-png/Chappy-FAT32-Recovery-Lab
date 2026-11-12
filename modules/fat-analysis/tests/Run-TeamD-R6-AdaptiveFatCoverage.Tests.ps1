@@ -294,6 +294,28 @@ foreach($mode in @('fixed','adaptive')){
     Assert-D25 (($s.TP+$s.FN) -eq 15 -and ($s.FP+$s.TN) -eq 6 -and $s.FP -eq 0) ($mode+' controlled artificial scorer labels')
 }
 Assert-D25 ($scores.adaptive.TP -eq $scores.fixed.TP) 'No aggregate improvement: remote gain offsets index256 miss'
+# Standalone oracle-free bad numeric target: both sampled FAT entry14 values
+# point outside the geometry. Never follow, probe, or infer an owner from them.
+$outside=New-ChappyA3DStandardFixture -Seed 202611 -SectorsPerCluster 1
+[byte[]]$outsideBytes=$outside.image
+$outsideFatSectors=[long][Math]::Ceiling(4.0*(65541+2)/512.0)
+$outsideFat1=33L*512L
+$outsideFat2=$outsideFat1+$outsideFatSectors*512L
+Patch-D25 $outsideBytes ($outsideFat1+56L) ([uint32]70000)
+Patch-D25 $outsideBytes ($outsideFat2+56L) ([uint32]70000)
+$outsideSha=Sha-D25 $outsideBytes
+$outsideBase=Invoke-D25Trial -Bytes $outsideBytes -Method fixed -Stop ([long]::MaxValue) -Chunk 4096
+$outsideTest=Invoke-D25Trial -Bytes $outsideBytes -Method adaptive -Stop ([long]::MaxValue) -Chunk 4096
+Assert-D25 ($null -eq $outsideTest.res.target -and
+    ($outsideTest.res.starts -join ',') -ceq '0,128,256') 'Out-of-range observed link is rejected, fixed safe fallback'
+Assert-D25 ($outsideTest.actual -le 2048 -and $outsideTest.denied -eq 0 -and
+    $outsideTest.res.state -ceq 'partial_numeric_only' -and
+    $outsideTest.res.original -ceq 'unknown' -and
+    -not $outsideTest.res.writePermitted) 'Rejected numeric link never authorizes identity/repair'
+Assert-D25 ($outsideBase.actual -eq $outsideTest.actual -and
+    (Sha-D25 $outsideBytes) -ceq $outsideSha) 'Out-of-range negative input unchanged and same physical returned bytes'
+$outside=$null;$outsideBytes=$null
+[GC]::Collect()
 $fake=[byte[]]::new(4096)
 $meter=[D25ReadMeter]::new($fake,2048L,120000L,256,[long]::MaxValue,4096)
 try{
