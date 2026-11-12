@@ -39,8 +39,8 @@ foreach($r4PCase in $r4PCases){
             $r4PUnknown++
             Assert-B ($r4PTest.metrics.bytesRead -eq 0 -and $r4PTest.status -eq 'error' -and $r4PTest.directoryReadEvidence.status -eq 'no_successful_reads' -and $r4PTest.directoryReadEvidence.readEvents -eq 0 -and $r4PTest.directoryReadEvidence.spans.Count -eq 0) 'R4 X02 no successful directory read; not classified as negative'
         } else {
-            Assert-B ($r4PTest.metrics.bytesRead -eq 512 -and $r4PTest.scanIncomplete -and $r4PTest.directoryReadEvidence.status -eq 'recorded' -and $r4PTest.directoryReadEvidence.source -eq 'directory_scanner_successful_cluster_reads_v1' -and $r4PTest.directoryReadEvidence.readEvents -eq 1 -and $r4PTest.directoryReadEvidence.recordedSpans -eq 1 -and $r4PTest.directoryReadEvidence.spans[0].offsetBytes -eq $r4PRootOffset -and $r4PTest.directoryReadEvidence.spans[0].lengthBytes -eq 512 -and $r4PTest.directoryReadEvidence.spans[0].cluster -eq 2) ('R4 successful root read yields numeric byte range: '+$r4PCase.id)
-            $r4PObservedSpans++
+            Assert-B ($r4PTest.metrics.bytesRead -eq 1024 -and $r4PTest.scanIncomplete -and $r4PTest.directoryReadEvidence.status -eq 'recorded' -and $r4PTest.directoryReadEvidence.source -eq 'directory_scanner_successful_cluster_reads_v1' -and $r4PTest.directoryReadEvidence.readEvents -eq 2 -and $r4PTest.directoryReadEvidence.recordedSpans -eq 2 -and $r4PTest.directoryReadEvidence.spans[0].offsetBytes -eq $r4PRootOffset -and $r4PTest.directoryReadEvidence.spans[0].lengthBytes -eq 512 -and $r4PTest.directoryReadEvidence.spans[0].cluster -eq 2 -and $r4PTest.directoryReadEvidence.spans[1].offsetBytes -eq ($r4PRootOffset+512) -and $r4PTest.directoryReadEvidence.spans[1].lengthBytes -eq 512 -and $r4PTest.directoryReadEvidence.spans[1].cluster -eq 3) ('R4 successful root read yields numeric byte range: '+$r4PCase.id)
+            $r4PObservedSpans+=2
             $r4PGraph=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $r4PTest -DetectConflictingContainerObservations -RequireObservedClusterIntervals -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
             $r4PGraphJson=ConvertTo-Json -InputObject $r4PGraph -Depth 8
             Assert-B ($r4PGraph.scanIncomplete -and $r4PGraph.metrics.probableEdgeAssertions -eq 0 -and $r4PGraph.metrics.edgeAssertions -eq 0 -and $r4PGraphJson -notmatch 'originalPath|verified|BAITDIR|EMPTY') ('R4 partial root scan never certifies original parent: '+$r4PCase.id)
@@ -68,7 +68,7 @@ foreach($r4PCase in $r4PCases){
     Assert-B ((Get-A3DSha256 $r4PImage) -ceq $r4PHash) ('R4 synthetic source unchanged: '+$r4PCase.id)
 }
 Assert-B ($r4PConfusions.TP -eq 1 -and $r4PConfusions.FP -eq 1 -and $r4PConfusions.FN -eq 0 -and $r4PConfusions.TN -eq 1 -and $r4PUnknown -eq 1) 'R4 observed-range A/B preserves warning TP1 FP1 FN0 TN1 with X02 unknown'
-Assert-B ($r4PDirectoryDataBytes -eq 4096 -and $r4PObservedSpans -eq 4) 'R4 equal-corpus 4096B directory data reads, four measured spans; geometry reads excluded'
+Assert-B ($r4PDirectoryDataBytes -eq 8192 -and $r4PObservedSpans -eq 8) 'R4 equal-corpus 8192B directory data reads, eight measured spans; geometry reads excluded'
 
 $r4PCapSource=New-ChappyA3DDamagedFixture -Case M00 -Seed $r4PSeed
 [byte[]]$r4PCapImage=$r4PCapSource.image
