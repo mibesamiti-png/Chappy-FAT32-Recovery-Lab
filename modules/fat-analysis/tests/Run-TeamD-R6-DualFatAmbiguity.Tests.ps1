@@ -109,11 +109,11 @@ $clean=$images['M00']
 Check-D19 ([BitConverter]::ToUInt32($clean,$fat1+16) -eq 5 -and
     [BitConverter]::ToUInt32($clean,$fat2+16) -eq 5) 'Frozen artificial FAT offsets and original cluster 4 link checked by scorer'
 Check-D19 ([BitConverter]::ToUInt32($clean,$fat1+20) -ge 268435448 -and
-    [BitConverter]::ToUInt32($clean,$fat2+24) -ge 268435448) 'Artificial cluster 5 and 6 both terminate EOC'
+    [BitConverter]::ToUInt32($clean,$fat2+32) -ge 268435448) 'Artificial cluster 5 and 8 both terminate EOC'
 [byte[]]$conflict=[byte[]]$clean.Clone()
-[Array]::Copy([BitConverter]::GetBytes([uint32]6),0,$conflict,$fat2+16,4)
+[Array]::Copy([BitConverter]::GetBytes([uint32]8),0,$conflict,$fat2+16,4)
 $images['CONFLICT']=$conflict
-Check-D19 ((Hash-D19 $conflict) -cne (Hash-D19 $clean)) 'Scorer-only contradictory link FAT2 cluster4 to 6 planted'
+Check-D19 ((Hash-D19 $conflict) -cne (Hash-D19 $clean)) 'Scorer-only contradictory link FAT2 cluster4 to 8 planted'
 [byte[]]$remote=[byte[]]$clean.Clone()
 [Array]::Copy([BitConverter]::GetBytes([uint32]1),0,$remote,$fat2+256*4,4)
 $images['REMOTE']=$remote
