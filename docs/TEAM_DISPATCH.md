@@ -5,11 +5,29 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-incomplete-read-origin-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
-| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-variable-fragment-negative-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
-| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-interval-provenance-negatives-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-shortread-byte-provenance-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-candidate-validator-origin-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-observed-source-identity-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
 
-## New active B/C/D round — after A R7 source-meter integration (2026-11-12 JST)
+## Latest live B/C/D bounded assignments — after A #97 review (2026-11-12 JST)
+
+This section and the live table above are authoritative. Historical sections below are records, NOT current assignments. Team identity stays attached to its original B/C/D conversation.
+
+Team A has reviewed and merged:
+- B [PR #95](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/95) as **adopt_experimental / default OFF**: incomplete directory origin status distinguishes scan_error, scan_incomplete, span_limit; 17-byte short read is not counted as a complete directory cluster. Exact-head B Windows and privacy CI PASS. Legitimate empty-file warning FP1 remains unresolved.
+- C [PR #96](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/96) as **research_only / test only**: on six invented variable fragment scenarios fixed baseline TP1 FP0 FN4 TN5 versus finite alternative TP5 FP1 FN0 TN22 (different hypothesis counts). A CRC-consistent false original candidate still exists; wrong phases/lengths remain unknown, no actual recovery success inferred.
+- D [PR #94](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/94) as **research_only / tests and docs only**: 11 selected synthetic read-accounting scenarios, correct distinct physical byte union versus naive sum; 16,302 returned/16,106 distinct/196 duplicate source bytes. No FAT owner/winner or original validity claimed.
+- A [PR #97](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/97) merged as **test-only R7 boundary**, 26/26 isolated Windows PowerShell 5.1 synthetic suites passing at [exact head CI #43147376900](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43147376900) and [post-main CI #43147583478](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43147583478). A's receipt resolver insists on A-issued actual source-event ID, source token, ordered candidate identity and validation-specific read coverage; merely having scanned bytes is not per-candidate validation. All accepted candidates retain originalIdentity unknown. Current A-reviewed main after #97: 9be7bb6d5f67d5a88074f085ea0ea417de570944.
+
+**Next bounded team P1s** (new branches created from that main SHA, older branches preserved; refresh Issue/PR and current main before coding):
+
+- **B #71**, branch feature/b-r4-shortread-byte-provenance-20261112: reconcile partial short-read physical bytes and completed-cluster metadata under same synthetic caps; protect missing or forged parent coverage. [A task comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71#issuecomment-6813410426).
+- **C #72**, branch feature/c-r5-candidate-validator-origin-20261112: test-only candidate-specific *actual validator* read intervals and an A-controlled meter receipt handoff; broad scan is NOT per-candidate proof and SHA originality is scorer-only. [A task comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72#issuecomment-6813411042).
+- **D #73**, branch research/d-r6-observed-source-identity-20261112: two separate synthetic source identities with overlapping offsets; preserve partial FAT reads, budget and unknown provenance. [A task comment](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73#issuecomment-6813411641).
+
+The full R7 candidate-specific receipt **contract is still only a synthetic research boundary**, not connected to real C production validators. R7 requires actual trustworthy meter IDs, multiple sources/ambiguous fragments and broader budget/short-read testing before R8 separate-root artificial export. Official fully gated R0-R3 = **39%** weighted program completion, R4-R7 partial; this is not real file recovery probability. Original microSD and sole 31GB master IMG are untouched, and real-media gate is **NOT APPROVED**.
+
+## Prior B/C/D round (historical) — after A R7 source-meter integration (2026-11-12 JST)
 
 **This section and the live roster above supersede historical assignment sections below.** Existing B/C/D chats retain their roles. Refresh main, Issue comments, their branch HEAD and open PRs each turn.
 
