@@ -199,3 +199,10 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - B #71, C #72, D #73 next independent branch assignments published in [TEAM_DISPATCH](TEAM_DISPATCH.md) and linked Issue comments. Branches begin at A-reviewed `main 77743db19048c5e00601aa80e61a67ca41fdaac0` after reviewed PRs #84/#86/#85 and A #87.
 - A post-main [Windows PS5.1 22/22 synthetic plus privacy CI #43137106907](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43137106907) SUCCESS. No user/master IMG accessed, and live recovery rate is unknown. Only 39% fully gated R0-R3 engineering milestones.
 - A next separate R7 task: actual candidate source-read provenance, conservative evidence union and one shared I/O limit; R8 output awaits R7 gate.
+
+## A live integration milestone — 2026-11-12 JST
+
+- A reviewed/merged B #89 `39b407c1` (default-off observed directory read ranges), C #91 `c69a4234` (test-only STL/ZIP negative controls) and D #90 `91346381` (default-off FAT physical read provenance). Formal reviews are on the PRs.
+- A #92 merged `4a9b9151`: one nonwritable, shared 120,000B physical source budget for B/C/D on invented M00/P02; dedicated R7 test and documentation, [branch Windows 23/23 + privacy CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43142165708), [post-main CI PASS](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43142388964). This is synthetic integration, not real-file restoration or full R7.
+- B #71 / C #72 / D #73 remain open; next bounded branches and Issue assignments are in [live dispatch](TEAM_DISPATCH.md). A's subsequent runner PR includes D's own observed-I/O suite, with final-head and post-merge CI pending until executed.
+- R0–R3 fully accepted => **39%** weighted roadmap; R4–R7 partial, R8–R10 incomplete. Real microSD and sole 31GB IMG not read/hashed/copied/written/repaired. **NOT APPROVED** remains the local trial gate.
