@@ -81,3 +81,6 @@ jobs:
       - name: Run Team D R6 standards-shaped FAT actual physical entry coverage and UNKNOWN cases
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-StandardFatCoverage.Tests.ps1
+      - name: Run Team D R6 preregistered adaptive versus fixed FAT coverage research
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-AdaptiveFatCoverage.Tests.ps1
