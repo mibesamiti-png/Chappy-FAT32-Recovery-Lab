@@ -5,11 +5,28 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-empty-record-fp-suppression-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
-| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-ambiguous-fragment-falsejoin-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
-| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-dual-fat-ambiguity-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-size-ambiguity-independent-evidence-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-multi-candidate-validation-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-mirror-sampling-blindspots-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
 
-## Active B/C/D bounded assignments — after Team A R7 live C receipt integration (2026-11-12 JST)
+## Active B/C/D bounded assignments — after Team A R7 source-token isolation (2026-11-12 JST)
+
+**Authoritative current work** is the live team roster above + latest A comment on existing B #71/C #72/D #73 Issues. Earlier dispatch sections below are archived history and do not supersede these tasks. Existing B/C/D chats retain their roles. Read latest main, issue/PR heads and CI before creating any new work.
+
+Team A reviewed and squash-merged B [#105](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/105), C [#106](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/106), D [#104](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/104) after exact-head native Windows PowerShell 5.1 and privacy CI SUCCESS.
+- **B #105 = adopt_experimental / default OFF.** A legitimate zero-size/nonzero-start file and genuinely damaged M04 are identical to the scanner under a single ambiguous field. The conservative variant changes binary TP1 FP1 FN0 TN1 into tri-state TP0 FP0 FN0 TN1 UNKNOWN2; it removes false warnings by abstaining **and also loses the true warning**. No FAT owner/original identity inferred.
+- **C #106 = research_only/tests-only.** Seven artificial finite pair scenarios yielded pair-level TP4 FP1 TN23, 2 missing-known-original cases at case-level, including two CRC-consistent but physically different fragments. Policy never auto-selects an authentic original; 0 additional source reads.
+- **D #104 = research_only/tests-only.** Five scorable artificial in-window FAT anomalies: mirror only TP2 FP0 FN1 TN2, mirror+cycle TP3 FP0 FN0 TN2. Five other cases remain UNKNOWN; two FAT copies can agree on a corruption or disagree without revealing the correct copy. No repair/winner.
+- **A [PR #107](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/107)** merged `9393fce2b9651b478a6861f7c44c26636acbfb86`: A's *test-only* physical Stream.Read meter now namespaces its event IDs by an A-chosen synthetic source token so two independently generated but byte-identical images do not collide. A's conservative receipt resolver refuses a mixed-source candidate even when offsets/bytes match and retains `originalIdentity=unknown`. D P6 standalone test added to central regression. Exact-head [CI 29/29 PASS #43158007893](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43158007893) and post-merge-main [29/29 PASS #43158227444](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43158227444), including privacy gate.
+
+**Next B/C/D single-P1 branches** were created from reviewed main `9393fce2b9651b478a6861f7c44c26636acbfb86`; previous branches preserved:
+- **B Issue #71:** `feature/b-r4-size-ambiguity-independent-evidence-20261112` — research what additional independent directory metadata can truly resolve, with byte-indistinguishable healthy/corrupt counterexample; do not invent allocation information. [A task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71#issuecomment-6815076846).
+- **C Issue #72:** `feature/c-r5-multi-candidate-validation-20261112` — keep both CRC-consistent but physically distinct hypotheses through bounded revalidation and retain ambiguity/unknown; original SHA only in scorer. [A task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72#issuecomment-6815078389).
+- **D Issue #73:** `research/d-r6-mirror-sampling-blindspots-20261112` — same global-byte-budget controls for unsampled vs shared/mismatching FAT anomalies; no authentic mirror/copy winner. [A task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73#issuecomment-6815080925).
+
+**Next A R7 P1:** preserve independent A-issued source IDs across actual multi-candidate C validation phases, ensure no phase spoof/short-return overclaim, and test cost of cumulative multi-source B/C/D observations. This remains a test-only proof, not a product recovery API or original identity authentication. R8 artificial-only export is blocked until full R7 gate. Official R0–R3 **39% weighted full-gate progress**, R4–R7 partial; no real-media recovery-rate estimate. Original physical microSD and sole ~31GB master IMG remain **NOT APPROVED** for any read/hash/copy/write/repair/scan/export/upload.
+
+## Prior active B/C/D assignment (historical) — after Team A R7 live C receipt integration (2026-11-12 JST)
 
 **Current authoritative assignment** is the live roster above plus each existing Team Issue's newest A comment. Subsequent old dispatch sections are historical checkpoints only; never restart those branches or duplicate completed P1. Retain existing B/C/D chat identities and refresh main/Issue/open PR/CI before changes.
 
