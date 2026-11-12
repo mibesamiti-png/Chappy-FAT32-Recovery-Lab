@@ -46,7 +46,8 @@ $tests=@(
     'tests\Test-A3DEvidenceBaseline.ps1',
     'tests\Test-A3DSharedReadProvenance.ps1',
     'tests\Test-A3DCandidateReadTrust.ps1',
-    'tests\Test-A3DLiveCCandidateReceipts.ps1'
+    'tests\Test-A3DLiveCCandidateReceipts.ps1',
+    'tests\Test-A3DLiveMultiCandidateBoundary.ps1'
 )
 $passed=0
 Push-Location $root
