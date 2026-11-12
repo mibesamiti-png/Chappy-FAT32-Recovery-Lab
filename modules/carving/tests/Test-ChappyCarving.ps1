@@ -941,3 +941,8 @@ Invoke-R5M01FragmentEvidence
 . (Join-Path $PSScriptRoot 'R5MultiFormatNegativeResearch.ps1')
 . (Join-Path $PSScriptRoot 'R5MultiFormatNegativeRegression.ps1')
 Invoke-CMultiFormatNegativeControls
+
+# Team C R5: finite variable first-piece and off-grid ZIP candidate research.
+. (Join-Path $PSScriptRoot 'R5VariableZipPairResearch.ps1')
+. (Join-Path $PSScriptRoot 'R5VariableZipPairRegression.ps1')
+Invoke-CVariableFragmentEvidence
