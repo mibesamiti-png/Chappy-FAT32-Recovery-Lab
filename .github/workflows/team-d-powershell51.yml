@@ -54,3 +54,6 @@ jobs:
       - name: Run Team D P02 FAT evidence handoff on synthetic images
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-P02Evidence.Tests.ps1
+      - name: Run Team D R6 P2 synthetic fragmentation versus shared FAT cycles A B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-FixtureChainAB.Tests.ps1
