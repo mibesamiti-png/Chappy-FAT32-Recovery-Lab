@@ -956,3 +956,8 @@ Invoke-CObservedCandidateValidationRegression
 . (Join-Path $PSScriptRoot 'R5AmbiguousFalseJoinGuard.ps1')
 . (Join-Path $PSScriptRoot 'R5AmbiguousFalseJoinRegression.ps1')
 Invoke-CFalseJoinNegativeRegression
+
+# Team C R5: revalidate both independently CRC-consistent physical hypotheses.
+. (Join-Path $PSScriptRoot 'R5MultiCandidateValidationResearch.ps1')
+. (Join-Path $PSScriptRoot 'R5MultiCandidateValidationRegression.ps1')
+Invoke-CMultiCandidateValidationRegression
