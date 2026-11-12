@@ -434,6 +434,8 @@ try {
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4ConservativeEmptyUnknown.ps1')
     # R4 P1: independent B directory-observation size identifiability counterexample.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4SizeIdentifiability.ps1')
+    # R4 A-assigned P1: 3-seed UNKNOWN calibration + short-root/spoofed-coverage controls.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4UnknownMultiSeed.ps1')
 
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
