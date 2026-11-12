@@ -66,3 +66,6 @@ jobs:
       - name: Run Team D R6 synthetic cross-source FAT identity adversarial A B
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-SourceIdentity.Tests.ps1
+      - name: Run Team D R6 dual FAT ambiguous mirror and chain synthetic A B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-DualFatAmbiguity.Tests.ps1
