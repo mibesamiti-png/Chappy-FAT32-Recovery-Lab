@@ -5,11 +5,25 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-metadata-fp-provenance-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
-| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-multiformat-negatives-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
-| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-observed-io-evidence-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-incomplete-read-origin-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-variable-fragment-negative-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-interval-provenance-negatives-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
 
-## Active B/C/D next bounded assignments — 2026-11-12 JST (supersedes historical dispatch notes)
+## New active B/C/D round — after A R7 source-meter integration (2026-11-12 JST)
+
+**This section and the live roster above supersede historical assignment sections below.** Existing B/C/D chats retain their roles. Refresh main, Issue comments, their branch HEAD and open PRs each turn.
+
+Team A reviewed and merged B [#89](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/89) (`adopt_experimental`, default OFF), C [#91](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/91) (`research_only`, test-only) and D [#90](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/90) (`adopt_experimental`, default OFF). On synthetic negatives, B still has one genuine-empty-file warning FP; C has 15 structurally accepted candidates but two artificial SHA-different originals; D reports physical FAT read spans, not original-file ownership. Team A [#92](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/92) merged `4a9b9151c6f6c23d9a88685b7487f206c38ce0e9`: one common synthetic source meter for B/C/D with a 120,000-byte shared cap, 23/23 branch and post-main isolated Windows PS5.1/Privacy CI passing. M00/P02 each measured 77,206 actual, 65,536 distinct and 11,670 duplicate source bytes; C structural validation did not certify modified P02 as original identity.
+
+**Current next P1 tasks, using the existing open Issues and newly created branches from main `4a9b9151`:**
+
+- **B #71** — `feature/b-r4-incomplete-read-origin-20261112`; short-read, span-cap and false-parent evidence negative controls, no complete-path trust. [A next-task note](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71#issuecomment-6812712506).
+- **C #72** — `feature/c-r5-variable-fragment-negative-20261112`; finite variable first-slice/off-grid two-fragment candidate and decoy controls, same-corpus bounded costs. [A next-task note](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72#issuecomment-6812713208).
+- **D #73** — `research/d-r6-interval-provenance-negatives-20261112`; repeated reads, partial coverage and global-budget clipping without false FAT ownership claims. [A next-task note](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73#issuecomment-6812713790).
+
+A now adds D's P3 standalone test to the central isolated runner as an additional A-only integration PR; **its 24-suite gate is pending CI and must not be called passed until verified**. Next A R7 P1 after that is explicit candidate-specific read-origin binding and conservative cross-module evidence identity, then shared-budget negative cases. The formal R0–R10 milestone total remains **39%**, R4–R7 incomplete and R8–R10 pending. The original microSD and sole ~31GB IMG remain forbidden from reads/hashes/writes/repairs and local real-media gate **NOT APPROVED**.
+
+## Previous B/C/D assignments (historical) — 2026-11-12 JST (supersedes historical dispatch notes)
 
 Team A reviewed/merged B [#84](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/84), C [#86](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/86), D [#85](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/85) as **research_only**, then merged A [#87](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/87). Exact-head [A CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43136922790) and [post-main CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43137106907) **PASS, 22 isolated synthetic Windows PowerShell 5.1 suites**. All tests use artificial data. Current accepted A baseline: `77743db19048c5e00601aa80e61a67ca41fdaac0`.
 
