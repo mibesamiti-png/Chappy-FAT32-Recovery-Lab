@@ -932,3 +932,7 @@ try {
 
 . (Join-Path $PSScriptRoot 'R5SyntheticFormatEvidence.ps1')
 Invoke-R5SyntheticFormatEvidence
+
+. (Join-Path $PSScriptRoot 'R5M01PairResearch.ps1')
+. (Join-Path $PSScriptRoot 'R5M01PairRegression.ps1')
+Invoke-R5M01FragmentEvidence
