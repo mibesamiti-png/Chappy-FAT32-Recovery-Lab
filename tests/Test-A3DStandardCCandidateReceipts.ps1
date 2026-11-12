@@ -16,6 +16,16 @@ Add-Type -ErrorAction Stop -TypeDefinition @'
 using System;
 using System.IO;
 using System.Collections.Generic;
+public sealed class ChappyA7StandardShortSource : MemoryStream {
+    public long StopAt { get; set; }
+    public ChappyA7StandardShortSource(byte[] bytes) : base(bytes, false) {
+        StopAt = bytes.LongLength;
+    }
+    public override int Read(byte[] buffer, int offset, int count) {
+        if (Position >= StopAt) return 0;
+        return base.Read(buffer, offset, (int)Math.Min(count, StopAt - Position));
+    }
+}
 public sealed class ChappyA7StandardCandidateEvent {
     public string EvidenceId {get;set;}
     public string SourceToken {get;set;}
@@ -87,13 +97,13 @@ function Assert-A7Receipt([bool]$Okay,[string]$Code){
 
 $results=New-Object System.Collections.ArrayList
 $totalPhysical=0L;$totalCandidateBytes=0L;$count=0
-foreach($trial in @(1,2)){
+foreach($trial in @(1,2,3)){
     # Two separately instantiated, byte-identical sources must have distinct
     # A-issued source tokens even when candidate offsets and hashes match.
     $fixture=New-ChappyA3DStandardFixture -Seed 202611 -SectorsPerCluster 2
     [byte[]]$img=$fixture.image
     $before=Get-A3DSha256 $img
-    $source=[IO.MemoryStream]::new($img,$false)
+    $source=[ChappyA7StandardShortSource]::new($img)
     $outer=[ChappyA7SharedSource]::new($source,120000L)
     $token=('A7standard_202611_spc2_'+$trial)
     $scoped=$null
@@ -127,6 +137,35 @@ foreach($trial in @(1,2)){
         $extent=@([pscustomobject]@{offsetBytes=[long]$candidate.offsetBytes;lengthBytes=[long]$candidate.lengthBytes})
         $scanBytes=$scoped.ActualBytes
         $scoped.BeginPhase('candidate_validation',$candidateId)
+
+        if($trial -eq 3){
+            $start=[long]$candidate.offsetBytes
+            $size=[int]$candidate.lengthBytes
+            Assert-A7Receipt ($size -gt 17) 'EOF_prefix_smaller_than_candidate'
+            $source.StopAt=$start+17L
+            $beforeRequests=$outer.ReadRequests
+            $beforeBytes=$outer.TotalBytes
+            [byte[]]$prefix=[byte[]]::new($size)
+            [void]$scoped.Seek($start,[IO.SeekOrigin]::Begin)
+            $got=$scoped.Read($prefix,0,$size)
+            Assert-A7Receipt ($got -eq 17) 'backing_source_returns_only_prefix'
+            $eof=$scoped.Read($prefix,$got,$size-$got)
+            Assert-A7Receipt ($eof -eq 0 -and ($outer.ReadRequests-$beforeRequests) -eq 2 -and
+                ($outer.TotalBytes-$beforeBytes) -eq 17L -and $outer.TotalBytes -le 120000L) 'EOF_distinct_from_budget_refusal'
+            $events=@($scoped.GetEvents())
+            $physical=@($outer.GetEvents() | Where-Object {$_.Consumer -ceq 'carving'})
+            $last=$events[-1]
+            Assert-A7Receipt ($events.Count -eq $physical.Count -and
+                $last.OffsetBytes -eq $start -and $last.ReturnedBytes -eq 17 -and
+                $physical[-1].OffsetBytes -eq $start -and $physical[-1].ReturnedBytes -eq 17) 'partial_receipt_matches_source'
+            $partial=Resolve-A3DReadEvidence -ImageLengthBytes $img.Length -SourceToken $token -CandidateId $candidateId -CandidateExtents $extent -MeterEvents $events -ClaimedEventIds @($last.EvidenceId) -MaxPhysicalReadBytes 120000L
+            Assert-A7Receipt ($partial.status -ceq 'unattributed' -and $partial.candidateReadBytes -eq 17 -and
+                $partial.originalIdentity -ceq 'unknown' -and
+                $partial.reasons -contains 'coverage.candidate_bytes_not_fully_read') 'short_read_cannot_attest_full_candidate'
+            Assert-A7Receipt ((Get-A3DSha256 $img) -ceq $before) 'EOF_fixture_source_unchanged'
+            Write-Host ('PASS: A7 candidate source EOF returned {0}/{1} bytes in two reads, total {2}, coverage unattributed and identity UNKNOWN.' -f $got,$size,$outer.TotalBytes)
+            continue
+        }
 
         # Invoke the actual C parser again on a narrow region proposed by C,
         # under A's candidate-specific physical-read phase. Structural checks
