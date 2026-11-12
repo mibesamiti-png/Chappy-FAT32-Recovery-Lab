@@ -10,14 +10,18 @@ function Test-CVariableZipPairs {
         [ValidateRange(1,16)][int]$MaxPairs=16,
         [ValidateRange(512,81920)][long]$MaxSourceBytes=81920,
         [ValidateRange(6144,98304)][long]$MaxValidationBytes=98304,
-        [ValidateRange(100,30000)][int]$MaxMilliseconds=30000
+        [ValidateRange(100,30000)][int]$MaxMilliseconds=30000,
+        [switch]$IncludeStartPhasePlusTwo
     )
     if(-not $Source.CanRead -or -not $Source.CanSeek -or $Source.CanWrite) {
         throw 'CVariable requires non-writable readable seekable artificial stream'
     }
     if($Source.Length -gt 2097152L) {throw 'CVariable tiny source exceeds 2MiB'}
     # Same finite hypotheses are tried for EVERY case, not passed as truth.
-    [int[]]$phases=@(0,1)
+    [int[]]$tailPhases=@(0,1)
+    # Default-OFF research ablation: expand only local PK-start phase,
+    # never alter EOCD phase or the predeclared first-piece lengths.
+    [int[]]$startPhases=if($IncludeStartPhasePlusTwo){@(0,1,2)}else{@(0,1)}
     [int[]]$firstSizes=@(512,544)
     $watch=[Diagnostics.Stopwatch]::StartNew()
     $starts=New-Object 'System.Collections.Generic.List[long]'
@@ -44,7 +48,7 @@ function Test-CVariableZipPairs {
             }
             if($status -ne 'ok'){break}
             $sectors++
-            foreach($phase in $phases){
+            foreach($phase in $startPhases){
                 if($block[$phase] -eq 0x50 -and $block[$phase+1] -eq 0x4b -and $block[$phase+2] -eq 3 -and $block[$phase+3] -eq 4){
                     $starts.Add([long]($sector+$phase))
                     if($starts.Count -gt $MaxStarts){$status='partial';$stop='search.start_limit';break}
@@ -54,7 +58,7 @@ function Test-CVariableZipPairs {
             for($k=0;$k -le 490;$k++){
                 if($block[$k] -ne 0x50 -or $block[$k+1] -ne 0x4b -or $block[$k+2] -ne 5 -or $block[$k+3] -ne 6){continue}
                 $comment=[int][BitConverter]::ToUInt16($block,$k+20)
-                foreach($phase in $phases){
+                foreach($phase in $tailPhases){
                     if($k -lt $phase){continue}
                     $suffix=[int]($k+22+$comment-$phase)
                     if($suffix -lt 22 -or $suffix -gt 512){continue}
