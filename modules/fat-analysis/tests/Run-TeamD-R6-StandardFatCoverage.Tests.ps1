@@ -225,7 +225,7 @@ foreach($c in $cases){
         }
         'bad_spc' {$data[525]=0}
         'bad_fat' {
-            [byte[]]$patch=[BitConverter]::GetBytes([uint32]0xFFFFFFFF)
+            [byte[]]$patch=[BitConverter]::GetBytes([uint32]::MaxValue)
             [Array]::Copy($patch,0,$data,512+36,4)
         }
     }
