@@ -436,6 +436,8 @@ try {
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4SizeIdentifiability.ps1')
     # R4 A-assigned P1: 3-seed UNKNOWN calibration + short-root/spoofed-coverage controls.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4UnknownMultiSeed.ps1')
+    # R4 A P1: LFN and observed/unobserved parent structure, 3 synthetic seeds.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4LfnParentPartialEvidence.ps1')
 
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
