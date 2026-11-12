@@ -965,3 +965,7 @@ Invoke-CMultiCandidateValidationRegression
 # Team C Issue #72: default-off +2 ZIP local-header byte-phase A/B research.
 . (Join-Path $PSScriptRoot 'R5OffgridTwoFragmentRegression.ps1')
 Invoke-COffgridTwoFragmentRegression
+
+# Team C R5: default-OFF 560B first-piece size / +2 phase 4-arm research.
+. (Join-Path $PSScriptRoot 'R5First560AblationRegression.ps1')
+Invoke-CFirst560AblationRegression
