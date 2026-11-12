@@ -60,3 +60,6 @@ jobs:
       - name: Run Team D R6 observed I O source span provenance artificial A B
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-ObservedIo.Tests.ps1
+      - name: Run Team D R6 physical FAT read-span adversarial A B negatives
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-IntervalNegatives.Tests.ps1
