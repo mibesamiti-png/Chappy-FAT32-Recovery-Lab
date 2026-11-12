@@ -131,3 +131,52 @@ Assert-A7Data ($cases -eq 2 -and $quotaRefusals -eq 2 -and $found -gt 0 -and
     $exactScorer -ge 1 -and $physicalTotal -ge $uniqueTotal) 'two_standard_artificial_volumes'
 Write-Host ('PASS: A7 C data-window / B geometry and root / D FAT on shared source, cases={0}, C candidates={1}, external exact3MF={2}, returnedB={3}, uniquePerSourceB={4}, refusals={5}; R7 PARTIAL, originalIdentity=unknown' -f
     $cases,$found,$exactScorer,$physicalTotal,$uniqueTotal,$quotaRefusals)
+
+
+# In-bounds primary BPB corruption can pass B's numeric checks. A requires
+# independent D corroboration before passing those numbers to C in this trial.
+Import-Module (Join-Path $root 'modules\fat-analysis\Fat32GeometryTrust.psm1') -Force
+foreach($disagree in @($false,$true)){
+    $fixture=New-ChappyA3DStandardFixture -Seed 202612 -SectorsPerCluster 1
+    [byte[]]$img=$fixture.image
+    $vbr=[long][BitConverter]::ToUInt32($img,454)*512L
+    if($disagree){
+        # Only the generated primary VBR is changed. Backup and data stay put.
+        $reserved=[BitConverter]::ToUInt16($img,[int]($vbr+14))
+        Set-A3DUint16 $img ($vbr+14) ($reserved+1)
+    }
+    $before=Get-A3DSha256 $img
+    $raw=[IO.MemoryStream]::new($img,$false)
+    $meter=[ChappyA7SharedSource]::new($raw,120000L)
+    try{
+        $meter.BeginConsumer('geometry')
+        $geo=Get-ChappyFat32Geometry -Stream $meter
+        Assert-A7Data ($geo.partitionEndBytes -eq $raw.Length -and
+            $geo.dataOffsetBytes -lt $geo.partitionEndBytes -and $geo.clusterCount -ge 65525) 'primary_numeric_geometry_in_bounds'
+        $meter.BeginConsumer('fat')
+        $dGeometry=Get-ChappyFatGeometryTrust -Stream $meter -MaxReadBytes 2048
+        Assert-A7Data ($dGeometry.backupVbrRead -and -not $dGeometry.writePermitted) 'independent_backup_observed'
+        $beforeCarving=$meter.TotalBytes
+        $priorCalls=$meter.ReadRequests
+        $agreement=$dGeometry.trustDecision -ceq 'plausible_unverified' -and
+            $dGeometry.geometry.dataStartOffsetBytes -eq $geo.dataOffsetBytes -and
+            $dGeometry.geometry.volumeEndExclusiveBytes -eq $geo.partitionEndBytes
+        if($agreement){
+            $meter.BeginConsumer('carving')
+            $carving=Invoke-CStandardDataTrial -Stream $meter -Geometry $geo -EnableDataWindow
+            Assert-A7Data (-not $disagree -and $carving.status -ceq 'partial' -and
+                $carving.originalIdentity -ceq 'unknown' -and $meter.TotalBytes -gt $beforeCarving) 'corroborated_geometry_allows_bounded_trial'
+        }else{
+            Assert-A7Data ($disagree -and $dGeometry.trustDecision -ceq 'reject' -and
+                $dGeometry.reasons -contains 'vbr.backup_geometry_or_signature_mismatch' -and
+                $meter.TotalBytes -eq $beforeCarving -and $meter.ReadRequests -eq $priorCalls) 'conflicting_geometry_no_C_reads'
+        }
+        Assert-A7Data ((Get-A3DSha256 $img) -ceq $before -and $meter.TotalBytes -le 120000L) 'geometry_trial_unchanged_and_bounded'
+        Write-Host ('A7 GEOMETRY disagreement={0} D={1} C_source_bytes={2} actual={3} identity=UNKNOWN' -f
+            $disagree,$dGeometry.trustDecision,($meter.TotalBytes-$beforeCarving),$meter.TotalBytes)
+    }finally{
+        $raw.Dispose()
+        $fixture=$null;$img=$null
+        [GC]::Collect()
+    }
+}
