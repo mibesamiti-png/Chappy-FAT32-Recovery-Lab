@@ -192,9 +192,9 @@ foreach($seed in @(202611,202612,202613)){
         Check-D22 ((Hash-D22 $copy) -cne (Hash-D22 $clean)) ($seed+' scorer-only mutation '+$m.id)
         $images[$m.id]=$copy
     }
-    [byte[]]$bad=[byte[]]$clean.Clone();$bad[525]=0
-    $images['INVALID_BPB']=$bad
-    Check-D22 ((Hash-D22 $bad) -cne (Hash-D22 $clean)) ($seed+' BPB corruption present')
+    [byte[]]$invalidBpbBytes=[byte[]]$clean.Clone();$invalidBpbBytes[525]=0
+    $images['INVALID_BPB']=$invalidBpbBytes
+    Check-D22 ((Hash-D22 $invalidBpbBytes) -cne (Hash-D22 $clean)) ($seed+' BPB corruption present')
     $rows=@(
         [pscustomobject]@{id='M00';src='M00';truth=$false;cap=2048;stop=[long]::MaxValue;chunk=4096},
         [pscustomobject]@{id='M01';src='M01';truth=$false;cap=2048;stop=[long]::MaxValue;chunk=4096},
