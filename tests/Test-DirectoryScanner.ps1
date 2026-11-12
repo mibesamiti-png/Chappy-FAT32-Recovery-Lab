@@ -422,6 +422,9 @@ try {
     } finally {$defaultStream.Dispose()}
     Write-Host "R4 B/A: TP=$tp FP=$fp FN=$fn TN=$tn UNKNOWN=$unknown; directory-data bytes=$r4DirectoryDataBytes (geometry excluded); all fixtures seed=202611."
 
+    # R4 continuation: independently labelled empty files and damaged LFN negatives.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4EmptyAndLfnNegative.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
