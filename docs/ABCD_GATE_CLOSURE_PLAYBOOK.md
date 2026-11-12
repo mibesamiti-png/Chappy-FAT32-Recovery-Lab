@@ -21,6 +21,11 @@ The issue is not lack of PR throughput. It is that exploratory research and synt
 
 **No Work orchestration is required.** Each team reads latest main, AGENTS, this playbook, live dispatch, its Issue/comments, current PR and CI at every continuation. A alone merges into `main`. B/C/D NEVER self-merge; don't edit shared state/dispatch/another module or overwrite another live branch. Each new scope uses one new branch from freshly verified main and one small Draft PR. Do not invent or assign team identity in a new unassigned chat.
 
+
+### Fast startup: load current state, not the entire historical chat log
+
+The pre-redesign `docs/TEAM_DISPATCH.md`, `docs/STATE.md` and `docs/ABCD_LIVE_CHECKPOINT.md` each carried long appended timelines (~66KB, ~52KB and ~35KB respectively). Their old complete text is preserved under `docs/archive/*_BEFORE_FOUR_CHAT_20261113.md`, while the canonical active documents are now short (~4KB, ~3KB, ~3KB). **Do not eagerly fetch archives or re-read unrelated old PRs on every `続けて`**. The latest top active state + own Issue/PR and referenced evidence are enough to begin; open a specific archived section only if the current gate actually depends on that history. The old documents were not discarded.
+
 ## 2. Gate closure checklist — derived from the existing roadmap, not replacements for it
 
 The rows below are **operational subchecks** mapping to the formal roadmap clauses. `Evidence candidate` means a likely location to audit, **not proof of PASS**. Do not call a row passed until its exact code path, synthetic cases, CI and limitations are linked in the gate ledger. All original roadmap requirements still apply, even if not abbreviated below.
