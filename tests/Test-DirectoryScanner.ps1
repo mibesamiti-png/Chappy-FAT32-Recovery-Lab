@@ -439,6 +439,9 @@ try {
     # R4 A P1: LFN and observed/unobserved parent structure, 3 synthetic seeds.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4LfnParentPartialEvidence.ps1')
 
+    # R4 hidden parent/orphan/LFN truth under identical physical source transcripts.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4HiddenParentIndistinguishability.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
