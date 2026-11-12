@@ -17,16 +17,6 @@ function Get-A7CandidateKey([object[]]$spans) {
         $spans[0].offsetBytes,$spans[0].lengthBytes,
         $spans[1].offsetBytes,$spans[1].lengthBytes)
 }
-function Get-A7ReceiptContext([object]$meter,[object[]]$spans,[string]$key,[long]$length) {
-    $events=@($meter.GetEvents())
-    $ids=@($events | Where-Object {
-        $_.Purpose -ceq 'candidate_validation' -and $_.CandidateId -ceq $key
-    } | ForEach-Object {$_.EvidenceId})
-    return [pscustomobject]@{
-        receipts=$ids
-        result=(Resolve-A3DReadEvidence -ImageLengthBytes $length -SourceToken $meterToken -CandidateId $key -CandidateExtents $spans -MeterEvents $events -ClaimedEventIds $ids -MaxPhysicalReadBytes 120000)
-    }
-}
 $a7mFixture=New-ChappyA3DDamagedFixture -Seed 202611 -Case M00
 $a7mBefore=Get-A3DSha256 $a7mFixture.image
 $a7mRaw=[IO.MemoryStream]::new($a7mFixture.image,$false)
