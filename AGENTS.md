@@ -15,3 +15,7 @@
 ## Universal bootstrap behavior
 
 The authoritative shared startup / continuation instructions are `docs/UNIVERSAL_WORK_INSTRUCTION.md`; the copy/paste message is `docs/UNIVERSAL_BOOTSTRAP_PROMPT.md`. Teams must consult `docs/TEAM_DISPATCH.md` and **keep the role already assigned to their conversation**. A fresh unassigned conversation cannot safely infer a unique team from the same generic prompt; require an explicit one-time role assignment. Read current GitHub state on each continuation; do not trust old branch/Issue summaries.
+
+## Current operating priority — 2026-11-13 four existing chats
+
+Read `docs/ABCD_GATE_CLOSURE_PLAYBOOK.md` and `docs/ABCD_GATE_LEDGER.md` together with the *top* of `docs/TEAM_DISPATCH.md`. The original A/B/C/D ChatGPT conversations remain separate; no Work single-session orchestration. Prioritize closing a cited formal R4/R5/R6/R7 acceptance row, not maximizing research-only PRs. Preserve independent branches, final-HEAD Windows PowerShell 5.1 + privacy CI, A-only merges, and official whole-stage weighted progress. The real microSD and sole master IMG are **NOT APPROVED for reading/hash/scan/copy as well as any mutation or upload**. This line does not replace the older safety policies.
