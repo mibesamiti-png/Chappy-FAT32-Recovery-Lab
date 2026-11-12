@@ -193,3 +193,9 @@ Repository is PUBLIC. Teams assigned in Issues #1-#4 and independent B/C/D branc
 - Each exact submitted HEAD's dedicated Windows PowerShell 5.1 and privacy CI passed. A's central runner adds the D R6 P2 isolated test via an integration PR; its final-head and post-merge checks must be independently verified.
 - See [latest evidence and next acceptance criteria](ABCD_LIVE_CHECKPOINT.md). R0-R3 only are fully gated (**39%**); R4-R7 partly done. B #71/C #72/D #73 remain open, no production inference promoted and no extraction from user data.
 - Hard safety remains: no access to real physical microSD or sole 31GB master IMG; local real-image test gate **NOT APPROVED**.
+
+## Active continuation handoff — 2026-11-12 JST
+
+- B #71, C #72, D #73 next independent branch assignments published in [TEAM_DISPATCH](TEAM_DISPATCH.md) and linked Issue comments. Branches begin at A-reviewed `main 77743db19048c5e00601aa80e61a67ca41fdaac0` after reviewed PRs #84/#86/#85 and A #87.
+- A post-main [Windows PS5.1 22/22 synthetic plus privacy CI #43137106907](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43137106907) SUCCESS. No user/master IMG accessed, and live recovery rate is unknown. Only 39% fully gated R0-R3 engineering milestones.
+- A next separate R7 task: actual candidate source-read provenance, conservative evidence union and one shared I/O limit; R8 output awaits R7 gate.
