@@ -213,6 +213,7 @@ function Get-ChappyFatObservedIoEvidence {
         status=$(if($incomplete){'partial'}else{'ok'})
         scanIncomplete=$incomplete
         geometryTrustDecision=$decision
+        geometryReasonCodes=$(if($null -eq $geometry){@('geometry.unavailable')}else{@($geometry.reasons)})
         sourceDecision='not_selected';selectedCandidate=$null;writePermitted=$false
         evidence=[pscustomobject]@{
             mirrorDifferentEntries=$(if($null -eq $mirror){$null}else{[long]$mirror.metrics.differentEntries})
