@@ -16,7 +16,7 @@ function Resolve-A3DReadEvidence {
     if([string]::IsNullOrWhiteSpace($SourceToken) -or $SourceToken.Length -gt 64 -or
        [string]::IsNullOrWhiteSpace($CandidateId) -or $CandidateId.Length -gt 128 -or
        $CandidateExtents.Count -lt 1 -or $CandidateExtents.Count -gt 4 -or
-       $MeterEvents.Count -gt 128 -or $ClaimedEventIds.Count -gt 32){
+       $MeterEvents.Count -gt 256 -or $ClaimedEventIds.Count -gt 32){
         throw 'Invalid A7 evidence contract limits'
     }
     $extentList=New-Object System.Collections.ArrayList
