@@ -4,7 +4,7 @@
 
 Read [four-chat gate-closure playbook](ABCD_GATE_CLOSURE_PLAYBOOK.md) and [unchanged original formal roadmap](ABCD_SYNTHETIC_ROADMAP.md) before changing anything.
 
-**Current official completed stage weight: 39% (R0–R3 only).** Rows below are **not a declaration of PASS**. At initialization, individual requirement evidence has NOT been re-audited against current code and the full formal gate. The current count is **0 independently signed-off rows / 21 rows**, with all 21 marked `AUDIT_NEEDED`, **not** 0 implemented features. Do not confuse absence of this audit with a test failure.
+**Current official completed stage weight: 39% (R0–R3 only).** Rows below are **not a declaration of PASS**. At initialization, individual requirement evidence has NOT been re-audited against current code and the full formal gate. The current count is **0 independently signed-off rows / 22 rows**, with all 22 marked `AUDIT_NEEDED`, **not** 0 implemented features. Do not confuse absence of this audit with a test failure.
 
 To sign off a row, A (or B/C/D as proposer, then A as verifier) must fill: **status**, code path with HEAD SHA, fixture case IDs, CI URL, actual I/O & UNKNOWN/false-positive scope and explicit residual risks. For `PASS`, independent evidence must cover every requirement in the row; for `PARTIAL`, name missing tests; for `MISSING`, show no implemented support; for `BLOCKED`, name the dependency. `AUDIT_NEEDED` means no completeness assertion has yet been made.
 
