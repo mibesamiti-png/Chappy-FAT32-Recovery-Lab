@@ -52,7 +52,7 @@ For each of the six numerically consistent FAT32 candidates, denominator = **65,
 | Outer physical per-source ceiling | **120,000** |
 | Original-content matches claimed by this D study | **0** |
 
-Source input SHA unchanged in all 9 cases, scorer-only artificial payload never supplied to diagnostic. The unique count is **sum of nine separately scoped byte-location sets**, not a union over nine volumes. The 7-byte-chunk/early-zero case actually returned 1100B and recorded 16 zeros before declared source length; invalid BPB cases returned 1024B but legitimately withheld coverage denominator. Standard healthy cases each had 64 duplicate bytes from FAT chain rereads, which are not double-counted as new entry coverage.
+Source input SHA unchanged in all 9 cases, scorer-only artificial payload never supplied to diagnostic. The unique count is **sum of nine separately scoped byte-location sets**, not a union over nine volumes. The 7-byte-chunk/early-zero case actually returned 1100B and recorded 16 zeros before declared source length; invalid BPB cases returned 1024B but legitimately withheld coverage denominator. Normal fully observed cases had approximately 56–64 duplicate returned bytes from FAT chain rereads, which are not double-counted as new entry coverage.
 
 ## R4 — adoption, remaining risks and Team A request
 
