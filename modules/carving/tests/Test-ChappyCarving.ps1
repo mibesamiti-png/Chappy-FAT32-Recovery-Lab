@@ -973,3 +973,7 @@ Invoke-CFirst560AblationRegression
 # Team C #72 R5: standards-shaped generated FAT32, default-OFF bounded data-region A/B.
 . (Join-Path $PSScriptRoot 'R5StandardDataWindowResearch.ps1')
 Invoke-CStandardDataWindowRegression
+
+# Team C #72: default-OFF, no-oracle sparse 2x32KiB vs 64KiB data-start experiment.
+. (Join-Path $PSScriptRoot 'R5SparseWindowResearch.ps1')
+Invoke-CSparseWindowRegression
