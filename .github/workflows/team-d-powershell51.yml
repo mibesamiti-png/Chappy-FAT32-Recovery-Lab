@@ -84,3 +84,6 @@ jobs:
       - name: Run Team D R6 preregistered adaptive versus fixed FAT coverage research
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-AdaptiveFatCoverage.Tests.ps1
+      - name: Run Team D R6 P12 target displacement synthetic sweep
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-TargetDisplacement.Tests.ps1
