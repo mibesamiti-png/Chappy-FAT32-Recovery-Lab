@@ -122,14 +122,27 @@ function Test-D14Report {
         $Report.metrics.totalReadCapShared) ($CaseName+' phase totals enforce a single global byte budget')
     Check-D14 ($Report.metrics.readRequests -ge $External.ReadCalls -and
         $Report.metrics.successfulReadEvents -le $Report.metrics.readRequests) ($CaseName+' Read() attempts distinguish zero/budget blocked')
-    # Validate every event, but print one result for each invariant group.
-    # This avoids thousands of near-identical CI log lines with 1-byte reads.
+    # Assert every event, but log only an aggregate for each invariant.
     $eventIndex=0;$badIds=0;$badOrigins=0;$badBounds=0
     foreach($event in $Report.readEvents){
         if($event.evidenceId -cne ('D13-{0:D4}' -f $eventIndex)){$badIds++}
         $eventIndex++
         $p=[string]$event.phase
-        $known=($p -eq 'geometry' -or $p -eq 'mirror_window_0' -or $p -match '^chain_probe_[2-8]
+        $known=($p -eq 'geometry' -or $p -eq 'mirror_window_0' -or $p -match '^chain_probe_[2-8]$')
+        $actualCopy=$null
+        if($p -ne 'geometry'){
+            if($event.offsetBytes -ge 16896 -and $event.endExclusiveBytes -le 37376){$actualCopy=0}
+            elseif($event.offsetBytes -ge 37376 -and $event.endExclusiveBytes -le 57856){$actualCopy=1}
+        }
+        $originCorrect=(($null -eq $actualCopy -and $null -eq $event.fatCopyIndex) -or
+            ($null -ne $actualCopy -and $event.fatCopyIndex -eq $actualCopy))
+        if(-not $known -or -not $originCorrect){$badOrigins++}
+        if($event.provenance -ne 'observed_stream_read' -or
+            $event.offsetBytes -lt 0 -or $event.endExclusiveBytes -gt $SourceLength){$badBounds++}
+    }
+    Check-D14 ($badIds -eq 0) ($CaseName+' every observed event ID sequential')
+    Check-D14 ($badOrigins -eq 0) ($CaseName+' every phase/FAT copy matches actual source coordinates')
+    Check-D14 ($badBounds -eq 0) ($CaseName+' every observed span physically in range')
     $json=$Report|ConvertTo-Json -Depth 16
     Check-D14 ($json -notmatch 'userFilename|sourcePath|recoveredFile|originalSha256|rawBytes|repairTarget|fileOwner|trueSourceCopy') ($CaseName+' no original/owner/repair/path disclosures')
     Check-D14 ($Report.sourceDecision -eq 'not_selected' -and $null -eq $Report.selectedCandidate -and
@@ -193,132 +206,11 @@ foreach($item in $cases){
            $item.chunk -eq 4096){
             if($item.mode -eq 'MirrorOnly'){
                 Check-D14 ($result.evidence.mirrorDifferentEntries -eq 0 -and
-                    $result.evidence.observedCycles -eq 0) ($tag+' baseline matching corrupted FATs exposes no cycle evidence')
+                    $result.evidence.observedCycles -eq 0) ($tag+' mirror-only baseline cannot observe matching-copy cycle')
             }else{
                 Check-D14 ($result.evidence.mirrorDifferentEntries -eq 0 -and
-                    $result.evidence.observedCycles -ge 2) ($tag+' opt-in trace can observe cycles despite identical FAT mirrors')
+                    $result.evidence.observedCycles -ge 2) ($tag+' opt-in chain observes cycle despite matching mirrors')
             }
-        }
-        if($item.id -eq 'X02'){
-            $expectedUnknown++
-            Check-D14 ($result.geometryReasonCodes -contains 'geometry.partition_exceeds_stream') ($tag+' out-of-volume metadata remains rejected')
-        }
-        if($item.corrupt){
-            $expectedUnknown++
-            Check-D14 ($result.geometryTrustDecision -ne 'trusted' -and $result.status -eq 'partial') ($tag+' malformed synthetic BPB cannot authenticate FAT or imply complete coverage')
-        }
-        if($item.stop -ne [long]::MaxValue){
-            $expectedUnknown++
-            Check-D14 ($result.status -eq 'partial' -and $result.scanIncomplete -and
-                $result.metrics.prematureSourceZeroReads -gt 0) ($tag+' genuine premature EOF is unknown, not complete')
-        }
-        if($item.limit -lt 2048){
-            $expectedUnknown++
-            Check-D14 ($result.status -eq 'partial' -and $result.scanIncomplete -and
-                $result.metrics.bytesRead -le $item.limit -and $result.metrics.globalBudgetClipped) ($tag+' byte-limit clipping does not promote incomplete evidence')
-        }
-        $actualTotal+=$source.ActualBytes
-        $uniqueTotal+=$source.UniqueBytes
-        $requestsTotal+=$source.ReadCalls
-        Check-D14 ((Hash-D14 $bytes) -ceq $hashBefore) ($tag+' artificial source byte-identical after analysis')
-        Write-Host ('D14 case={0} actual={1} unique={2} duplicate={3} physicalReadCalls={4} wrapperReadCalls={5} partial={6} milliseconds={7}' -f
-            $tag,$result.metrics.bytesRead,$result.metrics.uniquePhysicalBytes,
-            $result.metrics.duplicatePhysicalBytes,$source.ReadCalls,
-            $result.metrics.readRequests,$result.scanIncomplete,$watch.ElapsedMilliseconds)
-    }finally{$source.Dispose()}
-}
-Check-D14 ($bTP -eq 0 -and $bFP -eq 0 -and $bFN -gt 0 -and $bTN -gt 0) 'Naive sum-of-reads fails to flag duplicate-coverage positives without false alerts'
-Check-D14 ($vTP -eq $bFN -and $vFP -eq 0 -and $vFN -eq 0 -and $vTN -eq $bTN) 'Observed unique interval union matches external physical read oracle on every case'
-Check-D14 ($expectedUnknown -eq 5) 'Expected uncertainty cases reported separately, never scored as recovered files'
-Write-Host ('D14 read-repeat A/B TP/FP/FN/TN naive={0}/{1}/{2}/{3} union={4}/{5}/{6}/{7}, expectedUnknownControls={8}' -f
-    $bTP,$bFP,$bFN,$bTN,$vTP,$vFP,$vFN,$vTN,$expectedUnknown)
-Write-Host ('D14 source totals actual={0}, unique={1}, duplicates={2}, underlying Read() calls={3}' -f
-    $actualTotal,$uniqueTotal,($actualTotal-$uniqueTotal),$requestsTotal)
-$fake=New-ChappyA3DDamagedFixture -Seed 202611 -Case M00
-$w=[IO.MemoryStream]::new($fake.image,$true)
-try{
-    Check-D14 (Throws-D14 {Get-ChappyFatObservedIoEvidence -Stream $w -Mode MirrorAndChain}) 'Writable input refused before first source read'
-}finally{$w.Dispose()}
-Write-Host ('Team D R6-P4 interval negatives: {0} passed; {1} failed.' -f $script:Pass,$script:Fail)
-if($script:Fail -gt 0){exit 1}
-)
-        $actualCopy=$null
-        if($p -ne 'geometry'){
-            if($event.offsetBytes -ge 16896 -and $event.endExclusiveBytes -le 37376){$actualCopy=0}
-            elseif($event.offsetBytes -ge 37376 -and $event.endExclusiveBytes -le 57856){$actualCopy=1}
-        }
-        $originCorrect=(($null -eq $actualCopy -and $null -eq $event.fatCopyIndex) -or
-             ($null -ne $actualCopy -and $event.fatCopyIndex -eq $actualCopy))
-        if(-not $known -or -not $originCorrect){$badOrigins++}
-        if($event.provenance -ne 'observed_stream_read' -or
-            $event.offsetBytes -lt 0 -or $event.endExclusiveBytes -gt $SourceLength){$badBounds++}
-    }
-    Check-D14 ($badIds -eq 0) ($CaseName+' every observed event ID sequential')
-    Check-D14 ($badOrigins -eq 0) ($CaseName+' every phase/FAT copy matches actual source coordinates')
-    Check-D14 ($badBounds -eq 0) ($CaseName+' every observed source span physically in range')
-    $json=$Report|ConvertTo-Json -Depth 16
-    Check-D14 ($json -notmatch 'userFilename|sourcePath|recoveredFile|originalSha256|rawBytes|repairTarget|fileOwner|trueSourceCopy') ($CaseName+' no original/owner/repair/path disclosures')
-    Check-D14 ($Report.sourceDecision -eq 'not_selected' -and $null -eq $Report.selectedCandidate -and
-        -not $Report.writePermitted -and $Report.experimentalDefaultOff) ($CaseName+' no unsupported FAT winner, verified owner or writer')
-    return $oracle
-}
-
-# Cases and truth are held by the scorer. Full 2MiB artificial images are never
-# persisted or passed into the repository as binary files.
-$cases=@(
-    [pscustomobject]@{id='M00';mode='MirrorOnly';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M00';mode='MirrorAndChain';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M02';mode='MirrorOnly';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M02';mode='MirrorAndChain';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M03';mode='MirrorOnly';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M03';mode='MirrorAndChain';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='X02';mode='MirrorOnly';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M03';mode='MirrorAndChain';limit=2048;stop=1200L;chunk=1;corrupt=$false},
-    [pscustomobject]@{id='M03';mode='MirrorAndChain';limit=1050;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M03';mode='MirrorAndChain';limit=32;stop=[long]::MaxValue;chunk=4096;corrupt=$false},
-    [pscustomobject]@{id='M00';mode='MirrorAndChain';limit=2048;stop=[long]::MaxValue;chunk=4096;corrupt=$true}
-)
-$bTP=0;$bFP=0;$bFN=0;$bTN=0
-$vTP=0;$vFP=0;$vFN=0;$vTN=0
-$expectedUnknown=0;$actualTotal=0L;$uniqueTotal=0L;$requestsTotal=0L
-foreach($item in $cases){
-    $fixture=New-ChappyA3DDamagedFixture -Seed 202611 -Case $item.id
-    [byte[]]$bytes=$fixture.image
-    if($item.corrupt){
-        # Deliberately invalid BPB sectors-per-cluster in the artificial
-        # boot sector, never source media. Data change belongs to the scorer.
-        $bytes=[byte[]]$bytes.Clone()
-        $bytes[525]=0
-    }
-    $hashBefore=Hash-D14 $bytes
-    if(-not $item.corrupt){
-        Check-D14 ($hashBefore -ceq $fixture.manifest.imageSha256) ($item.id+' scorer-only generated source hash')
-    }
-    $tag=('{0}/{1}/cap{2}/chunk{3}' -f $item.id,$item.mode,$item.limit,$item.chunk)
-    if($item.corrupt){$tag+='-invalid-bpb'}
-    $source=[D14ExternalReadObserver]::new($bytes,[long]$item.stop,[int]$item.chunk)
-    try{
-        $watch=[Diagnostics.Stopwatch]::StartNew()
-        $result=Get-ChappyFatObservedIoEvidence -Stream $source -Mode $item.mode -MaxReadBytes $item.limit
-        $watch.Stop()
-        $independent=Test-D14Report $result $tag $bytes.Length $source $item.limit
-        # Naive A: every returned Read() byte treated as previously unseen;
-        # Conservative B: union of distinct byte positions, checked against
-        # independently metered underlying source.
-        $truthPositive=($source.ActualBytes -gt $source.UniqueBytes)
-        $naivePositive=$false
-        $unionPositive=($result.metrics.duplicatePhysicalBytes -gt 0)
-        if($truthPositive){
-            if($naivePositive){$bTP++}else{$bFN++}
-            if($unionPositive){$vTP++}else{$vFN++}
-        }else{
-            if($naivePositive){$bFP++}else{$bTN++}
-            if($unionPositive){$vFP++}else{$vTN++}
-        }
-        if($item.id -eq 'M03' -and $item.limit -eq 2048 -and $item.stop -eq [long]::MaxValue -and
-           $item.chunk -eq 4096){
-            Check-D14 ($result.evidence.mirrorDifferentEntries -eq 0 -and
-                $result.evidence.observedCycles -ge 2) ($tag+' identical corrupt FAT mirrors do not imply integrity')
         }
         if($item.id -eq 'X02'){
             $expectedUnknown++
