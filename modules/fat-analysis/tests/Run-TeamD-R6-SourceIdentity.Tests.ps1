@@ -96,6 +96,25 @@ function Get-D16SourceScopedUnion {
         originalIdentity='unknown';fatWinner='not_selected';writePermitted=$false
     }
 }
+# Independent scorer: build a union from the module's separately emitted
+# nonoverlapping source-local RANGE representation, not the event-loop method
+# under test. Both are also checked against returned source byte counts.
+function Get-D16IndependentRangeOracle {
+    param($A,$B,[string]$RealKeyA,[string]$RealKeyB)
+    $distinct=New-Object 'System.Collections.Generic.HashSet[string]'
+    foreach($item in @(
+        [pscustomobject]@{report=$A;key=$RealKeyA},
+        [pscustomobject]@{report=$B;key=$RealKeyB}
+    )){
+        foreach($range in @($item.report.uniqueReadRanges)){
+            $from=[long]$range.offsetBytes;$n=[long]$range.lengthBytes
+            for($i=0L;$i -lt $n;$i++){
+                [void]$distinct.Add(($item.key+':'+($from+$i)))
+            }
+        }
+    }
+    return [long]$distinct.Count
+}
 function Has-D16NaiveOverlap {
     param($A,$B)
     $seen=New-Object 'System.Collections.Generic.HashSet[long]'
@@ -150,8 +169,10 @@ foreach($p in $pairs){
         }else{
             # Cross-source union under true *scorer* identities, independently
             # recomputed from each observed interval, never from module claims.
-            $expectedCount=Get-D16SourceScopedUnion $reportA $reportB $a.sourceKey $b.sourceKey $true $true
-            Check-D16 ($joined.sourceScopedUniqueBytes -eq $expectedCount.sourceScopedUniqueBytes) ($p.id+' source-scoped physical byte accounting')
+            $independentUnique=Get-D16IndependentRangeOracle $reportA $reportB $a.sourceKey $b.sourceKey
+            Check-D16 ($joined.sourceScopedUniqueBytes -eq $independentUnique -and
+                $joined.sourceScopedDuplicateBytes -eq
+                    ($reportA.metrics.bytesRead+$reportB.metrics.bytesRead-$independentUnique)) ($p.id+' source-scoped read events match independent range-union scorer')
             $positive=($truth -eq 'same_source')
             $guardPositive=($joined.relation -eq 'same_source')
             if($positive){
@@ -176,7 +197,8 @@ foreach($p in $pairs){
                 $sum -le $entry.cap -and $rep.metrics.uniquePhysicalBytes -le $sum) ($p.id+' actual source bytes and budget are independently accounted')
             Check-D16 ($rep.metrics.readRequests -ge $meter.ReadCalls -and
                 $rep.metrics.totalReadCapShared -and $rep.status -eq 'partial') ($p.id+' no full-FAT coverage from bounded source reads')
-            Check-D16 ($rep.geometryTrustDecision -eq 'reject' -and
+            $expectedGeometry=$(if($entry.cap -eq 32){'unknown'}else{'reject'})
+            Check-D16 ($rep.geometryTrustDecision -eq $expectedGeometry -and
                 $rep.sourceDecision -eq 'not_selected' -and $null -eq $rep.selectedCandidate -and
                 -not $rep.writePermitted -and
                 $null -eq $rep.PSObject.Properties['sourceIdentity']) ($p.id+' no invented source/FAT winner or ownership')
