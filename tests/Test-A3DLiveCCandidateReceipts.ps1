@@ -35,7 +35,7 @@ public sealed class ChappyA7CandidateMeter : Stream {
     public ChappyA7CandidateMeter(Stream source,string token,long budget) {
         if(source==null||!source.CanRead||!source.CanSeek||source.CanWrite)
             throw new ArgumentException("Nonwritable readable seekable source required");
-        if(String.IsNullOrEmpty(token)||token.Length>64||budget<1024||budget>120000)
+        if(String.IsNullOrEmpty(token)||token.Length>48||budget<1024||budget>120000)
             throw new ArgumentException("Invalid artificial source token or quota");
         input=source;sourceToken=token;maximum=budget;
     }
@@ -67,7 +67,9 @@ public sealed class ChappyA7CandidateMeter : Stream {
         if(got>0) {
             used+=got;
             events.Add(new ChappyA7CandidateRead{
-                EvidenceId="A7P-"+events.Count.ToString("D4"),
+                // A-issued IDs must remain unique when independently metered sources
+                // are aggregated; a per-stream bare sequence number collides.
+                EvidenceId=sourceToken+"#"+events.Count.ToString("D4"),
                 SourceToken=sourceToken,Consumer="carving",
                 Purpose=purpose,CandidateId=candidate,
                 OffsetBytes=start,ReturnedBytes=got
@@ -174,4 +176,82 @@ foreach($case in @('M00','M01','P02')){
             $case,$meter.BytesRead,$scoutBytes,$sum,$ids.Count,$resolved.status,$resolved.originalIdentity)
     }finally{$source.Dispose()}
 }
+# Negative A/B: two independently created, byte-identical *synthetic* images
+# can yield exactly the same physical offsets and bytes. Event IDs must not
+# collide, and receipt attribution must never cross an A-owned source token.
+$fixtureOne=New-ChappyA3DDamagedFixture -Seed 202611 -Case M00
+$fixtureTwo=New-ChappyA3DDamagedFixture -Seed 202611 -Case M00
+$shaOne=Get-A3DSha256 $fixtureOne.image
+$shaTwo=Get-A3DSha256 $fixtureTwo.image
+Assert-A7Live ($shaOne -ceq $shaTwo) 'independent_synthetic_sources_have_equal_bytes'
+$rawOne=[IO.MemoryStream]::new($fixtureOne.image,$false)
+$rawTwo=[IO.MemoryStream]::new($fixtureTwo.image,$false)
+$tokenOne='A7_independent_synthetic_one'
+$tokenTwo='A7_independent_synthetic_two'
+$meterOne=[ChappyA7CandidateMeter]::new($rawOne,$tokenOne,4096L)
+$meterTwo=[ChappyA7CandidateMeter]::new($rawTwo,$tokenTwo,4096L)
+$candidateKey='3mf:256+64,512+16'
+$sourceExtents=@(
+    [pscustomobject]@{offsetBytes=[long]256;lengthBytes=[long]64},
+    [pscustomobject]@{offsetBytes=[long]512;lengthBytes=[long]16}
+)
+try{
+    foreach($meterItem in @($meterOne,$meterTwo)){
+        $meterItem.BeginPhase('candidate_validation',$candidateKey)
+        foreach($extent in $sourceExtents){
+            [void]$meterItem.Seek([long]$extent.offsetBytes,[IO.SeekOrigin]::Begin)
+            [byte[]]$buffer=[byte[]]::new([int]$extent.lengthBytes)
+            $count=$meterItem.Read($buffer,0,$buffer.Length)
+            Assert-A7Live ($count -eq $buffer.Length) 'actual_test_only_candidate_read'
+        }
+        Assert-A7Live (-not $meterItem.CanWrite -and $meterItem.BytesRead -eq 80) 'independently_metered_readonly_source'
+    }
+    $eventsOne=@($meterOne.GetEvents())
+    $eventsTwo=@($meterTwo.GetEvents())
+    $idsOne=@($eventsOne|ForEach-Object{$_.EvidenceId})
+    $idsTwo=@($eventsTwo|ForEach-Object{$_.EvidenceId})
+    Assert-A7Live ($eventsOne.Count -eq 2 -and $eventsTwo.Count -eq 2 -and
+        $idsOne[0] -cne $idsTwo[0] -and $idsOne[1] -cne $idsTwo[1]) 'a_issued_receipts_do_not_collide_across_sources'
+    $allMeterEvents=@($eventsOne)+@($eventsTwo)
+    $base=@{
+        ImageLengthBytes=[long]$fixtureOne.image.Length
+        SourceToken=$tokenOne
+        CandidateId=$candidateKey
+        CandidateExtents=$sourceExtents
+        MeterEvents=$allMeterEvents
+        MaxPhysicalReadBytes=4096L
+    }
+    $first=Resolve-A3DReadEvidence @base -ClaimedEventIds $idsOne
+    Assert-A7Live ($first.status -ceq 'source_observed' -and
+        $first.candidateReadBytes -eq 80 -and
+        $first.sourceActualReadBytes -eq 80 -and
+        $first.originalIdentity -ceq 'unknown') 'first_artificial_source_receipts_scoped'
+    $other=$base.Clone();$other.SourceToken=$tokenTwo
+    $second=Resolve-A3DReadEvidence @other -ClaimedEventIds $idsTwo
+    Assert-A7Live ($second.status -ceq 'source_observed' -and
+        $second.candidateReadBytes -eq 80 -and
+        $second.sourceActualReadBytes -eq 80 -and
+        $second.originalIdentity -ceq 'unknown') 'second_artificial_source_receipts_scoped'
+    $cross=Resolve-A3DReadEvidence @base -ClaimedEventIds @($idsOne[0],$idsTwo[1])
+    Assert-A7Live ($cross.status -ceq 'unattributed' -and
+        $cross.candidateReadBytes -eq 64 -and
+        $cross.reasons -contains 'origin.wrong_source' -and
+        $cross.reasons -contains 'coverage.candidate_bytes_not_fully_read') 'identical_bytes_wrong_source_cannot_complete_candidate'
+    $wrongSource=Resolve-A3DReadEvidence @base -ClaimedEventIds $idsTwo
+    Assert-A7Live ($wrongSource.status -ceq 'unattributed' -and
+        $wrongSource.candidateReadBytes -eq 0 -and
+        $wrongSource.reasons -contains 'origin.wrong_source') 'other_image_receipts_cannot_authenticate_first'
+    $cap=$base.Clone();$cap.MaxPhysicalReadBytes=64L
+    $quota=Resolve-A3DReadEvidence @cap -ClaimedEventIds $idsOne
+    Assert-A7Live ($quota.status -ceq 'unattributed' -and
+        $quota.reasons -contains 'budget.physical_read_limit') 'actual_source_quota_enforced_for_same_image'
+    Assert-A7Live ((Get-A3DSha256 $fixtureOne.image) -ceq $shaOne -and
+        (Get-A3DSha256 $fixtureTwo.image) -ceq $shaTwo) 'both_generated_sources_unchanged'
+    Write-Host ('A7 DUAL SOURCES source1={0} source2={1} actual_each=80 distinct_receipts=4 cross_source=unattributed originalIdentity=unknown' -f $tokenOne,$tokenTwo)
+}finally{
+    $rawOne.Dispose()
+    $rawTwo.Dispose()
+}
+Write-Host 'PASS: A7 actual independent synthetic sources never share A event IDs or cross-attest identical physical offsets.'
+
 Write-Host 'PASS: A7 independent A Stream.Read receipt IDs reconcile actual C test-only candidate validation, not scans or original identity.'
