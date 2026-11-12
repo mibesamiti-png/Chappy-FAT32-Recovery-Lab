@@ -42,6 +42,7 @@ function Invoke-CObservedCandidateValidationRegression {
     $readRequests=0;$readIntervals=0;$baselinePairs=0;$validatedPairs=0
     $positive=0;$negative=0;$unknown=0;$originalExact=0;$byteDifferent=0
     $scorerCases=0;$reference=$null;$unchanged=0
+    $scoutElapsedMs=0L;$candidateValidationElapsedMs=0L
     foreach($id in $caseNames) {
         $sourceId=if($id -eq 'M01_decoy'){'M01'}else{$id}
         $fixture=New-ChappyA3DDamagedFixture -Seed 202611 -Case $sourceId
@@ -56,6 +57,7 @@ function Invoke-CObservedCandidateValidationRegression {
             Assert-COrigin ($meter.BytesRead -eq $baseline.metrics.sourceBytesRead -and
                 $meter.BytesRead -le 73728) ($id+': source scout budget and actual I/O equal')
             $discoverySourceBytes += [long]$baseline.metrics.sourceBytesRead
+            $scoutElapsedMs += [long]$baseline.metrics.elapsedMilliseconds
             $proposals=@($baseline.items)
             Assert-COrigin ($proposals.Count -le 8) ($id+': bounded candidate proposals')
             if($id -eq 'M00' -or $id -eq 'M01'){
@@ -95,6 +97,7 @@ function Invoke-CObservedCandidateValidationRegression {
                 $memoryBytes += [long]$observed.metrics.memoryValidatorBytesRead
                 $readRequests += [int]$observed.metrics.sourceReadRequests
                 $readIntervals += [int]$observed.metrics.sourceObservedIntervals
+                $candidateValidationElapsedMs += [long]$observed.metrics.elapsedMilliseconds
                 $validatedPairs++
                 if($observed.status -eq 'format_consistent'){
                     $positive++;$casePositive++
@@ -164,8 +167,8 @@ function Invoke-CObservedCandidateValidationRegression {
         Assert-COrigin $denied 'writable synthetic source refused'
     }finally{$writable.Dispose()}
     Assert-COrigin ((Get-A3DSha256 $sample.image) -ceq $sample.manifest.imageSha256) 'negative control source SHA invariant'
-    Write-Host ('C ORIGIN SYNTHETIC METRICS cases={0} discovered_pairs={1} revalidated_pairs={2} consistent={3} rejected={4} exact_original_sha={5} byte_different={6} scout_source_bytes={7} candidate_validation_source_bytes={8} candidate_validation_memory_bytes={9} candidate_read_requests={10} observed_intervals={11} source_unchanged={12} A_receipt_ids_minted=0' -f
+    Write-Host ('C ORIGIN SYNTHETIC METRICS cases={0} discovered_pairs={1} revalidated_pairs={2} consistent={3} rejected={4} exact_original_sha={5} byte_different={6} scout_source_bytes={7} candidate_validation_source_bytes={8} candidate_validation_memory_bytes={9} candidate_read_requests={10} observed_intervals={11} source_unchanged={12} scout_elapsed_ms={13} candidate_validation_elapsed_ms={14} A_receipt_ids_minted=0' -f
         $scorerCases,$baselinePairs,$validatedPairs,$positive,$negative,$originalExact,$byteDifferent,
-        $discoverySourceBytes,$validationSourceBytes,$memoryBytes,$readRequests,$readIntervals,$unchanged)
+        $discoverySourceBytes,$validationSourceBytes,$memoryBytes,$readRequests,$readIntervals,$unchanged,$scoutElapsedMs,$candidateValidationElapsedMs)
     Write-Host 'PASS: C R5 candidate-specific physical read traces, A receipt boundary, short-read/budget/ordering negative controls'
 }
