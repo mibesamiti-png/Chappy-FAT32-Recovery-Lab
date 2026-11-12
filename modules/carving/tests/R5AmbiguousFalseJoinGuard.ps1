@@ -25,6 +25,10 @@ function Resolve-CFragmentFalseJoinEvidence {
         $input=@($ScanResult.items)
         if($ScanResult.status -cne 'ok' -or $ScanResult.decision -ceq 'incomplete'){
             $incomplete=$true;$reason='guard.scan_incomplete'
+        }elseif([long]$ScanResult.metrics.pairAttempts -lt 0 -or
+           [long]$ScanResult.metrics.sourceBytesRead -lt 0 -or
+           [long]$ScanResult.metrics.validatorBytesRead -lt 0){
+            $incomplete=$true;$reason='guard.invalid_metrics'
         }elseif($input.Count -gt $MaxPairs -or
                 [long]$ScanResult.metrics.pairAttempts -gt $MaxPairs -or
                 [long]$ScanResult.metrics.sourceBytesRead -gt $MaxSourceBytes -or
@@ -78,7 +82,11 @@ function Resolve-CFragmentFalseJoinEvidence {
             })
         }
     }
-    $decision=if($incomplete){'incomplete'}elseif($hypotheses.Count -eq 0){'unknown'}elseif($hypotheses.Count -eq 1){'one_possible'}else{'ambiguous'}
+    $derived=if($hypotheses.Count -eq 0){'unknown'}elseif($hypotheses.Count -eq 1){'one_possible'}else{'ambiguous'}
+    if(-not $incomplete -and [string]$ScanResult.decision -cne $derived){
+        $incomplete=$true;$reason='guard.scan_decision_mismatch'
+    }
+    $decision=if($incomplete){'incomplete'}else{$derived}
     # Partial results retain diagnostic hypotheses but never select a winner.
     $timer.Stop()
     return [pscustomobject]@{
