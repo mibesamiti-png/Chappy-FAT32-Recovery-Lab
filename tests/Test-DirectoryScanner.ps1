@@ -442,6 +442,9 @@ try {
     # R4 hidden parent/orphan/LFN truth under identical physical source transcripts.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4HiddenParentIndistinguishability.ps1')
 
+    # R4 next-round positive control: independently metered parent entry + child dotdot.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4ObservedParentPositiveControl.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
