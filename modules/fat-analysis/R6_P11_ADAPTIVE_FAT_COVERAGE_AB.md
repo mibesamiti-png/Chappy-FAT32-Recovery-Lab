@@ -42,7 +42,7 @@ Code HEAD `87a1172c509b17695288188b1a01c7e0c2e319e0`: native Windows [push CI #4
 | Repeated returned bytes | 1,264 | 1,264 |
 | Physical Stream.Read calls, including short/EOF | 1,033 | 1,033 |
 | Complete physically sampled FAT1/FAT2 paired entries on each normal valid source | **48 / 65,664** | **48 / 65,664** |
-| Paired coverage percentage | **0.07309972%** | **0.07309972%** |
+| Paired coverage percentage | **0.07309942%** | **0.07309942%** |
 | Original file byte identity proven | 0 | 0 |
 | Authentic FAT copy selected / repair | 0 | 0 |
 
