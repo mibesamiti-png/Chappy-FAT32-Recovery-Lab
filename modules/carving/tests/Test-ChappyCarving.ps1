@@ -946,3 +946,8 @@ Invoke-CMultiFormatNegativeControls
 . (Join-Path $PSScriptRoot 'R5VariableZipPairResearch.ps1')
 . (Join-Path $PSScriptRoot 'R5VariableZipPairRegression.ps1')
 Invoke-CVariableFragmentEvidence
+
+# Team C R5 Issue #72: physical candidate-validation reads, not scan receipts.
+. (Join-Path $PSScriptRoot 'R5CandidateValidatorOriginResearch.ps1')
+. (Join-Path $PSScriptRoot 'R5CandidateValidatorOriginRegression.ps1')
+Invoke-CObservedCandidateValidationRegression
