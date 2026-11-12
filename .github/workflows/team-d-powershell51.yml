@@ -75,3 +75,6 @@ jobs:
       - name: Run Team D R6 synthetic remote512 and displaced128 FAT schedule tradeoff
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-Remote512Tradeoff.Tests.ps1
+      - name: Run Team D R6 synthetic multi-seed nonoracle rotating FAT window A B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-NonoracleRotatingWindows.Tests.ps1
