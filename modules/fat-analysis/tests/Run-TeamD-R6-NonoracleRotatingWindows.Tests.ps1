@@ -168,6 +168,9 @@ $oldCalls=0L;$newCalls=0L
 $plans=New-Object 'System.Collections.Generic.HashSet[string]'
 $locations=New-Object 'System.Collections.Generic.HashSet[long]'
 foreach($seed in @(202611,202612,202613)){
+    # PowerShell 5.1 treats int + string as numeric addition. Display labels
+    # use a decimal string; function parameters still strictly cast to int.
+    $seed=[string]$seed
     $images=@{}
     foreach($id in @('M00','M01','M02','M03','M05','X02')){
         $f=New-ChappyA3DDamagedFixture -Case $id -Seed $seed
