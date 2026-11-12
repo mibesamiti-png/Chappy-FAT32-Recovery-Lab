@@ -424,6 +424,8 @@ try {
 
     # R4 continuation: independently labelled empty files and damaged LFN negatives.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4EmptyAndLfnNegative.ps1')
+    # R4 P1: read-event origin spans, zero-size false warning, bad LFN and false parent.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4ReadSpanEvidence.ps1')
 
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
