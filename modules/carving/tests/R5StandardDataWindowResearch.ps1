@@ -127,7 +127,7 @@ function Invoke-CStandardDataWindowRegression {
                     $f.BytesRead-$prior -eq $out.metrics.sourceBytesRead) 'FAT false ZIP cannot become data-region candidate'
             }finally{$f.Dispose()}
             Assert-CStandardTrial ((Get-A3DSha256 $fake) -ceq $fakeBefore) 'FAT spoof source unchanged'
-            [byte[]]$bad=[byte[]]$img.Clone();$bad[[int]($geo.partitionOffsetBytes+11)]=0
+            [byte[]]$bad=[byte[]]$img.Clone();$bad[[int]($geo.partitionOffsetBytes+12)]=0
             $badInput=[IO.MemoryStream]::new($bad,$false);$badGeo=$null
             try{try{$badGeo=Get-ChappyFat32Geometry -Stream $badInput}catch{$badGeo=$null}}
             finally{$badInput.Dispose()}
