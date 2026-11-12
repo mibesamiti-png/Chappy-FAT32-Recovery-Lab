@@ -426,6 +426,8 @@ try {
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4EmptyAndLfnNegative.ps1')
     # R4 P1: read-event origin spans, zero-size false warning, bad LFN and false parent.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4ReadSpanEvidence.ps1')
+    # R4 next P1: short-read/false-parent and bounded-origin negative A/B.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4IncompleteReadOrigin.ps1')
 
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {

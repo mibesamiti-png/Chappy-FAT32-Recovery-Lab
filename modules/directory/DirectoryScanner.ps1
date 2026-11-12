@@ -353,7 +353,10 @@ function Get-ChappyDirectoryCandidates {
           # B R4 opt-in: record actual successful directory cluster read
           # offsets (not filenames, file contents, or FAT ownership).
           [switch]$RecordDirectoryReadSpans,
-          [int]$MaxDirectoryReadSpans = 128)
+          [int]$MaxDirectoryReadSpans = 128,
+          # R4 experimental, default OFF: classify incomplete/failed scans
+          # distinctly from completed read-event capture. No additional I/O.
+          [switch]$ClassifyIncompleteDirectoryReadOrigin)
     $items = New-Object System.Collections.ArrayList
     $directoryContainers = New-Object System.Collections.ArrayList
     $warnings = New-Object System.Collections.ArrayList
@@ -563,6 +566,16 @@ function Get-ChappyDirectoryCandidates {
     }
     $directoryReadEvidence = $null
     if ($RecordDirectoryReadSpans) {
+        if ($ClassifyIncompleteDirectoryReadOrigin) {
+            if ($errors.Count -gt 0) {
+                # A failed/short cluster read was NOT a successful event;
+                # preserve prior successful spans but never call it complete.
+                $readSpanStatus = 'scan_error'
+            } elseif ($readSpanStatus -eq 'recorded' -and $incomplete) {
+                # A fixed scan budget may leave contradictory parents unseen.
+                $readSpanStatus = 'scan_incomplete'
+            }
+        }
         if ($directoryReadEvents -eq 0 -and $readSpanStatus -eq 'recorded') {
             $readSpanStatus = 'no_successful_reads'
         }
