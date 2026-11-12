@@ -144,7 +144,7 @@ function Invoke-CQuarterStratifiedWindowRegression {
             Assert-CQuarterArm $base $baselineMeter 'contiguous'
             Assert-CQuarterArm $midpoint $midpointMeter 'start-midpoint'
             Assert-CQuarterArm $quarter $quarterMeter 'four-quarter'
-            if($base.metrics.scannedBytes -gt 65536 -or $midpoint.metrics.scannedBytes -gt 65536 -or
+            if($base.metrics.scannedBytes -ne 65536 -or $midpoint.metrics.scannedBytes -ne 65536 -or
                 $quarter.metrics.scannedBytes -ne 65536){throw 'C quarter arms scanned unequal/overbudget logical bytes'}
             $scBase=Get-CSparseSyntheticScore -Image $img -Truth $case.truth -Items @($base.items) -FatDecoyAt -1 -RootDecoyAt $case.decoyAt
             $scMid=Get-CSparseSyntheticScore -Image $img -Truth $case.truth -Items @($midpoint.items) -FatDecoyAt -1 -RootDecoyAt $case.decoyAt
@@ -176,7 +176,7 @@ function Invoke-CQuarterStratifiedWindowRegression {
             $baseUnique+=$baselineMeter.UniqueBytes;$midUnique+=$midpointMeter.UniqueBytes;$quarterUnique+=$quarterMeter.UniqueBytes
             $baseMs+=$base.metrics.elapsedMilliseconds;$midMs+=$midpoint.metrics.elapsedMilliseconds;$quarterMs+=$quarter.metrics.elapsedMilliseconds
             $cases++
-            Write-Host ('C QUARTER CASE seed={0} spc={1} placement={2}/8 aligned={3} true={4}/{5}/{6} exact={7}/{8}/{9} false={10} bytes={11}/{12}/{13} calls={14}/{15}/{16} unknown={17}/{18}/{19}' -f
+            Write-Host ('C QUARTER CASE seed={0} spc={1} placement={2}/8 aligned={3} true={4}/{5}/{6} exact={7}/{8}/{9} false={10} bytes={11}/{12}/{13} calls={14}/{15}/{16} scan_unknown_status={17}/{18}/{19}' -f
                 $seed,$spc,$case.placementNumerator,$case.isAligned,$scBase.trueHeader,$scMid.trueHeader,$scQuarter.trueHeader,$scBase.exact,$scMid.exact,$scQuarter.exact,$scQuarter.falseObservations,
                 $baselineMeter.BytesRead,$midpointMeter.BytesRead,$quarterMeter.BytesRead,$baselineMeter.ReadCalls,$midpointMeter.ReadCalls,$quarterMeter.ReadCalls,
                 ($base.status -eq 'unknown'),($midpoint.status -eq 'unknown'),($quarter.status -eq 'unknown'))
