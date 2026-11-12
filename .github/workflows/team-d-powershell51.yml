@@ -63,3 +63,6 @@ jobs:
       - name: Run Team D R6 physical FAT read-span adversarial A B negatives
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-IntervalNegatives.Tests.ps1
+      - name: Run Team D R6 synthetic cross-source FAT identity adversarial A B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-SourceIdentity.Tests.ps1
