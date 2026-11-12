@@ -43,11 +43,13 @@ $tests=@(
     'modules\fat-analysis\tests\Run-TeamD-R6-IntervalNegatives.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R6-SourceIdentity.Tests.ps1',
     'modules\fat-analysis\tests\Run-TeamD-R6-DualFatAmbiguity.Tests.ps1',
+    'modules\fat-analysis\tests\Run-TeamD-R6-SamplingBlindspots.Tests.ps1',
     'tests\Test-A3DEvidenceBaseline.ps1',
     'tests\Test-A3DSharedReadProvenance.ps1',
     'tests\Test-A3DCandidateReadTrust.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
-    'tests\Test-A3DLiveMultiCandidateBoundary.ps1'
+    'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
+    'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
 )
 $passed=0
 Push-Location $root
