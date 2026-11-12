@@ -29,18 +29,34 @@ Negative controls require that a matching corrupt FAT1/FAT2 (M03) does not becom
 
 **Research-only acceptance:** if the existing D module fails a safety invariant, keep the failing test and propose a small D-owned correction; never change synthetic labels or source oracle to manufacture a PASS. Stage R3 results and exact-head Windows/Privacy CI: **pending at documentation creation**.
 
-## R3 — measured A/B evidence
+## R3 — actual adversarial Windows PowerShell 5.1 results
 
-| Criterion | Naïve sum-as-unique baseline | Existing #90 observed-unique union candidate | Notes |
-| --- | ---: | ---: | --- |
-| Duplicate-read TP/FP/FN/TN | pending | pending | Independent physical read-offset oracle, not file recovery |
-| Bytes physically returned | pending | pending | Same runs, not separate work |
-| Distinct/duplicate bytes and Read() calls | pending | pending | Independently counted |
-| Incomplete/unknown runs | pending | pending | Early zero, clipping, malformed/out-of-volume geometry |
-| False FAT-owner/copy selection/verified original | pending | pending | Must remain zero |
-| Input SHA identical | pending | pending | Synthetic only |
-| Windows PowerShell 5.1 exact HEAD | pending | pending | Includes previous D suites |
-| Privacy gate exact HEAD | pending | pending | Not a security audit |
+**Code HEAD tested:** `52945a7e9ee6d226b08a782fd23b660515beb10f`. The dedicated D P4 Windows PowerShell 5.1 synthetic test [CI #43144965038](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43144965038) **SUCCESS: 197/197 assertions**, and the existing Team D synthetic suites passed. Privacy CI for that code HEAD: [#43144965034](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43144965034) (verify completion). This documentation-only update requires a **new exact-final-HEAD** Windows and privacy confirmation before A review.
+
+The *same physical reads* are scored by two counting rules, so the physical read totals below are **not** two independent workloads.
+
+| Independent duplicate-read accounting (11 artificial controls) | Naïve sum-as-unique baseline | Existing observed-unique interval union |
+| --- | ---: | ---: |
+| TP / FP / FN / TN on **physical repeat** truth | **0 / 0 / 3 / 8** | **3 / 0 / 0 / 8** |
+| Precision | undefined (no baseline positives) | 3/3 = 100% selected artificial controls |
+| Recall | 0/3 = 0% | 3/3 = 100% selected artificial controls |
+| Actual source bytes returned, across 11 inputs | 16,302 (same reads) | 16,302 |
+| Independently verified distinct physical byte offsets | 16,106 | 16,106 |
+| Actual duplicate source bytes | 196 (naïve algorithm fails to flag) | 196 |
+| Underlying read calls | 1,299 | 1,299 |
+| Actual file bytes recovered / byte-identical | not applicable | not applicable |
+| Unsupported original file, FAT-winner, directory-owner or repair claims | 0 | 0 |
+| Independently maintained synthetic SHA unchanged | 11/11 | 11/11 |
+| Unknown/partial controls explicitly retained | 5 | 5 |
+| Reliable CPU speed or memory peak | not measured | not measured |
+
+**Case-by-case physical-read observations:** M00 `MirrorOnly` 2,048 actual / 2,048 unique; M00 `MirrorAndChain` 1,600/1,536 (64 duplicated); M02 mirror-only 2,048/2,048 and mirror+chain 1,596/1,536 (60 duplicated); M03 mirror-only 2,048/2,048 and mirror+chain 1,608/1,536 (72 duplicated). X02 mirror-only 2,048/2,048 with `geometry.partition_exceeds_stream`. The M03 mirrored FAT corruption still had **zero FAT copy disagreements**: only the optional chain mode saw the cycles, and neither selected a source.
+
+**Negative/unknown controls:** premature source stop at 1,200 bytes (1-byte chunks) retained 1,200 unique and `partial` despite 1,216 physical `Read()` calls; global caps 1,050 and 32 bytes were exactly enforced, with clip/partial codes and no invented extra bytes. An independently altered *synthetic* BPB sectors-per-cluster=0 caused only 1,024 bytes of geometry reads and `partial` rejection; the analyzer did not authenticate geometry or fabricate a FAT copy/owner. Five such cases (X02, early-stop, two budget caps, invalid BPB) stay **unknown** for original-file recovery and were never included as recovered-file positives or negatives. A writable source was rejected before reading.
+
+**Regression caught during testing:** one assertion accidentally demanded cycle evidence from the **mirror-only** baseline, which by design does not perform chain traversal. That assumption was fixed by asserting mirror-only no-cycle and mirror+chain observed-cycle separately, without changing source bytes or injected truth labels. An unrelated test-source replacement accidentally duplicated text because a JavaScript replace string interpreted a literal PowerShell `$'` sequence; restored the clean committed test and used function-based replacement to avoid source corruption. No production D module edits and no artificial-label relaxation.
+
+**Limits:** this is a selected *11-case synthetic byte-accounting A/B*, not a general FAT corruption detector, true original-content recovery study or reliable speed benchmark. Physical observed offsets are not file-owner provenance. More actual `Read()` attempts in a fragmented reader do not create more unique evidence.
 
 ## R4 — Team A decision
 
