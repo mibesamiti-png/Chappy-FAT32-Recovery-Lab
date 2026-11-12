@@ -143,6 +143,16 @@ try{
     $shortEvents=@($shortMeter.GetEvents())
     $idsFirst=@($shortEvents|Where-Object{$_.CandidateId -ceq $first.key}|ForEach-Object {$_.EvidenceId})
     $idsSecond=@($shortEvents|Where-Object{$_.CandidateId -ceq $second.key}|ForEach-Object {$_.EvidenceId})
+    Assert-A7Discovered ($idsFirst.Count -gt 32 -and $idsFirst.Count -le 128) 'real_short_chunks_require_more_than_previous_32_receipts'
+    $tooMany=New-Object 'System.Collections.Generic.List[string]'
+    for($k=0;$k -lt 129;$k++){ $tooMany.Add($idsFirst[0]) }
+    $limitRejected=$false
+    try{
+        $null=Resolve-A3DReadEvidence -ImageLengthBytes ([long]$raw.Length) -SourceToken $shortToken -CandidateId $first.key -CandidateExtents $first.extents -MeterEvents $shortEvents -ClaimedEventIds @($tooMany.ToArray()) -MaxPhysicalReadBytes 120000L
+    }catch{
+        $limitRejected=($_.Exception.Message -match 'Invalid A7 evidence contract limits')
+    }
+    Assert-A7Discovered $limitRejected 'more_than_128_receipts_still_refused'
     $base=@{ImageLengthBytes=[long]$raw.Length;SourceToken=$shortToken;MeterEvents=$shortEvents;MaxPhysicalReadBytes=120000L}
     $valid=Resolve-A3DReadEvidence @base -CandidateId $first.key -CandidateExtents $first.extents -ClaimedEventIds $idsFirst
     $incomplete=Resolve-A3DReadEvidence @base -CandidateId $second.key -CandidateExtents $second.extents -ClaimedEventIds $idsSecond
