@@ -5,7 +5,8 @@
 function Read-ChappyBBytes {
     param([Parameter(Mandatory=$true)][System.IO.Stream]$Stream,
           [Parameter(Mandatory=$true)][long]$Offset,
-          [Parameter(Mandatory=$true)][int]$Count)
+          [Parameter(Mandatory=$true)][int]$Count,
+          [object]$ReturnedByteObserver = $null)
     if (-not $Stream.CanRead -or -not $Stream.CanSeek) { throw 'A readable, seekable stream is required' }
     if ($Count -lt 0 -or $Offset -lt 0 -or $Offset -gt ($Stream.Length - [long]$Count)) {
         throw 'Read outside input stream bounds'
@@ -15,6 +16,18 @@ function Read-ChappyBBytes {
     $done = 0
     while ($done -lt $Count) {
         $read = $Stream.Read($buffer, $done, $Count - $done)
+        # When explicitly requested by the B directory scanner, account
+        # only returned Stream.Read bytes, not requested bytes or FAT/geometry.
+        # Callers never infer hardware I/O or source identity from this counter.
+        if ($null -ne $ReturnedByteObserver) {
+            $ReturnedByteObserver.readCalls = [long]$ReturnedByteObserver.readCalls + 1L
+            if ($read -gt 0) {
+                $ReturnedByteObserver.positiveReadCalls = [long]$ReturnedByteObserver.positiveReadCalls + 1L
+                $ReturnedByteObserver.streamReturnedBytes = [long]$ReturnedByteObserver.streamReturnedBytes + [long]$read
+            } elseif ($read -eq 0) {
+                $ReturnedByteObserver.zeroReadCalls = [long]$ReturnedByteObserver.zeroReadCalls + 1L
+            }
+        }
         if ($read -le 0) { throw 'Input stream truncated during read' }
         $done += $read
     }
@@ -356,13 +369,25 @@ function Get-ChappyDirectoryCandidates {
           [int]$MaxDirectoryReadSpans = 128,
           # R4 experimental, default OFF: classify incomplete/failed scans
           # distinctly from completed read-event capture. No additional I/O.
-          [switch]$ClassifyIncompleteDirectoryReadOrigin)
+          [switch]$ClassifyIncompleteDirectoryReadOrigin,
+          # R4 default OFF: count positive Stream.Read returns for B directory
+          # cluster requests, including incomplete chunks. Not a disk I/O meter.
+          [switch]$RecordDirectoryPhysicalReadBytes)
     $items = New-Object System.Collections.ArrayList
     $directoryContainers = New-Object System.Collections.ArrayList
     $warnings = New-Object System.Collections.ArrayList
     $errors = New-Object System.Collections.ArrayList
     $bytesRead = 0L
     $directoryReadEvents = 0L
+    $directoryReturnedObserver = $null
+    if ($RecordDirectoryPhysicalReadBytes) {
+        $directoryReturnedObserver = [pscustomobject]@{
+            streamReturnedBytes = 0L
+            readCalls = 0L
+            positiveReadCalls = 0L
+            zeroReadCalls = 0L
+        }
+    }
     $directoryReadSpans = New-Object System.Collections.ArrayList
     $readSpanStatus = 'not_requested'
     if ($RecordDirectoryReadSpans) { $readSpanStatus = 'recorded' }
@@ -426,7 +451,7 @@ function Get-ChappyDirectoryCandidates {
             $rootRead = $false
             if ($root -ge 2 -and $root -le $maxCluster) {
                 $rootOffset = $dataOffset + ($root-2L)*$clusterSize
-                $rootBuf = Read-ChappyBBytes $Stream $rootOffset ([int]$clusterSize)
+                $rootBuf = Read-ChappyBBytes $Stream $rootOffset ([int]$clusterSize) -ReturnedByteObserver $directoryReturnedObserver
                 $bytesRead += $clusterSize
                 if ($RecordDirectoryReadSpans) {
                     $directoryReadEvents++
@@ -478,7 +503,7 @@ function Get-ChappyDirectoryCandidates {
                     break
                 }
                 $at = $dataOffset + ($c-2L)*$clusterSize
-                $buf = Read-ChappyBBytes $Stream $at ([int]$clusterSize)
+                $buf = Read-ChappyBBytes $Stream $at ([int]$clusterSize) -ReturnedByteObserver $directoryReturnedObserver
                 $bytesRead += $clusterSize
                 if ($RecordDirectoryReadSpans) {
                     $directoryReadEvents++
@@ -587,6 +612,27 @@ function Get-ChappyDirectoryCandidates {
             spans = @($directoryReadSpans.ToArray())
         }
     }
+    $directoryPhysicalReadEvidence = $null
+    if ($RecordDirectoryPhysicalReadBytes) {
+        $reportedReturnedBytes = [long]$directoryReturnedObserver.streamReturnedBytes
+        $partialReturnedBytes = $reportedReturnedBytes - $bytesRead
+        $accountingState = if ($partialReturnedBytes -lt 0) { 'inconsistent' } elseif ($errors.Count) {
+            'scan_error'
+        } elseif ($incomplete) { 'scan_incomplete' } else { 'recorded' }
+        $directoryPhysicalReadEvidence = [pscustomobject]@{
+            source = 'directory_stream_read_returns_v1'
+            status = $accountingState
+            streamReturnedBytes = $reportedReturnedBytes
+            completedClusterBytes = $bytesRead
+            incompleteClusterReturnedBytes = $(if ($partialReturnedBytes -ge 0) { $partialReturnedBytes } else { $null })
+            readCalls = [long]$directoryReturnedObserver.readCalls
+            positiveReadCalls = [long]$directoryReturnedObserver.positiveReadCalls
+            zeroReadCalls = [long]$directoryReturnedObserver.zeroReadCalls
+            notes = @('only positive Stream.Read returns inside B directory-cluster requests',
+                      'geometry and other stream consumers excluded',
+                      'not an authenticated A meter receipt or proof of original identity')
+        }
+    }
     $status = if ($errors.Count) { 'error' } elseif ($incomplete -or $warnings.Count) { 'partial' } else { 'ok' }
     return [pscustomobject]@{
         schemaVersion = '1'
@@ -597,6 +643,7 @@ function Get-ChappyDirectoryCandidates {
         directoryContainers = @($directoryContainers.ToArray())
         coverageProvenance = $coverageReport
         directoryReadEvidence = $directoryReadEvidence
+        directoryPhysicalReadEvidence = $directoryPhysicalReadEvidence
         warnings = @($warnings.ToArray())
         errors = @($errors.ToArray())
         metrics = [pscustomobject]@{
