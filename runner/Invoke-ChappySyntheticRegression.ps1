@@ -51,6 +51,7 @@ $tests=@(
     'tests\Test-A3DSharedMultiSeedQuota.ps1',
     'tests\Test-A3DStandardSharedSourceGate.ps1',
     'tests\Test-A3DStandardDataWindowBridge.ps1',
+    'tests\Test-A3DStandardCCandidateReceipts.ps1',
     'tests\Test-A3DCandidateReadTrust.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
