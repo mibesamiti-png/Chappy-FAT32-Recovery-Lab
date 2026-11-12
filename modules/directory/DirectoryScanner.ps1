@@ -191,7 +191,8 @@ function Get-ChappyBShortName {
 function Read-ChappyBDirectoryCluster {
     param([byte[]]$Buffer, [long]$Cluster, [long]$OffsetBytes,
           [long]$MaxCluster, [switch]$IncludeDeleted, [switch]$IncludeNames,
-          [switch]$ExperimentalFlagZeroSizeNonzeroStartCluster, [bool]$IsRoot)
+          [switch]$ExperimentalFlagZeroSizeNonzeroStartCluster,
+          [switch]$ExperimentalConservativeZeroSizeUnknown, [bool]$IsRoot)
     $candidateItems = New-Object System.Collections.ArrayList
     $segments = New-Object System.Collections.ArrayList
     $validCount = 0
@@ -266,7 +267,11 @@ function Read-ChappyBDirectoryCluster {
         if ($lfnInvalid) { [void]$reasons.Add('lfn_rejected_short_fallback') }
         if ($isDeleted) { [void]$reasons.Add('deleted_first_character_unknown') }
         if ($oversized) { [void]$reasons.Add('size_exceeds_volume_capacity') }
-        if ($ExperimentalFlagZeroSizeNonzeroStartCluster -and $zeroSizeNonzeroStartCluster) {
+        if ($ExperimentalConservativeZeroSizeUnknown -and $zeroSizeNonzeroStartCluster) {
+            # B cannot distinguish an intentionally empty record from M04
+            # using this field alone. Neither healthy nor damaged is proven.
+            [void]$reasons.Add('zero_size_start_field_integrity_unknown')
+        } elseif ($ExperimentalFlagZeroSizeNonzeroStartCluster -and $zeroSizeNonzeroStartCluster) {
             [void]$reasons.Add('zero_size_with_nonzero_start_cluster')
         }
         [void]$candidateItems.Add([pscustomobject]@{
@@ -274,13 +279,14 @@ function Read-ChappyBDirectoryCluster {
             containerCluster = $Cluster
             startCluster = $start
             sizeBytes = $size
+            sizeIntegrity = $(if ($ExperimentalConservativeZeroSizeUnknown -and $zeroSizeNonzeroStartCluster) { 'unknown' } else { $null })
             isDirectory = $directory
             deleted = $isDeleted
             name = $visibleName
             shortName = $visibleShort
             nameSource = $(if ($null -ne $lfnName) { 'lfn_validated' } elseif ($isDeleted) { 'deleted_short_partial' } else { 'short_8_3' })
             confidence = $(if ($isDeleted -or $lfnInvalid -or $oversized -or
-                ($ExperimentalFlagZeroSizeNonzeroStartCluster -and $zeroSizeNonzeroStartCluster)) { 'partial' } else { 'probable' })
+                (($ExperimentalFlagZeroSizeNonzeroStartCluster -or $ExperimentalConservativeZeroSizeUnknown) -and $zeroSizeNonzeroStartCluster)) { 'partial' } else { 'probable' })
             evidence = @($reasons.ToArray())
             parentClusterHint = $null
         })
@@ -358,6 +364,9 @@ function Get-ChappyDirectoryCandidates {
           [switch]$IncludeDeleted,
           # R4 experiment, default OFF: flag zero-size files with nonzero start-cluster fields.
           [switch]$ExperimentalFlagZeroSizeNonzeroStartCluster,
+          # B R4 conservative research: zero-size/nonzero-start remains UNKNOWN.
+          # Opt-in override of legacy heuristic warning. Does NOT inspect FAT.
+          [switch]$ExperimentalConservativeZeroSizeUnknown,
           # R9 experimental, default OFF: bounded read-event provenance.
           # This reports scanner observations, not cryptographic authenticity.
           [switch]$RecordClusterCoverage,
@@ -471,7 +480,7 @@ function Get-ChappyDirectoryCandidates {
                     } else { $coverageDuplicates++ }
                 }
                 $rootRead = $true
-                $parsed = Read-ChappyBDirectoryCluster -Buffer $rootBuf -Cluster $root -OffsetBytes $rootOffset -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -IsRoot $true
+                $parsed = Read-ChappyBDirectoryCluster -Buffer $rootBuf -Cluster $root -OffsetBytes $rootOffset -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -ExperimentalConservativeZeroSizeUnknown:$ExperimentalConservativeZeroSizeUnknown -IsRoot $true
                 $checked += [long]$parsed.validCount
                 if ($parsed.accepted) {
                     $directoriesAccepted++
@@ -522,7 +531,7 @@ function Get-ChappyDirectoryCandidates {
                         $coverageUnique++
                     } else { $coverageDuplicates++ }
                 }
-                $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -IsRoot $false
+                $parsed = Read-ChappyBDirectoryCluster -Buffer $buf -Cluster $c -OffsetBytes $at -MaxCluster $maxCluster -IncludeDeleted:$IncludeDeleted -IncludeNames:$IncludeNames -ExperimentalFlagZeroSizeNonzeroStartCluster:$ExperimentalFlagZeroSizeNonzeroStartCluster -ExperimentalConservativeZeroSizeUnknown:$ExperimentalConservativeZeroSizeUnknown -IsRoot $false
                 $checked += [long]$parsed.validCount
                 if (-not $parsed.accepted) {
                     $rejectedReasons[$parsed.decisionReason] = [long]$rejectedReasons[$parsed.decisionReason] + 1L
