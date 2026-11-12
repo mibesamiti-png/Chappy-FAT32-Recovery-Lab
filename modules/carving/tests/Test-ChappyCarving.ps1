@@ -977,3 +977,7 @@ Invoke-CStandardDataWindowRegression
 # Team C #72: default-OFF, no-oracle sparse 2x32KiB vs 64KiB data-start experiment.
 . (Join-Path $PSScriptRoot 'R5SparseWindowResearch.ps1')
 Invoke-CSparseWindowRegression
+
+# Team C #72: equal-quarter fixed-budget schedule with aligned and off-grid unknown controls.
+. (Join-Path $PSScriptRoot 'R5QuarterStratifiedResearch.ps1')
+Invoke-CQuarterStratifiedWindowRegression
