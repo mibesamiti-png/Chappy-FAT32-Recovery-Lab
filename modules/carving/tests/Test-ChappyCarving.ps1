@@ -951,3 +951,8 @@ Invoke-CVariableFragmentEvidence
 . (Join-Path $PSScriptRoot 'R5CandidateValidatorOriginResearch.ps1')
 . (Join-Path $PSScriptRoot 'R5CandidateValidatorOriginRegression.ps1')
 Invoke-CObservedCandidateValidationRegression
+
+# Team C R5: false CRC join stays ambiguous; original selection withheld.
+. (Join-Path $PSScriptRoot 'R5AmbiguousFalseJoinGuard.ps1')
+. (Join-Path $PSScriptRoot 'R5AmbiguousFalseJoinRegression.ps1')
+Invoke-CFalseJoinNegativeRegression
