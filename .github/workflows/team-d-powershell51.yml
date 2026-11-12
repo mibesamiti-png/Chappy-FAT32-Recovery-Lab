@@ -69,3 +69,6 @@ jobs:
       - name: Run Team D R6 dual FAT ambiguous mirror and chain synthetic A B
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-DualFatAmbiguity.Tests.ps1
+      - name: Run Team D R6 synthetic FAT sampling blind spots A B
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-SamplingBlindspots.Tests.ps1
