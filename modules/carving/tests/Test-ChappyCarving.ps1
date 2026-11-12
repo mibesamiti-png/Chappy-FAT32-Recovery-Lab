@@ -936,3 +936,8 @@ Invoke-R5SyntheticFormatEvidence
 . (Join-Path $PSScriptRoot 'R5M01PairResearch.ps1')
 . (Join-Path $PSScriptRoot 'R5M01PairRegression.ps1')
 Invoke-R5M01FragmentEvidence
+
+# Team C R5: conservative STL/plain ZIP and PK-decoy negative control.
+. (Join-Path $PSScriptRoot 'R5MultiFormatNegativeResearch.ps1')
+. (Join-Path $PSScriptRoot 'R5MultiFormatNegativeRegression.ps1')
+Invoke-CMultiFormatNegativeControls
