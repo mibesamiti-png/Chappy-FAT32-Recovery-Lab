@@ -49,13 +49,20 @@ function Invoke-CFirst560AblationRegression {
                     $input.BytesRead -eq $scan.metrics.sourceBytesRead -and
                     $input.BytesRead -le 81920 -and $scan.metrics.validatorBytesRead -le 98304 -and
                     $scan.metrics.pairAttempts -le 16 -and -not $input.CanWrite) ($kind+'/'+$arm+': same cap and fully metered stream')
-                $guard=Resolve-CFragmentFalseJoinEvidence -ScanResult $scan
+                $guard=Resolve-CFragmentFalseJoinEvidence -ScanResult $scan -AllowFirstPiece560:($arm -in @('len560','both'))
                 Assert-CFirst560 ($guard.status -eq 'ok' -and
                     $guard.decision -ceq $scan.decision -and
                     $guard.originalIdentity -ceq 'unknown' -and
                     $null -eq $guard.selectedOriginal -and
                     -not $guard.canAutoSelectOriginal -and
                     $guard.metrics.additionalSourceBytesRead -eq 0) ($kind+'/'+$arm+': no original promotion')
+                if($kind -eq 'nonlisted_first_560' -and $arm -eq 'len560'){
+                    $oldGuard=Resolve-CFragmentFalseJoinEvidence -ScanResult $scan
+                    Assert-CFirst560 ($oldGuard.status -eq 'partial' -and
+                        $oldGuard.decision -eq 'incomplete' -and
+                        $oldGuard.reason -eq 'guard.invalid_physical_spans' -and
+                        $null -eq $oldGuard.selectedOriginal) 'old 544B guard refuses unreviewed 560B hypothesis unless explicitly enabled'
+                }
                 $accepted=@($scan.items | Where-Object {$_.possible})
                 $exact=@($accepted | Where-Object {$_.candidateSha256 -ceq $truth.sha256})
                 $rejected=@($scan.items | Where-Object {-not $_.possible})
