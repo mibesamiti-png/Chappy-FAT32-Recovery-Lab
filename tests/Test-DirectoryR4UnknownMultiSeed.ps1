@@ -140,14 +140,19 @@ foreach($r4ZSeed in $r4ZSeeds) {
                 $r4ZP=$r4ZResult.directoryPhysicalReadEvidence
                 $r4ZCompletedBytes += [long]$r4ZResult.metrics.bytesRead
                 $r4ZReturnedDirectoryBytes += [long]$r4ZP.streamReturnedBytes
-                $r4ZReturnedAllSourceBytes += [long]$r4ZStream.AllSourceReturnedBytes
+                $r4ZOuterReturned=if($r4ZCase.kind -eq 'short'){
+                    [long]$r4ZStream.AllSourceReturnedBytes
+                } else {
+                    [long]$r4ZStream.ReturnedBytes
+                }
+                $r4ZReturnedAllSourceBytes += $r4ZOuterReturned
                 $r4ZReadCalls += [long]$r4ZP.readCalls
                 $r4ZRetained += $r4ZResult.items.Count
                 Assert-B (-not $r4ZStream.CanWrite -and
                     $r4ZResult.scanIncomplete -and
                     $r4ZP.completedClusterBytes -eq $r4ZResult.metrics.bytesRead -and
                     $r4ZP.streamReturnedBytes -ge $r4ZP.completedClusterBytes -and
-                    $r4ZStream.AllSourceReturnedBytes -ge $r4ZP.streamReturnedBytes -and
+                    $r4ZOuterReturned -ge $r4ZP.streamReturnedBytes -and
                     @($r4ZResult.items|Where-Object{$null -ne $_.name -or $null -ne $_.shortName}).Count -eq 0) ('R4 Z bounded readonly redacted input/source accounting: '+$r4ZSeed+' '+$r4ZCase.id+' '+$r4ZArm)
                 if($r4ZCase.kind -eq 'normal'){
                     Assert-B ($r4ZResult.status -eq 'partial' -and
