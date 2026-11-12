@@ -961,3 +961,7 @@ Invoke-CFalseJoinNegativeRegression
 . (Join-Path $PSScriptRoot 'R5MultiCandidateValidationResearch.ps1')
 . (Join-Path $PSScriptRoot 'R5MultiCandidateValidationRegression.ps1')
 Invoke-CMultiCandidateValidationRegression
+
+# Team C Issue #72: default-off +2 ZIP local-header byte-phase A/B research.
+. (Join-Path $PSScriptRoot 'R5OffgridTwoFragmentRegression.ps1')
+Invoke-COffgridTwoFragmentRegression
