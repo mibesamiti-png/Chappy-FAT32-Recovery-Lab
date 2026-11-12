@@ -1,16 +1,16 @@
 # A R7 — standards-shaped C data-region shared-read bridge (synthetic only)
 
 Date: 2026-11-12 JST. Owner: Team A, Issue #1.
-Starting reviewed main: \`a26c204a4f82fdfaae884344d4a840e629e07fb7\`.
+Starting reviewed main: `a26c204a4f82fdfaae884344d4a840e629e07fb7`.
 New B #125 (research_only), C #127 (adopt_experimental, default OFF, test-only), D #126 (research_only) were reviewed at exact final PR heads and squash-merged individually. Neither production reconstruction nor export is enabled.
 
 ## Bounded P1
 
-\`tests/Test-A3DStandardDataWindowBridge.ps1\` exercises actual B geometry and root, C's **research/test-only** \`Invoke-CStandardDataTrial -EnableDataWindow\`, and actual D FAT evidence against the same \`ChappyA7SharedSource\` nonwritable source stream. The test invokes A's existing shared-meter regression in its isolated process. The A runner adds the separate D standard-FAT physical-coverage regression, too.
+`tests/Test-A3DStandardDataWindowBridge.ps1` exercises actual B geometry and root, C's **research/test-only** `Invoke-CStandardDataTrial -EnableDataWindow`, and actual D FAT evidence against the same `ChappyA7SharedSource` nonwritable source stream. The test invokes A's existing shared-meter regression in its isolated process. The A runner adds the separate D standard-FAT physical-coverage regression, too.
 
 Two independently generated ~32.5/64.5 MiB standards-shaped FAT32-classified memory sources use seed 202611, sectors-per-cluster 1 and 2, and the existing independent artificial 3MF oracle. The scorer alone owns the correct extents and SHA. Neither the B, C nor D module receives original truth. Every source has one **120,000 actual-returned-byte physical cap**, not a cap reset per module; D additionally retains its own 2,048B scope. The C bounded data window is 65,536B with finite extra validation budget 32,768B. No full-volume search.
 
-A checks physical returned-byte event unions against total/unique/repeated source bytes; the real C returned count against A's \`carving\` events, and D returned count against A's \`fat\` events. B root bytes are independently compared with A's \`directory\` observations. Invalid out-of-bounds data-start hints and intentionally insufficient C subquota must return UNKNOWN without physical reads. Physical global quota refusal must throw without consuming bytes or inventing EOF/events. Inputs are SHA-checked unchanged; no disk paths, output, recovery, or private data.
+A checks physical returned-byte event unions against total/unique/repeated source bytes; the real C returned count against A's `carving` events, and D returned count against A's `fat` events. B root bytes are independently compared with A's `directory` observations. Invalid out-of-bounds data-start hints and intentionally insufficient C subquota must return UNKNOWN without physical reads. Physical global quota refusal must throw without consuming bytes or inventing EOF/events. Inputs are SHA-checked unchanged; no disk paths, output, recovery, or private data.
 
 ## Acceptance scope / known gap
 
