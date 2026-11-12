@@ -164,7 +164,17 @@ try {
         [byte[]]$oversize=[byte[]]::new(1025)
         [void]$short.Read($oversize,0,$oversize.Length)
     } catch {
-        $rejected=($_.Exception.Message -ceq 'A7.shared_source_budget_exhausted')
+        # PowerShell 5.1 wraps a .NET Stream.Read IOException in a
+        # MethodInvocationException; inspect the causal chain, not just the
+        # outer wrapper's display string. Never accept an unrelated exception.
+        $fault=$_.Exception
+        for($depth=0; $depth -lt 5 -and $null -ne $fault; $depth++) {
+            if($fault.Message -match 'A7[.]shared_source_budget_exhausted'){
+                $rejected=$true
+                break
+            }
+            $fault=$fault.InnerException
+        }
     }
     Assert-A7 ($rejected -and $short.TotalBytes -eq 0) 'hard_fail_closed_on_budget_exhaustion'
     $writeRejected=$false
