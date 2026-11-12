@@ -11,7 +11,8 @@ function Test-CVariableZipPairs {
         [ValidateRange(512,81920)][long]$MaxSourceBytes=81920,
         [ValidateRange(6144,98304)][long]$MaxValidationBytes=98304,
         [ValidateRange(100,30000)][int]$MaxMilliseconds=30000,
-        [switch]$IncludeStartPhasePlusTwo
+        [switch]$IncludeStartPhasePlusTwo,
+        [switch]$IncludeFirstPiece560
     )
     if(-not $Source.CanRead -or -not $Source.CanSeek -or $Source.CanWrite) {
         throw 'CVariable requires non-writable readable seekable artificial stream'
@@ -22,7 +23,9 @@ function Test-CVariableZipPairs {
     # Default-OFF research ablation: expand only local PK-start phase,
     # never alter EOCD phase or the predeclared first-piece lengths.
     [int[]]$startPhases=if($IncludeStartPhasePlusTwo){@(0,1,2)}else{@(0,1)}
-    [int[]]$firstSizes=@(512,544)
+    # Independent default-OFF single-size ablation; every case sees the
+    # same non-oracle length hypotheses, never a fixture-specific hint.
+    [int[]]$firstSizes=if($IncludeFirstPiece560){@(512,544,560)}else{@(512,544)}
     $watch=[Diagnostics.Stopwatch]::StartNew()
     $starts=New-Object 'System.Collections.Generic.List[long]'
     $tails=New-Object 'System.Collections.Generic.List[object]'
