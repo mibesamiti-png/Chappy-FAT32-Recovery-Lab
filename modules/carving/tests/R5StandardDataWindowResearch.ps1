@@ -90,7 +90,7 @@ function Invoke-CStandardDataWindowRegression {
             $nA=@($a.items).Count;$nB=@($b.items).Count
             Assert-CStandardTrial ($nA -eq 0 -and $nB -gt 0) 'bounded data scan discovers synthetic file-shaped bytes'
             # External-only scorer: known SHA and physical extents NEVER passed to candidate search.
-            $truth=@($fixture.oracle|Where-Object {$_.format -eq '3mf'})[0]
+            $truth=@($fixture.oracle|Where-Object {$_.shortName -eq 'MODEL   3MF'})[0]
             foreach($arm in @('a','b')){
                 $result=if($arm -eq 'a'){$a}else{$b}
                 foreach($c in @($result.items)){
