@@ -197,9 +197,10 @@ foreach($p in $pairs){
                 $sum -le $entry.cap -and $rep.metrics.uniquePhysicalBytes -le $sum) ($p.id+' actual source bytes and budget are independently accounted')
             Check-D16 ($rep.metrics.readRequests -ge $meter.ReadCalls -and
                 $rep.metrics.totalReadCapShared -and $rep.status -eq 'partial') ($p.id+' no full-FAT coverage from bounded source reads')
-            # The existing geometry parser can reject invalid numerical fields
-            # or return unknown when bytes are insufficient; neither is trust.
-            Check-D16 ((@('reject','unknown') -contains [string]$rep.geometryTrustDecision) -and
+            # The existing geometry parser has a separate explicit
+            # insufficient_evidence state when 32 bytes cannot form a VBR.
+            $expectedDecision=$(if($entry.cap -eq 32){'insufficient_evidence'}else{'reject'})
+            Check-D16 ($rep.geometryTrustDecision -eq $expectedDecision -and
                 $rep.sourceDecision -eq 'not_selected' -and $null -eq $rep.selectedCandidate -and
                 -not $rep.writePermitted -and
                 $null -eq $rep.PSObject.Properties['sourceIdentity']) ($p.id+' no invented source/FAT winner or ownership')
