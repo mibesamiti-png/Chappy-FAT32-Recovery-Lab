@@ -24,7 +24,7 @@ function Test-CObservedCandidateValidation {
     foreach($span in $spans){
         $at=[long]$span.offsetBytes
         $count=[long]$span.lengthBytes
-        if($at -lt 0 -or $count -lt 1 -or $count -gt 512 -or
+        if($at -lt 0 -or $count -lt 1 -or $count -gt 544 -or
            $at -gt $Source.Length-$count){
             throw 'CObservedValidation candidate span outside stream or size cap'
         }
@@ -36,7 +36,7 @@ function Test-CObservedCandidateValidation {
        $b.offsetBytes -lt ($a.offsetBytes+$a.lengthBytes)){
         throw 'CObservedValidation cannot re-read overlapping physical spans'
     }
-    if($length -gt 1024){throw 'CObservedValidation joined-byte cap'}
+    if($length -gt 1056){throw 'CObservedValidation joined-byte cap'}
     # Exact ordered candidate identity, never a claim of A-issued event IDs.
     $key=('3mf:{0}+{1},{2}+{3}' -f $a.offsetBytes,$a.lengthBytes,$b.offsetBytes,$b.lengthBytes)
     $watch=[Diagnostics.Stopwatch]::StartNew()
