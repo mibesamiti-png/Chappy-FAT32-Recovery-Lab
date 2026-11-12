@@ -18,6 +18,7 @@ function Invoke-CMultiFormatNegativeControls {
     $exact=0;$validButDifferent=0;$falseOriginalClaims=0
     $baseBytesTotal=0L;$newBytesTotal=0L;$newValidatorTotal=0L
     $baseRequests=0;$newRequests=0;$sectorProbes=0;$zipRejected=0
+    $baseElapsedMs=0L;$newElapsedMs=0L
     foreach($name in $cases){
         [byte[]]$image=$clean.image.Clone()
         $bin=$truth['stl_binary'];$ascii=$truth['stl_ascii'];$zip=$truth['zip_plain']
@@ -67,6 +68,7 @@ function Invoke-CMultiFormatNegativeControls {
             Assert-CMulti ($baselineStream.BytesRead -eq $base.metrics.bytesRead -and $base.metrics.bytesRead -le 98304) ($name+':baseline_read_budget')
             $baseBytesTotal+=$baselineStream.BytesRead
             $baseRequests+=[int]$base.metrics.readRequests
+            $baseElapsedMs+=[long]$base.metrics.elapsedMilliseconds
         }finally{$baselineStream.Dispose()}
         $researchStream=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($image,$false))
         try{
@@ -78,6 +80,7 @@ function Invoke-CMultiFormatNegativeControls {
             $newBytesTotal+=$researchStream.BytesRead
             $newValidatorTotal+=[long]$candidate.metrics.validatorBytesRead
             $newRequests+=[int]$candidate.metrics.readRequests
+            $newElapsedMs+=[long]$candidate.metrics.elapsedMilliseconds
             $sectorProbes+=[int]$candidate.metrics.sectorProbes
             $zipRejected+=[int]$candidate.metrics.zipRejected
         }finally{$researchStream.Dispose()}
@@ -137,8 +140,8 @@ function Invoke-CMultiFormatNegativeControls {
     Assert-CMulti ($newTP -eq 15 -and $newFP -eq 0 -and $newFN -eq 0 -and $newTN -eq 9) 'research_truth_table'
     Assert-CMulti ($validButDifferent -eq 2 -and $exact -eq 13 -and $falseOriginalClaims -eq 0) 'structural_not_original_byte_identity'
     Assert-CMulti ($zipRejected -ge 6 -and $sectorProbes -eq 768) 'fake_signature_rejected_safely'
-    Write-Host ('R5 MULTIFORMAT METRICS cases=6 format_slots=24 baseline_TP={0} baseline_FP={1} baseline_FN={2} baseline_TN={3} research_TP={4} research_FP={5} research_FN={6} research_TN={7} structural_exact_sha={8} structural_changed_sha={9} false_original_claims={10} baseline_source_bytes={11} research_source_bytes={12} research_validator_bytes={13} baseline_requests={14} research_requests={15} sampled_sectors={16} rejected_zip_signatures={17}' -f
-        $baseTP,$baseFP,$baseFN,$baseTN,$newTP,$newFP,$newFN,$newTN,$exact,$validButDifferent,$falseOriginalClaims,$baseBytesTotal,$newBytesTotal,$newValidatorTotal,$baseRequests,$newRequests,$sectorProbes,$zipRejected)
+    Write-Host ('R5 MULTIFORMAT METRICS cases=6 format_slots=24 baseline_TP={0} baseline_FP={1} baseline_FN={2} baseline_TN={3} research_TP={4} research_FP={5} research_FN={6} research_TN={7} structural_exact_sha={8} structural_changed_sha={9} false_original_claims={10} baseline_source_bytes={11} research_source_bytes={12} research_validator_bytes={13} baseline_requests={14} research_requests={15} sampled_sectors={16} rejected_zip_signatures={17} baseline_elapsed_ms={18} research_elapsed_ms={19}' -f
+        $baseTP,$baseFP,$baseFN,$baseTN,$newTP,$newFP,$newFN,$newTN,$exact,$validButDifferent,$falseOriginalClaims,$baseBytesTotal,$newBytesTotal,$newValidatorTotal,$baseRequests,$newRequests,$sectorProbes,$zipRejected,$baseElapsedMs,$newElapsedMs)
 
     $small=[IO.MemoryStream]::new([byte[]]::new(1024),$false)
     try{
