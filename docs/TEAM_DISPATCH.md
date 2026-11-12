@@ -5,11 +5,30 @@
 | Role | Owner of work | GitHub Issue | Current branch | Module scope | Startup state |
 | --- | --- | --- | --- | --- | --- |
 | A | Coordinator (this original conversation) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | `main` / `integration/*` | integration, QA, runner | active |
-| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-shortread-byte-provenance-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
-| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-candidate-validator-origin-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
-| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-observed-source-identity-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
+| B | Existing Team B chat | [#71](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71) | `feature/b-r4-empty-record-fp-suppression-20261112` | `modules/directory/` | R4 directory evidence on synthetic records |
+| C | Existing Team C chat | [#72](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72) | `feature/c-r5-ambiguous-fragment-falsejoin-20261112` | `modules/carving/` | R5 format evidence on synthetic payload damage |
+| D | Existing Team D chat | [#73](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73) | `research/d-r6-dual-fat-ambiguity-20261112` | `modules/fat-analysis/` | R6 FAT evidence on synthetic fragmentation and short reads |
 
-## Latest live B/C/D bounded assignments — after A #97 review (2026-11-12 JST)
+## Active B/C/D bounded assignments — after Team A R7 live C receipt integration (2026-11-12 JST)
+
+**Current authoritative assignment** is the live roster above plus each existing Team Issue's newest A comment. Subsequent old dispatch sections are historical checkpoints only; never restart those branches or duplicate completed P1. Retain existing B/C/D chat identities and refresh main/Issue/open PR/CI before changes.
+
+Team A formally reviewed and squash-merged B [#99](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/99) as `adopt_experimental` (default OFF), C [#100](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/100) as `research_only` (tests only), D [#101](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/101) as `research_only` (tests/docs). Exact submitted-head Windows PowerShell 5.1 and privacy CI passed for all three.
+
+- B #99 measures **2,082 actual returned B-directory bytes** vs 2,048 fully completed cluster bytes, including 34 returned but incomplete bytes, only on five artificial tests. Not an authenticated source receipt or real recovery score.
+- C #100 test-only validator re-read 4,106 artificial source bytes across 5 proposals, with 12,327 in-memory validation reads, and mints **zero A receipts**. Three candidate structures passed, two failed; any original SHA is scorer-only.
+- D #101 tested seven scored artificial cross-source identity pairs: naive numeric-offset source claim TP4 FP3 FN0 TN0 vs externally scoped TP4 FP0 FN0 TN3; two unverified source pairs remain UNKNOWN. These are source identity tests, not recovered data.
+
+Team A [#102](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/102) merged `e420369bb6de79e33de009cbce570315880a589f`: test-only **actual C validator** called through an **independent A-owned strict nonwritable physical Stream.Read meter** on generated M00/M01/P02. A mints IDs and source token after actual read events; C's diagnostic numeric spans are reconciled but never treated as self-authenticating. M00/M01/P02 each consumed **67,310 source bytes** (66,423 search + 887 candidate-validation), with 2 real A-issued candidate-read receipts; selected candidate becomes `source_observed` only, never `originalIdentity=verified`. D P5 cross-source regression added to central Windows synthetic gate: [exact-head 28/28 PASS CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43152990724), [post-main 28/28 PASS CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43153238957). All generated artificial data.
+
+**Next independent B/C/D bounded P1 branches created from reviewed main `e420369b`** (previous branches preserved):
+- **B #71** `feature/b-r4-empty-record-fp-suppression-20261112`: investigate legitimate zero-size with nonzero start-field warning FP1 vs real M04 damaged size, preserving UNKNOWN not overclaiming FAT ownership. [New A issue task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/71#issuecomment-6814295728).
+- **C #72** `feature/c-r5-ambiguous-fragment-falsejoin-20261112`: ambiguity-safe CRC-consistent ZIP/3MF false-join negatives, no automatic original winner. [New A issue task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/72#issuecomment-6814297450).
+- **D #73** `research/d-r6-dual-fat-ambiguity-20261112`: two FAT copies that agree on corruption or contradict each other; unknown winner and bounded read provenance. [New A issue task](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/73#issuecomment-6814298996).
+
+**Next A R7:** investigate the candidate-validation A-meter receipt contract for multiple ambiguous candidates, true short reads, two distinct sources and standards-shaped artificial FAT32 with one shared resource ceiling. Current exact-byte candidate observation is not a cryptographic original identity or full recovery pipeline. Do not start R8 separate-root export until R7 full gate passes. Official weighted roadmap remains **39% fully gated (R0–R3 only)**. Real microSD and only ~31GB master IMG are NOT APPROVED for any scanning/read/hash/copy/write/repair/export/upload.
+
+## Previous assignment checkpoint — after A #97 review (historical)
 
 This section and the live table above are authoritative. Historical sections below are records, NOT current assignments. Team identity stays attached to its original B/C/D conversation.
 
