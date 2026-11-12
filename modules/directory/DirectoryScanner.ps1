@@ -349,12 +349,20 @@ function Get-ChappyDirectoryCandidates {
           # This reports scanner observations, not cryptographic authenticity.
           [switch]$RecordClusterCoverage,
           [int]$MaxCoverageClusters = 65536,
-          [int]$MaxCoverageIntervals = 128)
+          [int]$MaxCoverageIntervals = 128,
+          # B R4 opt-in: record actual successful directory cluster read
+          # offsets (not filenames, file contents, or FAT ownership).
+          [switch]$RecordDirectoryReadSpans,
+          [int]$MaxDirectoryReadSpans = 128)
     $items = New-Object System.Collections.ArrayList
     $directoryContainers = New-Object System.Collections.ArrayList
     $warnings = New-Object System.Collections.ArrayList
     $errors = New-Object System.Collections.ArrayList
     $bytesRead = 0L
+    $directoryReadEvents = 0L
+    $directoryReadSpans = New-Object System.Collections.ArrayList
+    $readSpanStatus = 'not_requested'
+    if ($RecordDirectoryReadSpans) { $readSpanStatus = 'recorded' }
     $checked = 0L
     $directoriesAccepted = 0L
     $coverageBitmap = $null
@@ -374,7 +382,8 @@ function Get-ChappyDirectoryCandidates {
             $MaxCandidates -lt 1 -or $MaxCandidates -gt 200000 -or
             $MaxDirectories -lt 1 -or $MaxDirectories -gt 100000 -or
             $MaxCoverageClusters -lt 1 -or $MaxCoverageClusters -gt 65536 -or
-            $MaxCoverageIntervals -lt 1 -or $MaxCoverageIntervals -gt 128) {
+            $MaxCoverageIntervals -lt 1 -or $MaxCoverageIntervals -gt 128 -or
+            $MaxDirectoryReadSpans -lt 1 -or $MaxDirectoryReadSpans -gt 128) {
             throw 'Invalid scan limits'
         }
         if ($null -eq $Geometry) {
@@ -416,6 +425,16 @@ function Get-ChappyDirectoryCandidates {
                 $rootOffset = $dataOffset + ($root-2L)*$clusterSize
                 $rootBuf = Read-ChappyBBytes $Stream $rootOffset ([int]$clusterSize)
                 $bytesRead += $clusterSize
+                if ($RecordDirectoryReadSpans) {
+                    $directoryReadEvents++
+                    if ($directoryReadSpans.Count -lt $MaxDirectoryReadSpans) {
+                        [void]$directoryReadSpans.Add([pscustomobject]@{
+                            offsetBytes = $rootOffset
+                            lengthBytes = $clusterSize
+                            cluster = $root
+                        })
+                    } else { $readSpanStatus = 'span_limit' }
+                }
                 if ($null -ne $coverageBitmap) {
                     $readIndex = [int]($root - 2L)
                     if ($coverageBitmap[$readIndex] -eq 0) {
@@ -458,6 +477,16 @@ function Get-ChappyDirectoryCandidates {
                 $at = $dataOffset + ($c-2L)*$clusterSize
                 $buf = Read-ChappyBBytes $Stream $at ([int]$clusterSize)
                 $bytesRead += $clusterSize
+                if ($RecordDirectoryReadSpans) {
+                    $directoryReadEvents++
+                    if ($directoryReadSpans.Count -lt $MaxDirectoryReadSpans) {
+                        [void]$directoryReadSpans.Add([pscustomobject]@{
+                            offsetBytes = $at
+                            lengthBytes = $clusterSize
+                            cluster = $c
+                        })
+                    } else { $readSpanStatus = 'span_limit' }
+                }
                 if ($null -ne $coverageBitmap) {
                     $readIndex = [int]($c - 2L)
                     if ($coverageBitmap[$readIndex] -eq 0) {
@@ -532,6 +561,19 @@ function Get-ChappyDirectoryCandidates {
             intervals = @($coverageIntervals.ToArray())
         }
     }
+    $directoryReadEvidence = $null
+    if ($RecordDirectoryReadSpans) {
+        if ($directoryReadEvents -eq 0 -and $readSpanStatus -eq 'recorded') {
+            $readSpanStatus = 'no_successful_reads'
+        }
+        $directoryReadEvidence = [pscustomobject]@{
+            source = 'directory_scanner_successful_cluster_reads_v1'
+            status = $readSpanStatus
+            readEvents = $directoryReadEvents
+            recordedSpans = $directoryReadSpans.Count
+            spans = @($directoryReadSpans.ToArray())
+        }
+    }
     $status = if ($errors.Count) { 'error' } elseif ($incomplete -or $warnings.Count) { 'partial' } else { 'ok' }
     return [pscustomobject]@{
         schemaVersion = '1'
@@ -541,6 +583,7 @@ function Get-ChappyDirectoryCandidates {
         items = @($items.ToArray())
         directoryContainers = @($directoryContainers.ToArray())
         coverageProvenance = $coverageReport
+        directoryReadEvidence = $directoryReadEvidence
         warnings = @($warnings.ToArray())
         errors = @($errors.ToArray())
         metrics = [pscustomobject]@{
