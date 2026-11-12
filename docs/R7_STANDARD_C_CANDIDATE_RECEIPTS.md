@@ -20,3 +20,8 @@ Negative assertions: scan-phase IDs cannot prove candidate-specific validation; 
 The A central native Windows PowerShell 5.1 isolated runner now expects **38 scripts** (was 37). CI green at exact PR HEAD plus post-main privacy/Windows green are mandatory before claims of completion or integration. Only completed full-gate roadmap R0–R3 = **39% official weighted synthetic engineering**, not real-world data recovery probability.
 
 Next A: malformed/synthetic ambiguous geometry and genuine physical short-return EOF negative under candidate validation, plus cross-candidate source extent ambiguity. B/C/D own their modules and retain separate roles/branches.
+
+
+## Backing stream early EOF control — 2026-11-13
+
+A third generated source runs the same discovery under the same cap. After discovery, its backing stream returns a 17-byte prefix and then zero bytes during A's candidate reread. The declared length stays constant, so range checks alone cannot cover this case. Both meters must agree on the returned prefix, and the resolver must preserve incomplete coverage and unknown identity. The two full-read controls and central script count are unchanged. This tests source observation only. Malformed and ambiguous geometry remain separate work.
