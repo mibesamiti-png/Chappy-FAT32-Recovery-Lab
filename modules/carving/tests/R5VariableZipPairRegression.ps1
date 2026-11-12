@@ -8,8 +8,8 @@ function New-CVariableSyntheticCase([byte[]]$CleanImage,[byte[]]$Original,[strin
     [byte[]]$image=[byte[]]$CleanImage.Clone()
     $firstBase=58880;$tailBase=60416
     [Array]::Clear($image,$firstBase,1024)
-    $firstLen=if($Kind -eq 'M01_control' -or $Kind -eq 'offgrid_first') {512} else {544}
-    $firstPhase=if($Kind -eq 'offgrid_first'){1}else{0}
+    $firstLen=if($Kind -eq 'M01_control' -or $Kind -eq 'offgrid_first' -or $Kind -eq 'offgrid_plus_two') {512} elseif($Kind -eq 'nonlisted_first_560') {560} else {544}
+    $firstPhase=if($Kind -eq 'offgrid_first'){1}elseif($Kind -eq 'offgrid_plus_two'){2}else{0}
     $tailPhase=if($Kind -in @('non512_offgrid_tail','fake_eocd','alternate_zip_metadata')){1}else{0}
     Assert-CVariable ($Original.Length -gt $firstLen -and $Original.Length-$firstLen -le 512) 'constructed artificial prefix/suffix fit one bounded tail'
     [Array]::Copy($Original,0,$image,($firstBase+$firstPhase),$firstLen)
@@ -150,5 +150,19 @@ function Invoke-CVariableFragmentEvidence {
         Assert-CVariable ($guard.status -eq 'partial' -and $guard.decision -eq 'incomplete' -and $guard.metrics.pairAttempts -eq 0 -and @($guard.items).Count -eq 0) 'pair flood fails before choosing true item'
         Assert-CVariable ($over.BytesRead -eq $guard.metrics.sourceBytesRead -and $over.BytesRead -le 81920) 'pair overflow read budget'
     }finally{$over.Dispose()}
+    # Explicit assumptions remain observable: +2 offset and 560B first
+    # piece lie OUTSIDE the fixed hypotheses and must not be promoted.
+    foreach($unsupported in @('offgrid_plus_two','nonlisted_first_560')){
+        $case=New-CVariableSyntheticCase -CleanImage $clean.image -Original $original -Kind $unsupported
+        $input=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($case.image,$false))
+        try{
+            $r=Test-CVariableZipPairs -Source $input
+            Assert-CVariable ($r.status -eq 'ok' -and $r.decision -eq 'unknown' -and
+                @($r.items | Where-Object {$_.possible}).Count -eq 0) ($unsupported+': uncovered hypothesis must stay unknown')
+            Assert-CVariable ($input.BytesRead -eq $r.metrics.sourceBytesRead -and
+                $input.BytesRead -le 81920) ($unsupported+': bounded source I/O')
+        }finally{$input.Dispose()}
+        Write-Host ('C VARIABLE NEGATIVE={0} decision=unknown, unscored_assumption_miss=True' -f $unsupported)
+    }
     Write-Host 'PASS: C variable 512/544 and off-grid two-piece ZIP synthetic A/B; missing/fake/ambiguous and quota guards'
 }
