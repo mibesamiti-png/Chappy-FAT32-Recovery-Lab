@@ -135,6 +135,40 @@ function Invoke-CFalseJoinNegativeRegression {
     }
     $blocked=Resolve-CFragmentFalseJoinEvidence -ScanResult $incomplete
     Assert-CFalseJoin ($blocked.decision -eq 'incomplete' -and $blocked.formatConsistentHypotheses.Count -eq 0) 'incomplete upstream search cannot be promoted'
+    # Adversarial untrusted RESULT metadata, not altered original fixture
+    # labels: the guard must detect a scanner lying about ambiguity.
+    $concealed=[pscustomobject]@{
+        status='ok';decision='one_possible';metrics=$altScan.metrics
+        items=@($altScan.items)
+    }
+    $notUnique=Resolve-CFragmentFalseJoinEvidence -ScanResult $concealed
+    Assert-CFalseJoin ($notUnique.status -eq 'partial' -and
+        $notUnique.decision -eq 'incomplete' -and
+        $notUnique.reason -ceq 'guard.scan_decision_mismatch' -and
+        $null -eq $notUnique.selectedOriginal) 'claimed single must not hide two CRC-consistent joins'
+    # A forged original verified field cannot be accepted from the C scan.
+    $forged=[pscustomobject]@{
+        possible=$true;originalIdentity='verified'
+        integrityScope='structural_only_not_original_file_integrity'
+        sourceSpans=@($validAlt[0].sourceSpans)
+    }
+    $forgedScan=[pscustomobject]@{
+        status='ok';decision='one_possible';metrics=$altScan.metrics
+        items=@($forged)
+    }
+    $forgedResult=Resolve-CFragmentFalseJoinEvidence -ScanResult $forgedScan
+    Assert-CFalseJoin ($forgedResult.status -eq 'partial' -and
+        $forgedResult.reason -ceq 'guard.invalid_original_claim' -and
+        $null -eq $forgedResult.selectedOriginal) 'forged original claim rejected'
+    $badNumbers=[pscustomobject]@{
+        status='ok';decision='unknown';items=@()
+        metrics=[pscustomobject]@{
+            pairAttempts=-1;sourceBytesRead=-1;validatorBytesRead=-1
+        }
+    }
+    $negativeMetrics=Resolve-CFragmentFalseJoinEvidence -ScanResult $badNumbers
+    Assert-CFalseJoin ($negativeMetrics.decision -eq 'incomplete' -and
+        $negativeMetrics.reason -ceq 'guard.invalid_metrics') 'negative read metrics cannot certify evidence'
     $budgetStream=[ChappyCountingReadStream]::new([IO.MemoryStream]::new($clean.image,$false))
     try{
         $over=Test-CVariableZipPairs -Source $budgetStream -MaxSourceBytes 4096
