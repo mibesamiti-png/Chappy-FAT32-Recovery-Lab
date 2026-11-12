@@ -430,6 +430,8 @@ try {
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4IncompleteReadOrigin.ps1')
     # R4 P1: actual returned Stream.Read bytes vs fully completed directory clusters.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4PhysicalReadReturns.ps1')
+    # R4: conservatively abstain on zero-size/nonzero-start without FAT owner evidence.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4ConservativeEmptyUnknown.ps1')
 
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
