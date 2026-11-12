@@ -969,3 +969,7 @@ Invoke-COffgridTwoFragmentRegression
 # Team C R5: default-OFF 560B first-piece size / +2 phase 4-arm research.
 . (Join-Path $PSScriptRoot 'R5First560AblationRegression.ps1')
 Invoke-CFirst560AblationRegression
+
+# Team C #72 R5: standards-shaped generated FAT32, default-OFF bounded data-region A/B.
+. (Join-Path $PSScriptRoot 'R5StandardDataWindowResearch.ps1')
+Invoke-CStandardDataWindowRegression
