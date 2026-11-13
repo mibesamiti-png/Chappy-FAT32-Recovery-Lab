@@ -163,6 +163,8 @@ foreach($c in $scenarios){
             $r.hypotheses[1].plausibility -ceq 'plausible_unverified' -and
             $r.hypotheses[0].numericGeometry.fat1OffsetBytes -ne
             $r.hypotheses[1].numericGeometry.fat1OffsetBytes) 'Both in-bounds plausible but incompatible FAT offsets refused without winner'
+        Assert-D603 (-not $r.scanIncomplete -and $r.geometryUnresolved -and
+            $measure.actual -eq 2048 -and $r.gateDecision -ceq 'blocked_conflicting_geometry') 'Complete physical BPB observation still logically contradictory, not a fabricated short read'
     }
     if($c.id -eq 'backup_root3'){
         Assert-D603 ($r.agreement -ceq 'disagree' -and
