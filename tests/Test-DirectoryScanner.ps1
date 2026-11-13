@@ -466,6 +466,9 @@ try {
     # B4-05 versioned bounded directory envelope on generated/short-EOF sources.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateResultEnvelope.ps1')
 
+    # B4-04 independently metered physical-return/span comparisons and adversarial ledgers.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateReadReconciliation.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
