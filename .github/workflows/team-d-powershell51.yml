@@ -102,3 +102,6 @@ jobs:
       - name: Run Team D D6-02 original fixed FAT anomaly acceptance matrix
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-OriginalFatAcceptance.Tests.ps1
+      - name: Run Team D D6-03 strict equal-but-unsafe FAT32 BPB boundary gate
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-StrictBpbBoundary.Tests.ps1
