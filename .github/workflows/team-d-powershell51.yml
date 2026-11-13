@@ -90,3 +90,6 @@ jobs:
       - name: Run Team D R6 D6-02 shared numeric cluster evidence gate
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-GateSharedChain.Tests.ps1
+      - name: Run Team D D6-03 guarded conflicting VBR geometry gate
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-GateVbrHypotheses.Tests.ps1
