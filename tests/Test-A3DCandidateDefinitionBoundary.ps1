@@ -54,16 +54,16 @@ try{
         $dup.conflictingCandidateIds -eq 0) 'duplicate_C_definition_does_not_double_count'
 
     $changed=@(
-        [pscustomobject]@{offsetBytes=[long]$spans[0].offsetBytes;lengthBytes=([long]$spans[0].lengthBytes+1L)},
+        [pscustomobject]@{offsetBytes=[long]$spans[0].offsetBytes;lengthBytes=([long]$spans[0].lengthBytes-1L)},
         [pscustomobject]@{offsetBytes=[long]$spans[1].offsetBytes;lengthBytes=[long]$spans[1].lengthBytes}
     )
     $bad=New-A7Definition $id $changed $token
-    # A actual artificial-source reads cover the more expansive variant.
+    # A actual artificial-source reads cover the full original variant.
     # The old purely range-based receipt resolver can legitimately report
     # source coverage for BOTH extents; that is not a proof that the shared
     # candidate ID refers to one unique physical reconstruction.
     $events=New-Object 'System.Collections.Generic.List[object]'
-    foreach($e in $changed) {
+    foreach($e in $spans) {
         [void]$raw.Seek([long]$e.offsetBytes,[IO.SeekOrigin]::Begin)
         [byte[]]$data=[byte[]]::new([int]$e.lengthBytes)
         $got=$raw.Read($data,0,$data.Length)
