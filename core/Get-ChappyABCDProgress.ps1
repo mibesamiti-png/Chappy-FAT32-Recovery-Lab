@@ -65,7 +65,7 @@ foreach($s in $stages){
         team=$s.Team
         stage=$s.Stage
         officialStageWeight=$s.FormalWeight
-        officialStagePassed=($s.Stage -ceq 'R4') # Explicit A whole-stage signoff in docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md, never derived from PASS/N.
+        officialStagePassed=($s.Stage -cin @('R4','R6')) # Separate A full original stage signoffs, not inferred from row counts.
         totalConditions=$s.Count
         passed=$passed
         partial=$partial
@@ -88,16 +88,17 @@ foreach($x in $ary){
     $totalMissing+=$x.missing
 }
 # Explicit Team A original R4 whole-stage audit/signoff is recorded in docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md (PR #165 exact-head + main CI).
-# R0-R4 full-stage weights and R5-R10 gate weights are fixed from the
+# Original R6 formal approval is separately recorded in docs/R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md; do NOT infer from D5/5 rows.
+# R0-R4 and R6 fully signed stages, all other stage weights are fixed from the
 # formally approved roadmap. DO NOT derive a new official number from row PASS.
 $result=[pscustomobject]@{
     schemaVersion='abcd_gate_progress_v1'
     source='docs/ABCD_GATE_LEDGER.md'
     statusScope='audited_synthetic_engineering_evidence_only'
     originalRecoveryRate='unknown'
-    officialWeightedProjectPercent=49
-    officialCompletedStages=@('R0','R1','R2','R3','R4')
-    futureStageWeights=[pscustomobject]@{R5=15;R6=10;R7=10;R8=9;R9=5;R10=2}
+    officialWeightedProjectPercent=59
+    officialCompletedStages=@('R0','R1','R2','R3','R4','R6')
+    futureStageWeights=[pscustomobject]@{R5=15;R7=10;R8=9;R9=5;R10=2}
     signedConditions=$totalPass
     partialConditions=$totalPartial
     auditNeededConditions=$totalAudit
@@ -109,7 +110,7 @@ $result=[pscustomobject]@{
     parameters=@($ary)
     limitations=@(
         'PASS labels are A-signed narrow synthetic gate subconditions, not full milestone completion.',
-        'R4 was separately A-approved from original formal milestone/dual synthetic corpus, not inferred from B4 row counts.',
+        'R4 and R6 were independently A-approved on original formal two-track synthetic corpus, not inferred from subrow counts.',
         'PARTIAL is no numeric percentage of implementation completeness.',
         'AUDIT_NEEDED does not mean feature missing.',
         'evidenceVerifiedPercent is PASS rows / total rows, NOT engineering or real recovery completion.',
