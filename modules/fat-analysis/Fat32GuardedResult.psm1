@@ -124,6 +124,9 @@ function Get-ChappyFatGuardedResult {
         canRepair=$false
         canExport=$false
         scanIncomplete=$true
+        # Ordered returned offsets only (NO content, names or source token).
+        # A may compare these D-only claims with its own in-process meter.
+        sourceReturnedEvents=@()
         hypotheses=@(
             [pscustomobject]@{sourceRole='primary';plausibility='insufficient_evidence';numericGeometry=$null},
             [pscustomobject]@{sourceRole='backup';plausibility='insufficient_evidence';numericGeometry=$null}
@@ -305,6 +308,20 @@ function Get-ChappyFatGuardedResult {
         }
     }finally{
         if($null -ne $meter){
+            $observed=New-Object System.Collections.ArrayList
+            foreach($phase in @('geometry_gate','fat_fixed')){
+                foreach($e in @($meter.GetReturnedEvents($phase))){
+                    [void]$observed.Add([pscustomobject]@{
+                        phase=[string]$e.Phase
+                        offsetBytes=[long]$e.OffsetBytes
+                        returnedBytes=[int]$e.ReturnedBytes
+                        endExclusiveBytes=[long]($e.OffsetBytes+$e.ReturnedBytes)
+                    })
+                }
+            }
+            # Phase order is fixed: geometry first, FAT only after the gate.
+            # At most maxPhysicalReadCalls (<=512) successful events.
+            $out.sourceReturnedEvents=@($observed.ToArray())
             $out.metrics=[pscustomobject]@{
                 actualReturnedBytes=[long]$meter.ActualReturnedBytes
                 uniqueReturnedBytes=[long]$meter.UniqueReturnedBytes
