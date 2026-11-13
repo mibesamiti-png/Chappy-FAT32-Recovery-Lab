@@ -158,6 +158,7 @@ foreach($c in $cases){
     $shaBefore=Hash-D605 $data
     $t=Invoke-D605Case -Data $data -Enabled -Chains:($c.chain) -Cutoff $c.cut -Chunk $c.chunk -Calls $c.calls
     $o=$t.report
+    Write-Host ('D605 reason '+$c.id+' = '+([string]::Join(';',[string[]]@($o.reasonCodes))))
     Check-D605Contract $c.id $t 4096 $c.calls
     Assert-D605 ($o.fatProbeState -ceq $c.expect) ($c.id+' explicit fixed baseline or deny-before-FAT classification')
     Assert-D605 ((Hash-D605 $data) -ceq $shaBefore) ($c.id+' input synthetic SHA256 unchanged')
