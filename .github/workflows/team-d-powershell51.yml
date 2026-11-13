@@ -111,3 +111,6 @@ jobs:
       - name: Run Team D original formal R6 two-track synthetic FAT acceptance
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-FormalTwoTrackAcceptance.Tests.ps1
+      - name: Run Team D R7 A live BPB and source-phase negative support
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R7-A7NegativeSourceJoin.Tests.ps1
