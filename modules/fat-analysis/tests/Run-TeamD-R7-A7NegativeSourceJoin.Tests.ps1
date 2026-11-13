@@ -140,8 +140,8 @@ foreach($case in $cases){
     $fixture=$null;$image=$null
     if($case.id -ne 'clean_SPC1'){[GC]::Collect()}
 }
-Check-D7 ($good -eq 5 -and $blocked -eq 3 -and $unknown -eq 1) 'nine preregistered standard synthetic controls, BPB blocks and source UNKNOWN')
-Check-D7 ($null -ne $rawSourceForMeter -and $sourceLength -gt 30MB) 'test-only generated clean source retained for A meter event-forgery controls')
+Check-D7 ($good -eq 5 -and $blocked -eq 3 -and $unknown -eq 1) 'nine preregistered standard synthetic controls, BPB blocks and source UNKNOWN'
+Check-D7 ($null -ne $rawSourceForMeter -and $sourceLength -gt 30MB) 'test-only generated clean source retained for A meter event-forgery controls'
 
 # Separate test-only protected A meter: no D or test caller may issue A source
 # authenticity; this only measures successful physical offset/length events.
