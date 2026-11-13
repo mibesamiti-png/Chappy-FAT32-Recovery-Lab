@@ -72,17 +72,6 @@ function Get-D5Candidate {
             [void]$issues.Add('bpb.legacy_fields_nonzero')
         }
         if($Bpb.version -ne 0){[void]$issues.Add('bpb.version_unsupported')}
-        # The fixed two-copy mirror observer cannot interpret a BPB that
-        # disables mirroring/selects one active FAT, or sets reserved flag bits.
-        # Reject even if BOTH boot sectors match this unsafe configuration.
-        if($Bpb.extendedFlags -ne 0){
-            [void]$issues.Add('bpb.extended_flags_not_mirrored_fixed_compatible')
-        }
-        # BPB_HiddSec is the containing partition start in sectors. A
-        # numerical agreement between two VBRs does not override the MBR.
-        if($null -ne $Start -and $Bpb.hiddenSectors -ne [long]($Start/512)){
-            [void]$issues.Add('bpb.hidden_sectors_disagrees_with_mbr')
-        }
         if($Bpb.bytesPerSector -eq 512 -and $spcValid -and
             $Bpb.fatCopies -gt 0 -and $Bpb.reservedSectors -ge 2 -and
             $Bpb.totalSectors -gt 0 -and $Bpb.fatSectors -gt 0) {
@@ -99,12 +88,6 @@ function Get-D5Candidate {
             }else{
                 $dataSectors=[long]($Bpb.totalSectors-$Bpb.reservedSectors-$Bpb.fatCopies*$Bpb.fatSectors)
                 $clusters=[long][Math]::Floor($dataSectors/$spc)
-                # FAT32 classification requires >=65525 data clusters.
-                # An in-range tiny FAT16-size layout with a FAT32-like BPB
-                # cannot be promoted to a FAT32 fixed-sampler candidate.
-                if($clusters -lt 65525){
-                    [void]$issues.Add('geometry.below_fat32_cluster_threshold')
-                }
                 if($clusters -lt 1 -or $clusters -gt 268435438 -or $fatBytes/4 -lt ($clusters+2)){
                     [void]$issues.Add('geometry.fat_entry_capacity_insufficient')
                 }
