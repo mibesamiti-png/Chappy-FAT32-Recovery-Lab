@@ -2,6 +2,27 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## CURRENT eleventh A checkpoint — machine-readable source-of-truth (2026-11-14 JST)
+
+Core output from `core/Get-ChappyABCDProgress.ps1 -AsJson` now derives the 100-point formal weighted progress only from explicit A-approved original stages (never from subrow PASS), and exposes all 22 canonical IDs with exact statuses, remaining IDs, current ledger-order next incomplete ID, per-team A-accepted formal stage state and credited formal weight, alongside original historical fields. **No estimated implementation effort or recovery probability is fabricated.** See [A source code and signoff proof](A_R11_C506_PROGRESS_PARAMETER_AUDIT.md).
+
+| Team | Stage | A-signed narrow PASS | PARTIAL | Narrow row verified | Original full-stage gate | Next ledger-order incomplete |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| A | R7 | 2/6 | 4 | 33.3% | NOT accepted | A7-01 |
+| B | R4 | 5/5 | 0 | 100.0% | A accepted | none; C assistance |
+| C | R5 | 5/6 | 1 | 83.3% | NOT accepted | C5-05 |
+| D | R6 | 5/5 | 0 | 100.0% | A accepted | none; A R7 assistance |
+| **All** | R4–R7 | **17/22** | **5** | **77.3%** | **59% weighted overall** | 5 incomplete IDs |
+
+**Formal weighted project 59%, uncredited 41%**, 22/22 indexed conditions assessed. All metrics are synthetic engineering evidence, NOT real file recovery. B/D remain assisting their designated bottlenecks; individual 100% means only indexed rows and their original R4/R6 formal gate, not entire software. C5-05 memory/time/source limits remain PARTIAL, C5-06 versioned bounded interface PASS only under explicit default-off synthetic scope. A7-01/04/05/06 remain PARTIAL. This snapshot becomes signed only after the A PR's exact final HEAD and post-main CI pass.
+
+```powershell
+# Only reads the repository markdown evidence ledger:
+powershell.exe -NoProfile -File .\core\Get-ChappyABCDProgress.ps1 -AsJson
+```
+
+The JSON exposes `officialCompletedStages`, `officialUncreditedStages`, `officialWeightedProjectPercent`, `officialRemainingWeightPercent`, `formalStageWeights`, `signedConditions`, `remainingIncompleteGateCount`, `incompleteGateIds` and `parameters` with `team`, `stage`, `passed`, `partial`, `evidenceVerifiedPercent`, `officialStagePassed`, `formalStageState`, `creditedFormalWeight`, `gateRows`, `incompleteGateIds`, and `nextIncompleteGateId`. `nextIncompleteGateId` is first incomplete ledger ID, not priority or completion prediction. Frozen tests ensure 22/22 hypothetical PASS cannot automatically award R5/R7 milestone weights.
+
 ## Tenth A indexed candidate-identity progress after A R3 source receipt review — 2026-11-14 JST
 
 A [#175](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/175) actual protected A `Stream.Read` candidate-specific R3 two-fragment receipts plus A #143 ordered identity collision guard permit **A7-02 narrow PASS**, conditioned on [independent A approval](A702_LIVE_CANDIDATE_IDENTITY_SIGNOFF.md) exact-head/post-main CI. B R4 5/5, C R5 4/6, D R6 5/5, A R7 **2/6 =33.3% narrow evidence**; total **16/22 =72.7% narrow evidence**, 6 PARTIAL, none unaudited. **Official full-stage project 59%** unchanged (R0–R4,R6); R5/R7 unaccepted, R8 blocked, real restoration rate unknown. Earlier sections are historical.

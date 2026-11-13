@@ -41,6 +41,26 @@ $stages=@(
     [pscustomobject]@{Team='D';Stage='R6';Prefix='D6';Count=5;FormalWeight=10},
     [pscustomobject]@{Team='A';Stage='R7';Prefix='A7';Count=6;FormalWeight=10}
 )
+# Formal approval is an EXPLICIT independent Team A original-stage decision,
+# never obtained by summing narrow subrow PASS labels. Values total exactly 100.
+$formalStageWeights=[ordered]@{
+    R0=5;R1=10;R2=12;R3=12;R4=10;R5=15;R6=10;R7=10;R8=9;R9=5;R10=2
+}
+$explicitAApprovedFormalStages=@('R0','R1','R2','R3','R4','R6')
+[long]$allWeight=0L;[long]$officialWeight=0L
+$uncreditedWeights=[ordered]@{}
+foreach($key in @($formalStageWeights.Keys)) {
+    $weight=[long]$formalStageWeights[$key]
+    $allWeight+=$weight
+    if($key -cin $explicitAApprovedFormalStages){$officialWeight+=$weight}
+    else{$uncreditedWeights[$key]=$weight}
+}
+if($allWeight -ne 100 -or $officialWeight -lt 0 -or $officialWeight -gt 100){
+    throw 'Formal original roadmap weights invalid: expected exactly 100'
+}
+if($explicitAApprovedFormalStages.Count -ne (@($explicitAApprovedFormalStages | Select-Object -Unique).Count)){
+    throw 'Duplicate explicitly A-approved original roadmap stage'
+}
 $expected=0
 foreach($stage in $stages){$expected += $stage.Count}
 if($map.Count -ne $expected){
@@ -61,11 +81,21 @@ foreach($s in $stages){
     $assessed=$s.Count-$audit
     $worked=$passed+$partial
     $unpassed=$s.Count-$passed
+    $openGateIds=@($group | Where-Object {$_.status -cne 'PASS'} | ForEach-Object {$_.id})
+    $approved=($s.Stage -cin $explicitAApprovedFormalStages)
+    $nextId=$(if($openGateIds.Count -gt 0){[string]$openGateIds[0]}else{$null})
     $rows.Add([pscustomobject]@{
         team=$s.Team
         stage=$s.Stage
         officialStageWeight=$s.FormalWeight
-        officialStagePassed=($s.Stage -cin @('R4','R6')) # Separate A full original stage signoffs, not inferred from row counts.
+        officialStagePassed=$approved
+        formalStageState=$(if($approved){'A_ACCEPTED_SYNTHETIC'}else{'NOT_YET_ACCEPTED'})
+        creditedFormalWeight=$(if($approved){[int]$s.FormalWeight}else{0})
+        nextIncompleteGateId=$nextId
+        incompleteGateIds=@($openGateIds)
+        gateRows=@($group)
+        allIndexedSubchecksPassed=($unpassed -eq 0)
+        fullStageReviewCandidate=($unpassed -eq 0 -and -not $approved)
         totalConditions=$s.Count
         passed=$passed
         partial=$partial
@@ -96,15 +126,20 @@ $result=[pscustomobject]@{
     source='docs/ABCD_GATE_LEDGER.md'
     statusScope='audited_synthetic_engineering_evidence_only'
     originalRecoveryRate='unknown'
-    officialWeightedProjectPercent=59
-    officialCompletedStages=@('R0','R1','R2','R3','R4','R6')
-    futureStageWeights=[pscustomobject]@{R5=15;R7=10;R8=9;R9=5;R10=2}
+    officialWeightedProjectPercent=[int]$officialWeight
+    officialRemainingWeightPercent=[int](100-$officialWeight)
+    officialCompletedStages=@($explicitAApprovedFormalStages)
+    officialUncreditedStages=@($uncreditedWeights.Keys)
+    formalStageWeights=[pscustomobject]$formalStageWeights
+    futureStageWeights=[pscustomobject]$uncreditedWeights
     signedConditions=$totalPass
     partialConditions=$totalPartial
     auditNeededConditions=$totalAudit
     blockedConditions=$totalBlocked
     missingConditions=$totalMissing
     totalConditions=$expected
+    incompleteGateIds=@($ary | ForEach-Object {$_.incompleteGateIds} | Where-Object {$null -ne $_ -and [string]$_ -ne ''})
+    remainingIncompleteGateCount=$expected-$totalPass
     conditionVerifiedPercent=[math]::Round(100.0*$totalPass/$expected,1)
     conditionAssessmentPercent=[math]::Round(100.0*($expected-$totalAudit)/$expected,1)
     parameters=@($ary)
@@ -114,6 +149,8 @@ $result=[pscustomobject]@{
         'PARTIAL is no numeric percentage of implementation completeness.',
         'AUDIT_NEEDED does not mean feature missing.',
         'evidenceVerifiedPercent is PASS rows / total rows, NOT engineering or real recovery completion.',
+        'The official 59 percent is derived solely from explicit independently A-approved original stage IDs and fixed roadmap weights.',
+        'nextIncompleteGateId is a ledger-order first incomplete row, not a priority estimate or predicted implementation duration.',
         'conditionAssessmentPercent is reviewed rows / total rows, NOT implementation completeness.',
         'Real microSD and sole master IMG are NOT APPROVED for any access.',
         'R8 output remains blocked until full R7 official stage pass.'

@@ -21,6 +21,10 @@ $live=[IO.File]::ReadAllText($ledger,[Text.Encoding]::UTF8)
 $liveResult=& $tool -LedgerText $live
 Assert-AProgress ($liveResult.totalConditions -eq 22 -and
     $liveResult.officialWeightedProjectPercent -eq 59 -and
+    $liveResult.officialRemainingWeightPercent -eq 41 -and
+    @($liveResult.officialUncreditedStages).Count -eq 5 -and
+    $liveResult.remainingIncompleteGateCount -eq ($liveResult.totalConditions-$liveResult.signedConditions) -and
+    @($liveResult.incompleteGateIds).Count -eq $liveResult.remainingIncompleteGateCount -and
     ($liveResult.signedConditions+$liveResult.partialConditions+
      $liveResult.auditNeededConditions+$liveResult.blockedConditions+
      $liveResult.missingConditions) -eq 22) 'current_live_ledger_valid_but_not_frozen_in_test'
@@ -79,12 +83,35 @@ for($i=0;$i -lt 4;$i++){
 }
 Assert-AProgress ($progress.conditionVerifiedPercent -eq 18.2 -and
     $progress.conditionAssessmentPercent -eq 45.5) 'different_verification_and_audit_percentages'
+Assert-AProgress ($progress.officialRemainingWeightPercent -eq 41 -and
+    $progress.officialCompletedStages.Count -eq 6 -and
+    ($progress.officialCompletedStages -join ',') -ceq 'R0,R1,R2,R3,R4,R6' -and
+    @($progress.officialUncreditedStages).Count -eq 5 -and
+    $progress.futureStageWeights.R5 -eq 15 -and
+    $progress.futureStageWeights.R7 -eq 10 -and
+    $progress.formalStageWeights.R0 -eq 5 -and
+    $progress.formalStageWeights.R10 -eq 2) 'explicit_formal_weight_59_plus_remaining_41'
+Assert-AProgress ($progress.remainingIncompleteGateCount -eq 18 -and
+    @($progress.incompleteGateIds).Count -eq 18 -and
+    $teams[0].nextIncompleteGateId -ceq 'B4-03' -and
+    @($teams[0].incompleteGateIds).Count -eq 3 -and
+    @($teams[0].gateRows).Count -eq 5 -and
+    $teams[0].formalStageState -ceq 'A_ACCEPTED_SYNTHETIC' -and
+    $teams[0].creditedFormalWeight -eq 10 -and
+    $teams[1].formalStageState -ceq 'NOT_YET_ACCEPTED' -and
+    $teams[1].creditedFormalWeight -eq 0 -and
+    $teams[2].formalStageState -ceq 'A_ACCEPTED_SYNTHETIC' -and
+    $teams[2].creditedFormalWeight -eq 10 -and
+    $teams[3].nextIncompleteGateId -ceq 'A7-01') 'frozen_four_team_machine_readable_gate_parameter_vector'
 $pathResult=& $tool -LedgerPath $ledger
 Assert-AProgress ($pathResult.signedConditions -eq $liveResult.signedConditions -and
     $pathResult.partialConditions -eq $liveResult.partialConditions) 'path_and_text_same_current_ledger_result'
 $json=& $tool -LedgerText $text -AsJson | ConvertFrom-Json
 Assert-AProgress ($json.officialWeightedProjectPercent -eq 59 -and
-    $json.parameters.Count -eq 4 -and $json.originalRecoveryRate -ceq 'unknown') 'json_export_safe'
+    $json.parameters.Count -eq 4 -and $json.originalRecoveryRate -ceq 'unknown' -and
+    $json.officialRemainingWeightPercent -eq 41 -and
+    $json.remainingIncompleteGateCount -eq 18 -and
+    $json.parameters[0].nextIncompleteGateId -ceq 'B4-03') 'json_export_safe'
 # A previously audited PASS row may regress to PARTIAL on re-audit.
 $regressed=$text.Replace('| B4-02 | PASS |','| B4-02 | PARTIAL |')
 Assert-AProgress ($regressed -cne $text) 'regression_fixture_modified'
@@ -103,7 +130,11 @@ Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
     $hypothetical.officialWeightedProjectPercent -eq 59 -and
     @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 2 -and
     $hypothetical.parameters[0].stage -ceq 'R4' -and
-    $hypothetical.parameters[2].stage -ceq 'R6') 'no_automatic_extra_full_gate_credit'
+    $hypothetical.parameters[2].stage -ceq 'R6' -and
+    $hypothetical.parameters[1].fullStageReviewCandidate -and
+    $hypothetical.parameters[3].fullStageReviewCandidate -and
+    $hypothetical.remainingIncompleteGateCount -eq 0 -and
+    $hypothetical.officialRemainingWeightPercent -eq 41) 'no_automatic_extra_full_gate_credit'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
 $duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'
