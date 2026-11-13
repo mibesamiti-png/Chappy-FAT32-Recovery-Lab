@@ -14,7 +14,9 @@ function New-B404AEventCopies {
             ReturnedBytes=[int]$e.Returned
         })
     }
-    return ,@($all.ToArray())
+    # Emit individual A-shaped events; caller uses @(...). A leading unary
+    # comma would nest the list as one event and hide Consumer/Offset fields.
+    return @($all.ToArray())
 }
 function Copy-B404Report([psobject]$Report){
     return ($Report|ConvertTo-Json -Depth 12 -Compress|ConvertFrom-Json)
