@@ -84,7 +84,10 @@ function Get-ChappyCarvingCoverageEvidence {
         [ValidateRange(2,4096)][int]$MaxReadCalls=4096,
         [ValidateRange(100,30000)][int]$MaxMilliseconds=30000
     )
-    $m=[ordered]@{
+    # Keep a single mutable metric object shared by the public result;
+    # casting an OrderedDictionary to PSCustomObject at result creation
+    # would snapshot zero values before the actual Stream.Read observations.
+    $m=[pscustomobject][ordered]@{
         actualReturnedBytes=0L;uniqueReturnedBytes=0L;repeatedReturnedBytes=0L
         readCalls=0;successfulReadCalls=0;zeroByteReadCalls=0;observedReadIntervals=0
         sectorProbes=0;formatProbes=0;pairAttempts=0;candidateCount=0
@@ -102,7 +105,7 @@ function Get-ChappyCarvingCoverageEvidence {
         mode=$Mode;scanIncomplete=$true
         originalIdentity='unknown';sourceReadAttestation='C_unattested_A_outer_receipt_required'
         selectedOriginal=$null;canAutoSelectOriginal=$false
-        items=@();warnings=@('coverage.optin_required');metrics=[pscustomobject]$m
+        items=@();warnings=@('coverage.optin_required');metrics=$m
     }
     # No property access (including stream.Length), seeks or reads when disabled.
     if(-not $EnableCoverageEvidence){return [pscustomobject]$out}
