@@ -5,18 +5,22 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot 'Chappy.LiveBcdEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Chappy.CandidateDefinitionBoundary.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.FragmentEvidence.psm1') -Force
+# B supplies candidate geometry; A witnesses every physical return. Geometry is not authentic volume truth.
+. (Join-Path $PSScriptRoot '..\modules\directory\DirectoryScanner.ps1')
 
 function Invoke-ChappyA7FragmentPhysicalReceipts {
  [CmdletBinding(PositionalBinding=$false)]
  param(
   [Parameter(Mandatory)][IO.Stream]$Source,
   [switch]$EnableA7FragmentReceipts,
+  # Default legacy compact behavior remains unchanged; opt-in standards-shaped synthetic FAT32 data window.
+  [switch]$EnableStandardFAT32DataWindow,
   [ValidateRange(1024,120000)][long]$MaxPhysicalReadBytes=120000,
   [ValidateRange(1,512)][int]$MaxReadCalls=512
  )
  $metrics=[pscustomobject][ordered]@{
   actualReturnedBytes=0L;uniqueReturnedBytes=0L;repeatedReturnedBytes=0L
-  physicalReadCalls=0L;scanReturnedBytes=0L;validationReturnedBytes=0L
+  physicalReadCalls=0L;geometryReturnedBytes=0L;scanReturnedBytes=0L;validationReturnedBytes=0L
   sourceReadEvents=0;maxPhysicalBytes=$MaxPhysicalReadBytes
  }
  $result=[ordered]@{
@@ -26,6 +30,7 @@ function Invoke-ChappyA7FragmentPhysicalReceipts {
   originalIdentity='unknown';originalShaVerified=$false
   canSelectOriginal=$false;canExport=$false;canRepair=$false
   sourceToken=$null;sourceReadScope='none'
+  dataWindowOrigin='not_requested';dataWindowStartBytes=$null
   cStatus='not_run';cDecision='unknown';cScanIncomplete=$true
   candidateDefinitions=@();candidateCount=0
   sourceObservedCandidateCount=0;incompleteCandidateCount=0
@@ -37,7 +42,9 @@ function Invoke-ChappyA7FragmentPhysicalReceipts {
  $result.warnings=@('a7.real_original_identity_unknown')
  if($Source -isnot [IO.MemoryStream] -or -not $Source.CanRead -or
     -not $Source.CanSeek -or $Source.CanWrite -or
-    $Source.Length -lt 65536 -or $Source.Length -gt 2097152) {
+    $Source.Length -lt 65536 -or
+    ($EnableStandardFAT32DataWindow -and $Source.Length -gt 100MB) -or
+    (-not $EnableStandardFAT32DataWindow -and $Source.Length -gt 2097152)) {
   $result.warnings=@('a7.strict_nonwritable_synthetic_memory_required')
   return [pscustomobject]$result
  }
@@ -45,14 +52,43 @@ function Invoke-ChappyA7FragmentPhysicalReceipts {
  $token='A7F_'+[guid]::NewGuid().ToString('N')
  $result.sourceToken=$token
  try {
+  [long]$dataStart=0
+  [int]$windowBytes=65536
+  if($EnableStandardFAT32DataWindow){
+   # B BPB-derived data-region window, NOT the actual original fragment location.
+   # All geometry source reads pass through this same protected A memory Stream.
+   $meter.BeginConsumer('geometry')
+   $bGeometry=Get-ChappyFat32Geometry -Stream $meter
+   if($null -eq $bGeometry -or
+      [long]$bGeometry.clusterCount -lt 65525L -or
+      [int]$bGeometry.fatCount -ne 2 -or
+      [long]$bGeometry.dataOffsetBytes -le 65536L -or
+      ([long]$bGeometry.dataOffsetBytes % 512L) -ne 0L -or
+      [long]$bGeometry.dataOffsetBytes -gt $Source.Length - 32768L){
+      throw 'A7.B_numeric_data_window_geometry_unknown'
+   }
+   $dataStart=[long]$bGeometry.dataOffsetBytes
+   $windowBytes=32768
+   $result.dataWindowOrigin='A_in_process_B_numeric_geometry_unverified'
+   $result.dataWindowStartBytes=$dataStart
+   $metrics.geometryReturnedBytes=[long]$meter.Returned
+  }
   $meter.BeginConsumer('carving')
-  $scanArgs=@{Source=$meter;EnableFragmentEvidence=$true;WindowBytes=65536
+  [long]$beforeC=$meter.Returned
+  $scanArgs=@{Source=$meter;EnableFragmentEvidence=$true;WindowBytes=$windowBytes
    MaxPairs=16;MaxStarts=4;MaxTails=8;MaxSourceBytes=81920;MaxValidationBytes=98304}
+  if($EnableStandardFAT32DataWindow){
+   $scanArgs.StartOffsetBytes=$dataStart
+   $scanArgs.EnableStandardsShapedSource=$true
+   # Fixed bounded hypotheses applied equally, never selected from oracle start/tail.
+   $scanArgs.IncludeStartPhasePlusTwo=$true
+   $scanArgs.IncludeFirstPiece560=$true
+  }
   $scan=Get-ChappyFragmentCandidates @scanArgs
   $result.cStatus=[string]$scan.status
   $result.cDecision=[string]$scan.decision
   $result.cScanIncomplete=[bool]$scan.scanIncomplete
-  $scanReturned=$meter.Returned
+  $scanReturned=[long]($meter.Returned-$beforeC)
   if([long]$scan.metrics.sourceBytesRead -ne $scanReturned){
    throw 'A7.C_scanner_returned_read_disagrees_with_A_meter'
   }
@@ -134,9 +170,9 @@ function Invoke-ChappyA7FragmentPhysicalReceipts {
                       'a7.C_candidate_source_windows_incomplete')
   }
   $metrics.scanReturnedBytes=$scanReturned
-  $metrics.validationReturnedBytes=$meter.Returned-$scanReturned
+  $metrics.validationReturnedBytes=$meter.Returned-$beforeC-$scanReturned
   if($metrics.validationReturnedBytes -lt 0 -or
-     $metrics.scanReturnedBytes+$metrics.validationReturnedBytes -ne $meter.Returned){
+     $metrics.geometryReturnedBytes+$metrics.scanReturnedBytes+$metrics.validationReturnedBytes -ne $meter.Returned){
    throw 'A7.meter_phase_sum_mismatch'
   }
  }catch{
