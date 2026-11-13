@@ -187,7 +187,17 @@ function Get-ChappyCarvingCoverageEvidence {
             }
         }
         $m.candidateCount=$safe.Count
-        if($scan.status -eq 'ok' -and -not $observed.RefusedBudget){
+        # C's bounded contiguous scanner marks a fully inspected 64KiB
+        # source *window* as partial whenever the rest of a larger source
+        # remains unscanned. Keep those numeric hypotheses ONLY when all
+        # 65,536 window bytes were actually scanned and bounds_reached is
+        # the sole warning. Any CRC/probe/EOF/quota truncation fails closed.
+        $windowBoundedComplete=($Mode -eq 'Window' -and
+            $scan.status -eq 'partial' -and $scan.scanIncomplete -and
+            [long]$scan.metrics.scannedBytes -eq 65536L -and
+            @($scan.warnings | Where-Object {$_ -cne 'scan.bounds_reached'}).Count -eq 0 -and
+            @($scan.warnings).Count -eq 1)
+        if(($scan.status -eq 'ok' -or $windowBoundedComplete) -and -not $observed.RefusedBudget){
             $out.items=@($safe.ToArray())
             $out.status='partial'
             $m.stopCode='coverage.unscanned_source_unknown'
