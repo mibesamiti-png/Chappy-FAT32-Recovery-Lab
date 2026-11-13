@@ -445,6 +445,9 @@ try {
     # R4 next-round positive control: independently metered parent entry + child dotdot.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4ObservedParentPositiveControl.ps1')
 
+    # Formal R4 B4-01 gate: 3-seed four-case independent candidate and UNKNOWN matrix.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateCorpusMatrix.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
