@@ -1,0 +1,18 @@
+# A7 live D6-04 FAT paired source-returned receipt integration — synthetic only
+
+**Team:** A original separate chat, Issue #1. **Dependency:** independently A-reviewed and merged D [#166](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/166) `Compare-ChappyFatGuardedReturnedSourceEvents`. This source path belongs to A; no C/B/D module or original image modification.
+
+## Exact A-owned trust boundary
+
+- The existing `core/Chappy.LiveBcdEvidence.psm1` synthetic memory-only envelope, and a brand-new optional `-BindAObservedFatPairReceipts` switch, keep default OFF. The switch **requires** `-UseVersionedBDContracts` or returns before any source read. It may combine with `-BindAObservedDirectoryReceipts`, so one A in-process protected `ChappyA7LiveMeterV1` records all B/C/D real `Stream.Read` returns.
+- A directly captures **only same-call returned physical FAT-consumer offset/length events** from its private meter after D's actual default-off versioned guarded fixed FAT sampler has executed, never accepts caller-supplied logs or D's own event list as an independent A receipt. The pure D comparison performs exact ordered D-vs-A returned-span alignment, actual/unique/repeated byte and geometry-vs-FAT phase accounting, independently measured actual physical call and true zero count, and 4-byte-complete FAT1∩FAT2 numeric pair coverage under a 4096B/512-event cap.
+- For successful numeric candidate-only coverage, A emits redacted `a7_fat_pair_source_receipt_v1` with `decision=A_in_process_numeric_FAT_pair_coverage_consistent`, `pairedFullyObservedEntries` and `unobservedPairedEntryIndices`. Guarded-but-blocked geometry can emit `A_in_process_geometry_FAT_block_consistent` without positive pairs. Premature EOF, quota or invalid D/outer returned events stay **UNKNOWN** or fail closed. A privately counts actual zero-return `Read` calls independently, not just positive events.
+- A never supplies raw candidate data, device path, original identity, owner, FAT copy winner, repair or export. `sourceAuthenticity=not_real_media_authenticated`; **even A in-process returned-byte agreement cannot authenticate a real card or original source**. The unchanged central A status remains `partial`, C candidate validation is still separate and R7 as a whole is NOT signed off.
+
+## Test and acceptance scope
+
+`tests/Test-A3DLiveFatPairOuterReceipts.ps1`, wired as **45th isolated Windows PowerShell 5.1 synthetic test** in `runner/Invoke-ChappySyntheticRegression.ps1`. Generator: A standard FAT32 65,541 data-cluster SPC1/SPC2 nonwritable MemoryStream (seed 202611), same A physical meter B+carving+D phases, actual D fixed 4-byte pairing. Expected numeric pair 128 of 65,664 per synthetic sample, **65,536 remote unobserved UNKNOWN**. Retained no-winner/source SHA guards; switch disabled/invalid, writable memory refusal, 17B then zero actual source EOF, 1024B global quota. No actual microSD/unique master IMG access.
+
+**Before A gate row upgrade:** final PR HEAD independent Windows PS5.1 and privacy CI **45/45** must pass, then A inspect actual log and post-main CI. D6-04 may only become a **narrow scoped PASS after independently evidenced A binding**; R6 entire original stage still needs its own complete roadmap review. Official 49% (R0–R4 after separate A #168 signoff) is independent from D6-04's row outcome. Original R7 A7-01/02/04/05/06 still PARTIAL.
+
+**Residual risks:** generated artificial geometry, scan only 128/65664 paired FAT entries (not proof of the other 65,536); no actual original file owners or device provenance, no authentic recovered-original SHA; memory/process-global costs not equivalent to production device performance. Keep all caps/ambiguities and no real-media approval.
