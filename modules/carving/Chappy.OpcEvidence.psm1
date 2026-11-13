@@ -109,63 +109,117 @@ function Get-Chappy3MfOpcEvidence {
         $all=@($zip.Entries)
         if ($all.Count -lt 3 -or $all.Count -gt 8) {throw 'opc.zip_entry_limit'}
         $metrics.zipEntriesChecked=$all.Count
-        $needed=@('[Content_Types].xml','_rels/.rels','3D/3dmodel.model')
-        $found=@{};$declaredTotal=0L
-        foreach ($entry in $all) {
+        # Unique package entry names prevent an attacker from shadowing a
+        # referenced part in different ZIP libraries. Case-fold collisions
+        # are conservative UNKNOWN (this small profile is deliberately strict).
+        $parts=@{};$declaredTotal=0L
+        foreach($entry in $all){
             $name=[string]$entry.FullName
-            if ($name.Length -gt 128 -or $name.Contains('..') -or $name.Contains('\') -or
+            if($name.Length -gt 128 -or $name.Contains('..') -or $name.Contains('\') -or
                 $name.StartsWith('/') -or $name.Contains(':') -or
-                $entry.Length -gt 32768 -or $entry.CompressedLength -gt 8192) {
+                $entry.Length -gt 32768 -or $entry.CompressedLength -gt 8192){
                 throw 'opc.part_name_or_size'
             }
+            if($parts.ContainsKey($name)){throw 'opc.duplicate_zip_part'}
+            $parts[$name]=$entry
             $declaredTotal += [long]$entry.Length
-            if ($declaredTotal -gt 32768L) {throw 'opc.package_expansion_limit'}
-            if ($needed -ccontains $name) {
-                if ($found.ContainsKey($name)) {throw 'opc.duplicate_required_part'}
-                $found[$name]=$entry
-            }
+            if($declaredTotal -gt 32768L){throw 'opc.package_expansion_limit'}
         }
-        if ($found.Count -ne 3) {throw 'opc.required_parts_missing'}
+        foreach($name in @('[Content_Types].xml','_rels/.rels')){
+            if(-not $parts.ContainsKey($name)){throw 'opc.required_metadata_missing'}
+        }
         $xmlTotal=0L;$docs=@{}
-        foreach ($name in $needed) {
-            if ($timer.ElapsedMilliseconds -ge $MaxWorkMilliseconds) {throw 'opc.timeout'}
-            $part=Read-C3MfBoundedXml -Entry $found[$name] -MaxXmlBytes 8192
-            $xmlTotal += $part.inflatedBytes
-            if ($xmlTotal -gt 16384L) {throw 'opc.xml_total_limit'}
+        foreach($name in @('[Content_Types].xml','_rels/.rels')){
+            if($timer.ElapsedMilliseconds -ge $MaxWorkMilliseconds){throw 'opc.timeout'}
+            $part=Read-C3MfBoundedXml -Entry $parts[$name] -MaxXmlBytes 8192
+            $xmlTotal += [long]$part.inflatedBytes
+            if($xmlTotal -gt 16384L){throw 'opc.xml_total_limit'}
             $docs[$name]=$part.xml
             $metrics.xmlPartsChecked++
         }
-        $metrics.inflatedXmlBytes=$xmlTotal
         $typesNs='http://schemas.openxmlformats.org/package/2006/content-types'
         $relsNs='http://schemas.openxmlformats.org/package/2006/relationships'
         $modelNs='http://schemas.microsoft.com/3dmanufacturing/core/2015/02'
         $startPart='http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel'
         $modelType='application/vnd.ms-package.3dmanufacturing-3dmodel+xml'
-        $types=$docs['[Content_Types].xml'];$rels=$docs['_rels/.rels'];$model=$docs['3D/3dmodel.model']
-        if ($null -eq $types.DocumentElement -or $types.DocumentElement.LocalName -cne 'Types' -or
+        $types=$docs['[Content_Types].xml'];$rels=$docs['_rels/.rels']
+        if($null -eq $types.DocumentElement -or $types.DocumentElement.LocalName -cne 'Types' -or
             $types.DocumentElement.NamespaceURI -cne $typesNs -or
             $null -eq $rels.DocumentElement -or $rels.DocumentElement.LocalName -cne 'Relationships' -or
-            $rels.DocumentElement.NamespaceURI -cne $relsNs -or
-            $null -eq $model.DocumentElement -or $model.DocumentElement.LocalName -cne 'model' -or
-            $model.DocumentElement.NamespaceURI -cne $modelNs) {
-            throw 'opc.xml_root_mismatch'
+            $rels.DocumentElement.NamespaceURI -cne $relsNs){
+            throw 'opc.metadata_xml_root_mismatch'
         }
-        $overrideHits=0
-        foreach ($node in $types.GetElementsByTagName('Override',$typesNs)) {
-            if ($node.GetAttribute('PartName') -ceq '/3D/3dmodel.model' -and
-                $node.GetAttribute('ContentType') -ceq $modelType) {$overrideHits++}
-        }
-        $startHits=0
-        foreach ($node in $rels.GetElementsByTagName('Relationship',$relsNs)) {
-            if ($node.GetAttribute('Type') -ceq $startPart) {
-                if ($node.GetAttribute('Target') -cne '/3D/3dmodel.model' -or
-                    ($node.HasAttribute('TargetMode') -and $node.GetAttribute('TargetMode') -cne 'Internal')) {
-                    throw 'opc.invalid_startpart'
-                }
-                $startHits++
+        # OPC package-root relationships target exactly ONE primary 3D model.
+        # Valid root Targets can be '/3D/build.model' or '3D/build.model'.
+        # Reject external/scheme/traversal/percent-query names; no URL resolving.
+        $startHits=0;$chosenModel=$null
+        $seenIds=@{}
+        foreach($node in $rels.DocumentElement.ChildNodes){
+            if($node.NodeType -ne [Xml.XmlNodeType]::Element){continue}
+            if($node.LocalName -cne 'Relationship' -or $node.NamespaceURI -cne $relsNs){
+                throw 'opc.relationship_child_invalid'
             }
+            $id=$node.GetAttribute('Id')
+            if($id -cnotmatch '^[A-Za-z_][A-Za-z0-9_.-]{0,63}$' -or
+                $seenIds.ContainsKey($id)){throw 'opc.relationship_id_invalid_or_duplicate'}
+            $seenIds[$id]=$true
+            if($node.GetAttribute('Type') -cne $startPart){continue}
+            $startHits++
+            if($startHits -gt 1){throw 'opc.startpart_ambiguous'}
+            $target=$node.GetAttribute('Target')
+            if($target -cnotmatch '^/?3D/[A-Za-z0-9][A-Za-z0-9_.-]{0,63}\.model$' -or
+                $target.Contains('..') -or
+                ($node.HasAttribute('TargetMode') -and
+                 $node.GetAttribute('TargetMode') -cne 'Internal')){
+                throw 'opc.invalid_startpart_target'
+            }
+            $chosenModel=$target.TrimStart([char]'/')
         }
-        if ($overrideHits -ne 1 -or $startHits -ne 1) {throw 'opc.content_type_or_startpart'}
+        if($startHits -ne 1 -or $null -eq $chosenModel -or
+            -not $parts.ContainsKey($chosenModel)){throw 'opc.model_startpart_missing'}
+        # Resolve effective content type by exact Override first, then
+        # Default Extension='model'. Reject duplicate/conflicting declarations
+        # rather than accepting one correct value among contradictory ones.
+        $seenOverrides=@{};$seenDefaults=@{}
+        $overridden=$false;$overrideMime=$null;$defaultMime=$null
+        foreach($node in $types.DocumentElement.ChildNodes){
+            if($node.NodeType -ne [Xml.XmlNodeType]::Element){continue}
+            if($node.NamespaceURI -cne $typesNs){throw 'opc.types_child_namespace'}
+            if($node.LocalName -ceq 'Override'){
+                $partName=$node.GetAttribute('PartName')
+                $mime=$node.GetAttribute('ContentType')
+                if([string]::IsNullOrWhiteSpace($partName) -or
+                    [string]::IsNullOrWhiteSpace($mime) -or
+                    $seenOverrides.ContainsKey($partName)){throw 'opc.override_invalid_or_duplicate'}
+                $seenOverrides[$partName]=$true
+                if($partName -ceq ('/'+$chosenModel)){
+                    $overridden=$true;$overrideMime=$mime
+                }
+            }elseif($node.LocalName -ceq 'Default'){
+                $ext=$node.GetAttribute('Extension')
+                $mime=$node.GetAttribute('ContentType')
+                if([string]::IsNullOrWhiteSpace($ext) -or
+                    [string]::IsNullOrWhiteSpace($mime) -or
+                    $seenDefaults.ContainsKey($ext)){throw 'opc.default_invalid_or_duplicate'}
+                $seenDefaults[$ext]=$true
+                if($ext -ceq 'model'){$defaultMime=$mime}
+            }else{throw 'opc.content_type_child_invalid'}
+        }
+        $effectiveMime=if($overridden){$overrideMime}else{$defaultMime}
+        if($effectiveMime -cne $modelType){throw 'opc.model_content_type_invalid'}
+        # Validate the referenced XML, never a coincidentally named decoy.
+        if($timer.ElapsedMilliseconds -ge $MaxWorkMilliseconds){throw 'opc.timeout'}
+        $part=Read-C3MfBoundedXml -Entry $parts[$chosenModel] -MaxXmlBytes 8192
+        $xmlTotal += [long]$part.inflatedBytes
+        if($xmlTotal -gt 16384L){throw 'opc.xml_total_limit'}
+        $model=$part.xml
+        $metrics.xmlPartsChecked++
+        $metrics.inflatedXmlBytes=$xmlTotal
+        if($null -eq $model.DocumentElement -or
+            $model.DocumentElement.LocalName -cne 'model' -or
+            $model.DocumentElement.NamespaceURI -cne $modelNs){
+            throw 'opc.model_root_invalid'
+        }
         $resources=@($model.DocumentElement.ChildNodes|Where-Object {
             $_.NodeType -eq [Xml.XmlNodeType]::Element -and $_.LocalName -eq 'resources' -and $_.NamespaceURI -ceq $modelNs
         })
