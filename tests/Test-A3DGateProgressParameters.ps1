@@ -17,7 +17,38 @@ try{
     $original=[IO.File]::ReadAllBytes($ledger)
     $sha=[BitConverter]::ToString($before.ComputeHash($original)).Replace('-','')
 }finally{$before.Dispose()}
-$text=[IO.File]::ReadAllText($ledger,[Text.Encoding]::UTF8)
+$live=[IO.File]::ReadAllText($ledger,[Text.Encoding]::UTF8)
+$liveResult=& $tool -LedgerText $live
+Assert-AProgress ($liveResult.totalConditions -eq 22 -and
+    $liveResult.officialWeightedProjectPercent -eq 39 -and
+    ($liveResult.signedConditions+$liveResult.partialConditions+
+     $liveResult.auditNeededConditions+$liveResult.blockedConditions+
+     $liveResult.missingConditions) -eq 22) 'current_live_ledger_valid_but_not_frozen_in_test'
+# A frozen independent test ledger ensures future honest A row signoffs do
+# not break CI merely because the live signed-off count has increased.
+$syntheticStates=@{
+    'B4-01'='PASS'; 'B4-02'='PASS'
+    'C5-01'='PARTIAL';'C5-02'='PARTIAL';'C5-06'='PARTIAL'
+    'D6-01'='PASS';'D6-02'='PARTIAL';'D6-03'='PARTIAL'
+    'A7-02'='PARTIAL';'A7-03'='PASS'
+}
+$lines=New-Object 'System.Collections.Generic.List[string]'
+$lines.Add('# Frozen artificial A gate ledger for parameter tests')
+$lines.Add(('Synthetic-only explanatory padding '+('x'*300)))
+foreach($group in @(
+    [pscustomobject]@{prefix='B4';count=5},
+    [pscustomobject]@{prefix='C5';count=6},
+    [pscustomobject]@{prefix='D6';count=5},
+    [pscustomobject]@{prefix='A7';count=6}
+)){
+    for($i=1;$i -le $group.count;$i++){
+        $id=('{0}-{1:D2}' -f $group.prefix,$i)
+        $state='AUDIT_NEEDED'
+        if($syntheticStates.ContainsKey($id)){$state=$syntheticStates[$id]}
+        $lines.Add(('| {0} | {1} | synthetic test-only record | no file access |' -f $id,$state))
+    }
+}
+$text=$lines -join "`n"
 $progress=& $tool -LedgerText $text
 Assert-AProgress ($progress.schemaVersion -ceq 'abcd_gate_progress_v1' -and
     $progress.officialWeightedProjectPercent -eq 39 -and
@@ -49,7 +80,8 @@ for($i=0;$i -lt 4;$i++){
 Assert-AProgress ($progress.conditionVerifiedPercent -eq 18.2 -and
     $progress.conditionAssessmentPercent -eq 45.5) 'different_verification_and_audit_percentages'
 $pathResult=& $tool -LedgerPath $ledger
-Assert-AProgress ($pathResult.signedConditions -eq $progress.signedConditions) 'path_and_text_same_result'
+Assert-AProgress ($pathResult.signedConditions -eq $liveResult.signedConditions -and
+    $pathResult.partialConditions -eq $liveResult.partialConditions) 'path_and_text_same_current_ledger_result'
 $json=& $tool -LedgerText $text -AsJson | ConvertFrom-Json
 Assert-AProgress ($json.officialWeightedProjectPercent -eq 39 -and
     $json.parameters.Count -eq 4 -and $json.originalRecoveryRate -ceq 'unknown') 'json_export_safe'
