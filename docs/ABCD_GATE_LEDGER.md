@@ -10,6 +10,12 @@ To sign off a row, A (or B/C/D as proposer, then A as verifier) must fill: **sta
 
 Rows are an operational index of the original formal requirements. **A must add any omitted mandatory requirement before declaring the parent R4/R5/R6/R7 milestone passed**. Do not delete, merge or weaken rows merely to increase the ratio. Every new research or implementation PR must explicitly reference the ledger row it aims to close.
 
+## Tenth A A7-02 bounded live C candidate identity/source gate — 2026-11-14 JST
+
+**Current proposed narrow A7-02 PASS, contingent on A #175 post-main and this signoff PR final-head/post-main Windows5.1 privacy 46/46:** Source-scoped C two-span ordered candidate IDs are actually resolved under A private `ChappyA7LiveMeterV1`, even for R3 standard FAT32 SPC1 noncontiguous and SPC2 contiguous generated source via B-unverified numeric data window. A #143 definition conflicts reject same-ID/different spans, cross-source token, alias/replay and reversed physical order as original; A #159 compact and A [#175](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/175) R3 actual **candidate-specific positive Stream.Read returned-byte** receipts. [PR-head 46/46 #43514424310](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43514424310) SUCCESS; [A #175 post-main #43514939696](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43514939696) must be green. Source-observed is NOT original-byte integrity; actual file identity/parent/owner/source-authenticity UNKNOWN and canExport=false. [Independent A signoff detail](A702_LIVE_CANDIDATE_IDENTITY_SIGNOFF.md).
+
+**Narrow B5 PASS, C4 PASS/2 PARTIAL, D5 PASS, A2 PASS/4 PARTIAL =16 PASS /6 PARTIAL /0 AUDIT_NEEDED of 22**, or 72.7% indexed synthetic conditions, not real recovery. **Official weighted synthetic engineering remains 59%** R0–R4 plus R6; R5/R7 original formal stages remain incomplete and R8 blocked. Prior audit sections are historical. Real master IMG/card NOT APPROVED for any access.
+
 ## Ninth A independent original R6 whole-stage and C5-03 narrow audit — 2026-11-14 JST
 
 **Current proposed final disposition, conditioned on final A signoff PR and post-main CI:** A independent review of original full R6 FAT evidence stage (NOT D6-01..05 5/5 alone) with [D #171](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/171) R2 compact M00/M01/M02/X02 and R3 standards SPC1/SPC2, mirror equal corruption, missing links, shared-node/cycle, remote UNKNOWN, alternative BPB, actual/unique I/O, and A #169 same-session physical return authority supports **original synthetic R6 whole-stage ACCEPT**. Formal weighted project **59% (R0–R4 + R6)** after this A signoff's exact-final/post-main CI. Independent [A signoff](R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md) documents evidence and actual denominators. R5/R7 remain incomplete and R8 blocked; real files recovery rate unknown.
@@ -68,7 +74,7 @@ A also reviewed C [#167](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery
 | Row | Status | Existing evidence to examine | Specific remaining audit/delivery |
 | --- | --- | --- | --- |
 | A7-01 | PARTIAL | #123/#128 synthetic live B/C/D integration | Versioned adapters on actual B/C/D outputs under one nonwritable stream |
-| A7-02 | PARTIAL | #133 candidate tokens and `tests/helpers/Merge-A3DSyntheticEvidence.ps1` | Identity conflicts: same candidate ID with different ordered extents; different ID same bytes |
+| A7-02 | PASS | [A #143](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/143), [A #159](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/159), [A #175](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/175) actual C source-scoped ordered two-piece IDs and A physical receipts | Conflict, alias, reversed ordering and cross-source guards; scoped synthetic only, no authenticated original file/geometry |
 | A7-03 | PASS | #133/#134 A receipts, source quota tests | Full candidate physical reread/byte-union, source/candidate phase ID, dedup/cap |
 | A7-04 | PARTIAL | #134 early EOF, #135 contradictory BPB | Reordered input, conflicting geometry and extents, forged tokens, early EOF UNKNOWN |
 | A7-05 | PARTIAL | Synthetic scorer and A evidence merger | Preserve original-byte SHA only in independent oracle; structural and unknown separate |
