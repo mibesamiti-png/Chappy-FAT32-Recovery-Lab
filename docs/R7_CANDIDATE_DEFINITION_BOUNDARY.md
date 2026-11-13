@@ -15,7 +15,7 @@ Results never expose file bytes, true original filenames or trusted physical-sou
 ## Synthetic executable P1
 
 `tests/Test-A3DCandidateDefinitionBoundary.ps1` runs the actual existing C two-fragment 3MF scanner against generated in-memory R2 M00 bytes, then:
-- Demonstrates actual physically returned bytes can cover both the C-discovered original two-fragment extents and a slightly longer **forged same-ID extent**, while independent physical-coverage results both return `source_observed`.
+- Demonstrates actual physically returned bytes can cover both the C-discovered original two-fragment extents and a one-byte-shorter **forged same-ID extent**, while independent physical-coverage results both return `source_observed`.
 - Ensures the new definition boundary rejects that same-ID/different-extent collision rather than accepting source coverage as file identity.
 - Exercises byte-identical duplicate claims, different IDs for the same extents, reversed ordered fragments, different source tokens, overlapping/out-of-source extents and <=32 proposal cap.
 - Confirms no source mutation (artificial SHA identical), no writes, no file path/export, no actual device or master IMG. Independent scorer is NOT passed to the C scanner.
