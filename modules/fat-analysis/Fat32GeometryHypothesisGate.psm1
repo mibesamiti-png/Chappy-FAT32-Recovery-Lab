@@ -155,7 +155,12 @@ function Get-ChappyFatGeometryHypothesisGate {
     return [pscustomobject]@{
         schemaVersion='1';team='D';mode='read_only_geometry_hypothesis_refusal'
         gateDecision=$gate;agreement=$agreement
-        scanIncomplete=($gate -ne 'candidate_geometry_unverified')
+        # A complete read can still contain contradictory hypotheses.
+        # Do not turn logical disagreement into fabricated physical EOF.
+        scanIncomplete=($null -eq $comparison -or
+            $comparison.scanIncomplete -or $trace.ZeroBeforeDeclaredEnd -gt 0 -or
+            $quota.RefusedReadCalls -gt 0)
+        geometryUnresolved=($gate -ne 'candidate_geometry_unverified')
         matchedNumericHypotheses=($gate -eq 'candidate_geometry_unverified')
         geometryAuthenticity='unknown';originalIdentity='unknown'
         sourceDecision='not_selected';selectedCandidate=$null
