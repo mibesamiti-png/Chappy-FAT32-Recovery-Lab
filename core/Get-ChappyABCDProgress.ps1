@@ -87,7 +87,8 @@ foreach($x in $ary){
     $totalAudit+=$x.auditNeeded;$totalBlocked+=$x.blocked
     $totalMissing+=$x.missing
 }
-# Explicit Team A original R4 whole-stage audit/signoff is recorded in docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md (PR #165 exact-head + main CI).`n# R0-R4 full-stage weights and R5-R10 gate weights are fixed from the
+# Explicit Team A original R4 whole-stage audit/signoff is recorded in docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md (PR #165 exact-head + main CI).
+# R0-R4 full-stage weights and R5-R10 gate weights are fixed from the
 # formally approved roadmap. DO NOT derive a new official number from row PASS.
 $result=[pscustomobject]@{
     schemaVersion='abcd_gate_progress_v1'
@@ -107,7 +108,8 @@ $result=[pscustomobject]@{
     conditionAssessmentPercent=[math]::Round(100.0*($expected-$totalAudit)/$expected,1)
     parameters=@($ary)
     limitations=@(
-        'PASS labels are A-signed narrow synthetic gate subconditions, not full milestone completion.',`n        'R4 was separately A-approved from original formal milestone/dual synthetic corpus, not inferred from B4 row counts.',
+        'PASS labels are A-signed narrow synthetic gate subconditions, not full milestone completion.',
+        'R4 was separately A-approved from original formal milestone/dual synthetic corpus, not inferred from B4 row counts.',
         'PARTIAL is no numeric percentage of implementation completeness.',
         'AUDIT_NEEDED does not mean feature missing.',
         'evidenceVerifiedPercent is PASS rows / total rows, NOT engineering or real recovery completion.',
