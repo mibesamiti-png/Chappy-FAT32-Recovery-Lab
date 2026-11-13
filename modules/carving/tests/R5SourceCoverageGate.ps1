@@ -81,6 +81,7 @@ function Invoke-C5CoverageGate {
                 $outer.Position -eq 0) ($kind+':disabled_has_no_source_access')
             $r=Get-ChappyCarvingCoverageEvidence -Source $outer -EnableCoverageEvidence -Mode Fragment
             $m=$r.metrics
+            Write-Host ('C5-05 DIAG compact kind={0} status={1} decision={2} incomplete={3} attestation={4} innerB={5} outerB={6} innerUnique={7} outerUnique={8} innerCalls={9} outerCalls={10} sectors={11} pairs={12} cand={13} parserB={14} validationFlag={15} errorCode={16}' -f $kind,$r.status,$r.decision,$r.scanIncomplete,$r.sourceReadAttestation,$m.actualReturnedBytes,$outer.BytesRead,$m.uniqueReturnedBytes,$outer.UniqueBytes,$m.readCalls,$outer.ReadCalls,$m.sectorProbes,$m.pairAttempts,$m.candidateCount,$m.validatorMemoryReadBytes,$m.validatorMemoryReadStatus,$m.stopCode)
             Assert-C5Coverage ($r.schemaVersion -eq 'c5_source_coverage_v1' -and
                 $r.status -eq 'partial' -and $r.scanIncomplete -and
                 $r.sourceReadAttestation -eq 'C_unattested_A_outer_receipt_required' -and
