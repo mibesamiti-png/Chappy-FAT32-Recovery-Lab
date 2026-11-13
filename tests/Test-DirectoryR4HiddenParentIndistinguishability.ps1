@@ -36,6 +36,7 @@ namespace ChappyBR4Hidden {
 $r4HSeeds=@(202611,202612,202613)
 $r4HPairs=0;$r4HCount=0;$r4HBytes=0L;$r4HComplete=0L;$r4HDirReturned=0L
 $r4HCalls=0L;$r4HRetained=0L;$r4HForged=0L;$r4HProbable=0L;$r4HLfnValidated=0L
+$r4HStrictForgedUnknown=0L;$r4HStrictSuppressed=0L;$r4HStrictTruthSupported=0L;$r4HStrictTruthContradicted=0L
 $r4HParent=@{naive=@{TP=0;FP=0;FN=0;TN=0;UNKNOWN=0};abstain=@{TP=0;FP=0;FN=0;TN=0;UNKNOWN=0}}
 $r4HLfn=@{naive=@{TP=0;FP=0;FN=0;TN=0;UNKNOWN=0};abstain=@{TP=0;FP=0;FN=0;TN=0;UNKNOWN=0}}
 function Add-R4HTruth([hashtable]$Table,[string]$Arm,[string]$Truth,[string]$Decision) {
@@ -119,6 +120,13 @@ foreach($r4HSeed in $r4HSeeds) {
                     $r4HLinkItems[0].confidence -ne 'verified' -and
                     $r4HStream.ActualBytes -ge $r4HScan.directoryPhysicalReadEvidence.streamReturnedBytes -and
                     @($r4HScan.items|Where-Object{$null -ne $_.name -or $null -ne $_.shortName}).Count -eq 0) ('R4 H only structural root LFN, no original path: '+$r4HSeed+' '+$r4HMode+' '+$r4HTruth)
+                # No new source reads: same actual B result under strict graph.
+                $r4HStrictHonest=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $r4HScan -DetectConflictingContainerObservations -RequireObservedClusterIntervals -NeverPromoteUnattestedParentEdges -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
+                Assert-B ($r4HStrictHonest.metrics.probableEdgeAssertions -eq 0 -and
+                    $r4HStrictHonest.metrics.unattestedProbableSuppressed -eq 0 -and
+                    $r4HStrictHonest.edges.Count -eq $r4HGraph.edges.Count -and
+                    $r4HStrictHonest.nodes.Count -eq $r4HGraph.nodes.Count -and
+                    $r4HStrictHonest.parentHints.Count -eq $r4HGraph.parentHints.Count) ('B4-03 honest incomplete parent candidates remain unchanged under strict graph: '+$r4HSeed+' '+$r4HMode+' '+$r4HTruth)
                 $r4HProbable += [long]$r4HGraph.metrics.probableEdgeAssertions
                 $r4HLfnValidated++
                 $r4HBytes += [long]$r4HStream.ActualBytes
@@ -149,6 +157,22 @@ foreach($r4HSeed in $r4HSeeds) {
                     $r4HForged += [long]$r4HFakeGraph.metrics.probableEdgeAssertions
                     Assert-B ($r4HFakeGraph.metrics.probableEdgeAssertions -ge 1 -and
                         $r4HForgedScan.metrics.bytesRead -gt $r4HStream.ActualBytes) ('R4 H self-forged full scan is not external source proof: '+$r4HSeed+' '+$r4HTruth)
+                    # B4-03: exact same untrusted B scan report; NO source
+                    # receipt can be fabricated to bypass opt-in abstention.
+                    $r4HStrictForged=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $r4HForgedScan -DetectConflictingContainerObservations -RequireObservedClusterIntervals -NeverPromoteUnattestedParentEdges -MaxNodes 16 -MaxEdges 16 -MaxMetadataItems 32 -MaxAncestorSteps 64
+                    Assert-B ($r4HStrictForged.metrics.probableEdgeAssertions -eq 0 -and
+                        $r4HStrictForged.metrics.unattestedProbableSuppressed -eq 1 -and
+                        $r4HStrictForged.metrics.edgeAssertions -eq $r4HFakeGraph.metrics.edgeAssertions -and
+                        $r4HStrictForged.nodes.Count -eq $r4HFakeGraph.nodes.Count -and
+                        $r4HStrictForged.parentHints.Count -eq $r4HFakeGraph.parentHints.Count -and
+                        $r4HStrictForged.edges[0].relationStatus -eq $r4HFakeGraph.edges[0].relationStatus -and
+                        $r4HStrictForged.edges[0].confidence -eq 'partial' -and
+                        $r4HStrictForged.edges[0].evidence -contains 'independent_source_attestation_required' -and
+                        $r4HStrictForged.warnings -contains 'hierarchy_independent_source_receipt_not_provided' -and
+                        ($r4HStrictForged|ConvertTo-Json -Depth 9) -notmatch 'verified|originalPath') ('B4-03 forged fully covered B ledger cannot promote unattested parent: '+$r4HSeed+' '+$r4HTruth)
+                    $r4HStrictSuppressed += [long]$r4HStrictForged.metrics.unattestedProbableSuppressed
+                    $r4HStrictForgedUnknown++
+                    if($r4HTruth -eq 'supported'){$r4HStrictTruthSupported++}else{$r4HStrictTruthContradicted++}
                 }
             } finally {$r4HStream.Dispose()}
             Assert-B ((Get-A3DSha256 $r4HSource) -ceq $r4HBefore) ('R4 H artificial SHA preserved: '+$r4HSeed+' '+$r4HMode+' '+$r4HTruth)
@@ -172,6 +196,8 @@ foreach($r4HSeed in $r4HSeeds) {
 }
 Assert-B ($r4HPairs -eq 6 -and $r4HCount -eq 12 -and $r4HLfnValidated -eq 12 -and
     $r4HProbable -eq 0 -and $r4HForged -eq 6 -and
+    $r4HStrictSuppressed -eq 6 -and $r4HStrictForgedUnknown -eq 6 -and
+    $r4HStrictTruthSupported -eq 3 -and $r4HStrictTruthContradicted -eq 3 -and
     $r4HDirReturned -eq 27750 -and $r4HComplete -eq 27648 -and ($r4HDirReturned-$r4HComplete) -eq 102) 'R4 H six synthetic pairs, 102 partial return bytes, six forged probable edges'
 Assert-B ($r4HParent.naive.TP -eq 6 -and $r4HParent.naive.FP -eq 6 -and
     $r4HParent.abstain.UNKNOWN -eq 12 -and
@@ -182,3 +208,4 @@ Write-Host ('SYNTHETIC B R4 H: seeds=3 pairs=6 sources=12; parent naive TP={0} F
     $r4HLfn.naive.TP,$r4HLfn.naive.FP,$r4HLfn.abstain.UNKNOWN,
     $r4HBytes,$r4HDirReturned,$r4HComplete,($r4HDirReturned-$r4HComplete),
     $r4HCalls,$r4HRetained,$r4HProbable,$r4HForged)
+Write-Host ('B4-03 STRICT SYNTHETIC: forged same-report legacy apparent probable={0}, opt-in strict probable=0, retained partial={1}, hidden truth supported={2} contradicted={3}, all original-parent UNKNOWN={4}; NO extra Stream.Read, no A physical receipt claimed' -f $r4HForged,$r4HStrictSuppressed,$r4HStrictTruthSupported,$r4HStrictTruthContradicted,$r4HStrictForgedUnknown)
