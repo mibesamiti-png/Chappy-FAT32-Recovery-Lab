@@ -141,7 +141,7 @@ function Get-ChappyFragmentCandidates {
                         integrityScope='structural_only_not_original_file_integrity'
                         sourceSpans=@(
                             [pscustomobject]@{offsetBytes=[long]$first;lengthBytes=$firstLen;origin='source_observed_unattested'},
-                            [pscustomobject]@{offsetBytes=$second;lengthBytes=$secondLen;origin='observed_synthetic_source'}
+                            [pscustomobject]@{offsetBytes=$second;lengthBytes=$secondLen;origin='source_observed_unattested'}
                         )
                     })
                 }
