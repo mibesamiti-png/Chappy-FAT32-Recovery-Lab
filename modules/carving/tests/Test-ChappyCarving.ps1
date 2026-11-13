@@ -989,3 +989,7 @@ Invoke-CStlModuleGateRegression
 # Team C R5 ledger C5-01: bounded optional ZIP/3MF OPC/XML evidence gate.
 . (Join-Path $PSScriptRoot 'R5OpcXmlGateRegression.ps1')
 Invoke-C3mfOpcGateRegression
+
+# C R5 formal ledger C5-03: non-oracle guarded two-fragment callable module gate.
+. (Join-Path $PSScriptRoot 'R5FragmentModuleGateRegression.ps1')
+Invoke-CFragmentModuleGateRegression
