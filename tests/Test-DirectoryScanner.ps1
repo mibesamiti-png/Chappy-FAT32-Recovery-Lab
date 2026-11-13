@@ -469,6 +469,9 @@ try {
     # B4-04 independently metered physical-return/span comparisons and adversarial ledgers.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateReadReconciliation.ps1')
 
+    # B4-03: A-shaped physical return intervals vs structural parent+dotdot pairs.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateParentPhysicalPair.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
