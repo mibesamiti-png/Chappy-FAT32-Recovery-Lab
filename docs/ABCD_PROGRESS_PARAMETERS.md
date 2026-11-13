@@ -11,19 +11,19 @@ For a team with `N` registered ledger rows:
 - **Gate blockers** = status `BLOCKED`; **implementation missing** = `MISSING`; **awaiting audit** = `AUDIT_NEEDED`. Preserve all three separately.
 - **Official weighted project progress** = **39%**, the separately accepted full stages R0=5%, R1=10%, R2=12%, R3=12%. R4=10, R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited before their **entire original formal stage criteria** have A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
 
-## Latest snapshot after A independently reviewed and merged B #156, C #157, D #158
+## Latest snapshot after A independently reviewed and merged B #162, C #160, D #161
 
-Baseline B/C/D-merged main `e567f3eaf9f086c2ba5504ccf013590baf81495e`; new A7-04/A7-05 candidate-specific source reread implementation is PARTIAL **pending exact final A-head CI**. This evidence snapshot is not full software completeness or real recovery success; re-run the ledger scorer on main after A merges.
+Baseline B/C/D-merged main `ceb890644f7af778a980654532930dca233fc5dc`. A #163 live B4-04 bound physical A meter passed early 44/44 code-head CI but full final-head and post-main CI are still required. The 22 index rows are a **subcheck audit**, not the original whole-stage roadmap criteria or a real-file restoration rate.
 
 | Team | Formal stage | PASS | PARTIAL | AUDIT_NEEDED | Condition evidence % (PASS/N) | Assessed % ((N−AUDIT_NEEDED)/N) | Evidenced work reach % |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| B | R4 | 3/5 | 2/5 | 0/5 | **60.0%** | 100.0% | 100.0% |
-| C | R5 | 1/6 | 5/6 | 0/6 | **16.7%** | 100.0% | 100.0% |
-| D | R6 | 3/5 | 2/5 | 0/5 | **60.0%** | 100.0% | 100.0% |
+| B | R4 | 5/5 | 0/5 | 0/5 | **100.0%** | 100.0% | 100.0% |
+| C | R5 | 2/6 | 4/6 | 0/6 | **33.3%** | 100.0% | 100.0% |
+| D | R6 | 4/5 | 1/5 | 0/5 | **80.0%** | 100.0% | 100.0% |
 | A | R7 | 1/6 | 5/6 | 0/6 | **16.7%** | 100.0% | 100.0% |
-| **Total** | R4–R7 | **8/22** | **14/22** | **0/22** | **36.4%** | **100.0%** | **100.0%** |
+| **Total** | R4–R7 | **12/22** | **10/22** | **0/22** | **54.5%** | **100.0%** | **100.0%** |
 
-*These percentages are not full engineering completion, not a likelihood of real file recovery, not comparable to the original informal 79–86% estimates. C has one independently signed PASS row and five PARTIAL rows; assessed 100% does NOT mean R5 is complete.*
+*These percentages are not full engineering completion, not a likelihood of real file recovery, not comparable to the original informal 79–86% estimates. C now has two independently signed bounded PASS rows and four PARTIAL rows; assessed 100% does NOT mean R5 is complete.*
 
 ## Reproduce with Windows PowerShell 5.1
 
@@ -64,3 +64,8 @@ Compared with preceding third A round (4 PASS / 10 PARTIAL / 8 AUDIT_NEEDED, **6
 ## Fifth A snapshot and differential gate parameters — 2026-11-14 JST
 
 Before this round: B 3 PASS/1 PARTIAL/1 audit; C 1/4/1; D 2/3/0; A 1/3/2. **7 PASS, 11 PARTIAL, 4 AUDIT_NEEDED** across 22; 31.8% narrow-row verified and 81.8% assessed. After A independently reviewed B #156/C #157/D #158 and drafted A fragment physical reread: B 3/2/0, C 1/5/0, D 3/2/0, A 1/5/0. **8 PASS, 14 PARTIAL, 0 AUDIT_NEEDED**, 36.4% verified, **100% audited**. D6-02 is a narrowly bounded synthetic fixed-FAT anomaly acceptance, not proof of all source clusters or actual file owners. All 22 formally indexed *subconditions* have been inspected; **14 are not complete**. Change: **+1 narrow PASS, +3 PARTIAL, -4 AUDIT_NEEDED; +18.2 percentage points of audit coverage**. None of these represent actual recovery probability. Official weighted full-stage **39%**, R0–R3 only, unchanged. A7-04/A7-05 PARTIAL tests pending final-head PS5.1+privacy CI and independent post-main acceptance.
+
+
+## Sixth A verified-conditions differential snapshot — 2026-11-14 JST
+
+Before this round: **8 PASS /14 PARTIAL /0 AUDIT_NEEDED** of 22 (36.4% signed narrow rows). After A independently signed B4-03, C5-01, D6-03 based on final-head PS5.1/privacy CI and added A-owned live directory returned span comparison B4-04 (code-head 44/44, final-head CI still mandatory), current provisional ledger **12 PASS /10 PARTIAL /0 AUDIT_NEEDED**, 54.5% narrow row verified, 100% audited. Delta **+4 narrow PASS, −4 PARTIAL, +18.1 percentage points** in narrow verified-row rate. B's 5/5 scoped checklist is **not yet a separate original formal R4 complete-stage signature**; the formal R4 acceptance must be explicitly reviewed against original multi-track hidden-parent/uncertainty requirements before adding its 10% stage weight. Formal overall project remains **39%**. None of these numerical parameters estimate recoverability of actual private media, and the only 31GB master IMG and physical card remain unapproved for any access. `core/Get-ChappyABCDProgress.ps1 -AsJson` computes current signed statuses from `docs/ABCD_GATE_LEDGER.md` without assigning PARTIAL=0.5.
