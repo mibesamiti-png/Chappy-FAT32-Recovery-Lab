@@ -11,19 +11,19 @@ For a team with `N` registered ledger rows:
 - **Gate blockers** = status `BLOCKED`; **implementation missing** = `MISSING`; **awaiting audit** = `AUDIT_NEEDED`. Preserve all three separately.
 - **Official weighted project progress** = **39%**, the separately accepted full stages R0=5%, R1=10%, R2=12%, R3=12%. R4=10, R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited before their **entire original formal stage criteria** have A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
 
-## Snapshot after A independently reviewed and merged B #145, C #144, D #146
+## Latest snapshot after A independently reviewed and merged B #148, C #150, D #149
 
-Baseline main `1b48c3f5ed812b3a9f7bdf4734d4217d044f8388`; this is a **snapshot**, re-run the script on newest main after the A PR is merged, as individual ledger rows will continue to evolve.
+Baseline merged main `e0bb8b2dd778760da8a8a81c6592c8eea730b6d7`; A7-01 latest live adapter remains PARTIAL pending final-head CI in A Draft. This is an evidence **snapshot**, re-run the script on main after final A merge.
 
 | Team | Formal stage | PASS | PARTIAL | AUDIT_NEEDED | Condition evidence % (PASS/N) | Assessed % ((N−AUDIT_NEEDED)/N) | Evidenced work reach % |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| B | R4 | 2/5 | 0/5 | 3/5 | **40.0%** | 40.0% | 40.0% |
-| C | R5 | 0/6 | 3/6 | 3/6 | **0.0%** | 50.0% | 50.0% |
-| D | R6 | 1/5 | 2/5 | 2/5 | **20.0%** | 60.0% | 60.0% |
-| A | R7 | 1/6 | 1/6 | 4/6 | **16.7%** | 33.3% | 33.3% |
-| **Total** | R4–R7 | **4/22** | **6/22** | **12/22** | **18.2%** | **45.5%** | **45.5%** |
+| B | R4 | 2/5 | 1/5 | 2/5 | **40.0%** | 60.0% | 60.0% |
+| C | R5 | 0/6 | 4/6 | 2/6 | **0.0%** | 66.7% | 66.7% |
+| D | R6 | 1/5 | 3/5 | 1/5 | **20.0%** | 80.0% | 80.0% |
+| A | R7 | 1/6 | 2/6 | 3/6 | **16.7%** | 50.0% | 50.0% |
+| **Total** | R4–R7 | **4/22** | **10/22** | **8/22** | **18.2%** | **63.6%** | **63.6%** |
 
-*These percentages are not full engineering completion, not a likelihood of real file recovery, not comparable to the original informal 79–86% estimates. C’s 0% verified row evidence is not 0% implemented work: three actual positive capabilities are PARTIAL but incomplete for their broad formal gate.*
+*These percentages are not full engineering completion, not a likelihood of real file recovery, not comparable to the original informal 79–86% estimates. C’s 0% verified row evidence is not 0% implemented work: four actual positive capabilities are PARTIAL but incomplete for their broad formal gate.*
 
 ## Reproduce with Windows PowerShell 5.1
 
@@ -49,3 +49,8 @@ The tool rejects missing/duplicate/unknown row IDs, invalid schema/status or non
 Every chat should record `rowId`, last-reviewed HEAD, exact CI and next missing acceptance evidence. An indicator becoming more favorable without evidence is a bug, not progress.
 
 **Safety:** original physical microSD and sole ~31GB master IMG are still **NOT APPROVED for ANY access**: no reading, hashing, scanning, copying, uploading, repairing, exporting or writing. Generated artificial data only, and R8 stays blocked until full R7 acceptance.
+
+
+## Prior audited snapshot, for comparable change measurement
+
+Before this A round: 4 PASS, 6 PARTIAL, 12 AUDIT_NEEDED out of 22; assessment 45.5%. This round after B #148, C #150, D #149 and pending A live adapter: 4 PASS, 10 PARTIAL, 8 AUDIT_NEEDED out of 22; assessment 63.6% (**+18.1 percentage points reviewed**, not +18.1% engineering completeness). No new original formal stage gate passed. Verified PASS-ratio remains 18.2%, official weighted project remains 39%.
