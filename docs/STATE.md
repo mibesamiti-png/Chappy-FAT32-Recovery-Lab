@@ -1,5 +1,9 @@
 # STATE — latest 2026-11-13 four-chat operating redesign
 
+## ACTIVE A tenth checkpoint — scoped R7 candidate identity and actual physical receipts (2026-11-14 JST)
+
+A merged #175 with actual A-protected source returns for B-derived numeric data window + C R3 SPC1/SPC2 3MF candidate-specific re-reads (46/46 final PR-head Windows/Privacy CI SUCCESS). A #143 duplicate/alias/conflicting candidate identity and physical-order evidence with A #159/#175 source-scoped receipts qualifies indexed **A7-02 narrow PASS** conditional on #175 post-main 46/46 and A tenth gate signoff exact-head/post-main CI; [A scope/signoff](A702_LIVE_CANDIDATE_IDENTITY_SIGNOFF.md). R7 full formal stage still incomplete (A7-01/04/05/06 PARTIAL). After signoff B5 C4 D5 A2 =16/22 indexed PASS, 6 PARTIAL, 0 unaudited. **Official full-stage 59%** unchanged, real recovery unknown, R5/R7 incomplete, R8 blocked. A next shared B/C/D versioned candidate evidence interface; B assists C, C C5-05/06, D R7 negative tests. Real media never approved for access.
+
 ## ACTIVE ninth A checkpoint — 2026-11-14 JST
 
 A reviewed and merged B #173 observed-size advisory (no original selection gain), C #172 finite non-oracle R2/R3 two-fragment discovery, D #171 full original R6 evidence R2/R3. Exact PR HEAD Windows/Privacy CI GREEN. D original R6 (NOT merely D5/5 narrow) independently evaluated in `docs/R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md` against complete original R6 roadmap. **Official synthetic-engineering milestones 59% (R0–R4 and R6)** after A signoff exact-final/post-main CI. C5-03 scoped PASS for two-piece profile; C5-05/06 and A7-01/02/04/05/06 partial. B5 C4 D5 A1 =15/22 narrow PASS,7 PARTIAL. Team priority A R7 same-session large R3 C fragment source receipts; C5-05/06; B negative advisory; D R7 conflict tests. No actual real media/source authorization, R8 blocked.
