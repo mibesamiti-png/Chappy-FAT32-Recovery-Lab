@@ -1005,3 +1005,7 @@ Invoke-C5CoverageGate
 # C R5 C5-01: real OPC StartPart reference/part names and effective MIME, forged XML negatives.
 . (Join-Path $PSScriptRoot 'R5OpcStartPartBreadthGate.ps1')
 Invoke-C5OpcStartPartBreadthGate
+
+# Team C Issue #72 C5-02: 20 STL and 20 G-code strict synthetic acceptance cases.
+. (Join-Path $PSScriptRoot 'R5FormatBreadthGateRegression.ps1')
+Invoke-CFormatBreadthGate
