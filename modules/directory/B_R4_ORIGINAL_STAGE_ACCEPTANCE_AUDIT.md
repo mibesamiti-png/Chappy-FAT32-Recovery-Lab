@@ -24,6 +24,21 @@
 - **Safety:** No actual microSD, only master ~31GB IMG, private files/names, original logs, or user data can be read, hashed, scanned, copied, repaired, exported, uploaded or changed. Real-media gate stays **NOT APPROVED**. Artificial fixtures only; the A standard fixture generator and B tests never open a file/device path for source reads. B cannot issue A source receipts or approve future local trials.
 - **Licenses:** Microsoft FAT File System Specification v1.03 and .NET `Stream.Read` semantics are references, not copied implementation; mixed-license TSK and Linux FAT GPL code are not reused.
 
+## Native Windows PowerShell 5.1 measured supplementary R3 evidence (post preregistration)
+
+The initial version of the test had a **PowerShell dot-sourced variable collision**: a generic test-only `$fake` variable had a prior `[byte[]]` binding. The first [Windows run #43497453933](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43497453933) failed while making the forged test envelope, **after** successful SPC1 source/three-candidate and original-UNKNOWN checks; no B production logic or pre-frozen labels changed. Renaming only the new test's `$fake` and `$wrong` variables to B-prefixed names resolved the collision.
+
+[Native Windows PowerShell 5.1 B run #43497728318](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43497728318) **COMPLETED SUCCESS on test-code HEAD `f7d90869cef360b26a8d548114d96b7a80aab0c4`**, **1,515 logged `PASS:` assertions** and `ALL TEAM B SYNTHETIC TESTS PASSED`. This documentation update changes the final PR HEAD, so **both native B and privacy CI must pass again on that final HEAD** before A merges; earlier code-head checks alone are insufficient.
+
+| Actual generated source trial | Independent physical successful-return evidence | B candidate/coverage decision |
+| --- | --- | --- |
+| R3 FAT32 SPC1, seed 202611 | 1536 B total and unique, of which 512 B B-directory, **18 actual `Stream.Read` calls**, 5 ms observed B scan | **3 numeric metadata candidates**, one root cluster observed out of 65541; original identity UNKNOWN; forged second completed cluster contradicted |
+| R3 FAT32 SPC2, same seed | 2048 B total and unique, 1024 B B-directory, **23 actual calls**, 4 ms observed B scan | **3 numeric metadata candidates**, one root cluster observed out of 65541; original identity UNKNOWN; forged second completed cluster contradicted |
+| Separate SPC1 early EOF after 17/512 B directory | 1041 total successful B (1024 B geometry + 17 B incomplete root), **14 actual calls** including zero return; 0 complete B-directory blocks | `partial_unknown`, no recovered original path or candidate; not TN |
+| **Two full SPC trials combined, excluding separate EOF** | **3584 total and unique returned B, 1536 B directory, 41 actual calls** | **6 observed numeric candidate instances**, 2 forged B completed-read transcripts denied, 0 false original path assertions |
+
+Full synthetic input SHA after scans equals before, independent per-return chunk SHA/offset verified. Stopwatch duration is one observed Windows CI run, **not statistically stable benchmarking**. Reported `PeakWorkingSet64=825761792` B was the entire CI PowerShell process after all earlier tests and generator allocations; **not B-scanner-exclusive high-water memory** and not a standalone algorithm bound. The actual scanner is bounded by explicit source/read/candidate/event quotas. No source-authentication receipt was issued by the B-only tests.
+
 ## Disposition for Team A
 
 This report is a **conditional original-R4 stage acceptance proposal** pending exact final-HEAD Windows/privacy validation. If all original-R4 criteria are reviewed against the cited implementation, cross-track synthetic cases and strict UNKNOWN semantics, A may approve original **R4 full 10% gate** independently and update the roadmap/ledger; **B must not self-sign R4 or automatically add 10 points**. If the standards-sized SPC2 variant/short EOF fails or actual independent source receipt cannot be proven, leave the original R4 **PARTIAL** and name that specific gap. C assistance is prohibited until A explicitly posts full original R4 disposition to Issue #71 / live dispatch; C can continue independently.
