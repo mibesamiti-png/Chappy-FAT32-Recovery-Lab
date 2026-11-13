@@ -96,3 +96,6 @@ jobs:
       - name: Run Team D D6-04 independently metered physical paired FAT coverage gate
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-GatePhysicalCoverage.Tests.ps1
+      - name: Run Team D D6-05 stable guarded fixed FAT result acceptance
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-GateGuardedResult.Tests.ps1
