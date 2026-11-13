@@ -1,5 +1,9 @@
 # STATE — latest 2026-11-13 four-chat operating redesign
 
+## ACTIVE ninth A checkpoint — 2026-11-14 JST
+
+A reviewed and merged B #173 observed-size advisory (no original selection gain), C #172 finite non-oracle R2/R3 two-fragment discovery, D #171 full original R6 evidence R2/R3. Exact PR HEAD Windows/Privacy CI GREEN. D original R6 (NOT merely D5/5 narrow) independently evaluated in `docs/R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md` against complete original R6 roadmap. **Official synthetic-engineering milestones 59% (R0–R4 and R6)** after A signoff exact-final/post-main CI. C5-03 scoped PASS for two-piece profile; C5-05/06 and A7-01/02/04/05/06 partial. B5 C4 D5 A1 =15/22 narrow PASS,7 PARTIAL. Team priority A R7 same-session large R3 C fragment source receipts; C5-05/06; B negative advisory; D R7 conflict tests. No actual real media/source authorization, R8 blocked.
+
 ## ACTIVE eighth A checkpoint — D6-04 source-bound successful-return proof (2026-11-14 JST)
 
 After main R4 formal A signoff #168 at official 49% (post-main #43502834362 SUCCESS 44/44), A independently merged [#169](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/169) exact head `78b3fccd08c7a1c539406f381fc9bce173c26a3c`, [Windows/Privacy #43502899365](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43502899365) **45/45 SUCCESS**, for actual same-session A-protected FAT physical returned 4-byte pair join. SPC1/SPC2 each observed 128/65664 paired indices and 65536 remote UNKNOWN, no real authenticity/owner/winner/repair/export. D6-04 **narrow PASS only if post-main #43503435690 and current A signoff PR exact-head/post-main CI green**. Then B5/5 C3/6 D5/5 A1/6 narrow, 14/22 PASS, 8 PARTIAL; original full R6 and R5/R7 still incomplete, **official49% unchanged**. D next formal original R6 whole-stage audit, B authorized C support, C continues R5, A R7 C candidate binding. Real media NOT APPROVED for any access.
