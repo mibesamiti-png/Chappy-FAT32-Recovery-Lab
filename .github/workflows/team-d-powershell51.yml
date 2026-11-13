@@ -108,3 +108,6 @@ jobs:
       - name: Run Team D D6-04 guarded actual FAT source-read transcript join
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-GuardedReturnJoin.Tests.ps1
+      - name: Run Team D original formal R6 two-track synthetic FAT acceptance
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-FormalTwoTrackAcceptance.Tests.ps1
