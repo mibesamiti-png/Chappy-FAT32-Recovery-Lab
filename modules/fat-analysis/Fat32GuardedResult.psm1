@@ -232,7 +232,7 @@ function Get-ChappyFatGuardedResult {
 
                 # This separate D meter is NOT an A issued physical receipt.
                 # It only permits a conservative internal two-layer check.
-                $physical=@($meter.GetReturnedEvents('fat') | ForEach-Object {
+                $physical=@($meter.GetReturnedEvents('fat_fixed') | ForEach-Object {
                     [pscustomobject]@{
                         OffsetBytes=[long]$_.OffsetBytes
                         ReturnedBytes=[int]$_.ReturnedBytes
