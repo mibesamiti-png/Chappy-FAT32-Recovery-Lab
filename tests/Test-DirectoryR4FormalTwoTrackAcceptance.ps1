@@ -113,14 +113,14 @@ foreach($spc in @(1,2)){
             $b.originalIdentity -ceq 'unknown' -and
             -not $b.canExport -and -not $b.canSelectFatCopy) ('R4 FORMAL R3-SPC'+$spc+': candidate metadata visible but original path UNKNOWN')
         # Forge only B's self-reported completed cluster; physical events stay unchanged.
-        $fake=$b|ConvertTo-Json -Depth 12 -Compress|ConvertFrom-Json
-        $fake.directoryReadSpans[0].lengthBytes=2*$clusterSize
-        $fake.metrics.bCompletedDirectoryBytes=2*$clusterSize
-        $fake.metrics.bReturnedDirectoryBytes=2*$clusterSize
-        $wrong=Compare-ChappyBDirectoryReturnedEvidenceV1 -DirectoryEnvelope $fake -OuterReadEvents $events -SourceLengthBytes $img.Length -MaxEvents 64 -MaxSpans 8
-        Assert-B ($wrong.decision -ceq 'contradicted' -and
-            $wrong.originalIdentity -ceq 'unknown' -and
-            -not $wrong.canExport) ('R4 FORMAL R3-SPC'+$spc+': forged second complete B cluster contradicted')
+        $r4FormalSpoofedEnvelope=$b|ConvertTo-Json -Depth 12 -Compress|ConvertFrom-Json
+        $r4FormalSpoofedEnvelope.directoryReadSpans[0].lengthBytes=2*$clusterSize
+        $r4FormalSpoofedEnvelope.metrics.bCompletedDirectoryBytes=2*$clusterSize
+        $r4FormalSpoofedEnvelope.metrics.bReturnedDirectoryBytes=2*$clusterSize
+        $r4FormalSpoofDecision=Compare-ChappyBDirectoryReturnedEvidenceV1 -DirectoryEnvelope $r4FormalSpoofedEnvelope -OuterReadEvents $events -SourceLengthBytes $img.Length -MaxEvents 64 -MaxSpans 8
+        Assert-B ($r4FormalSpoofDecision.decision -ceq 'contradicted' -and
+            $r4FormalSpoofDecision.originalIdentity -ceq 'unknown' -and
+            -not $r4FormalSpoofDecision.canExport) ('R4 FORMAL R3-SPC'+$spc+': forged second complete B cluster contradicted')
         $r4FormalForgedDenied++
         $r4FormalStdCases++
         $r4FormalReturned += [long]$reader.ReturnedBytes
