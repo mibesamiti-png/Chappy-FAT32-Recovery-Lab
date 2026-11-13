@@ -33,7 +33,7 @@ public sealed class ChappyA7LiveMeterV1:Stream{
   s=source;quota=bytes;cap=readCap;
  }
  public void BeginConsumer(string c){
-  if(c!="geometry"&&c!="directory"&&c!="carving"&&c!="fat")
+  if(c!="geometry"&&c!="directory"&&c!="carving"&&c!="fat"&&c!="candidate_validation")
    throw new ArgumentException("Invalid consumer label");
   consumer=c;
  }
