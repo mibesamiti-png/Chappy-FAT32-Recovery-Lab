@@ -13,7 +13,7 @@ For a team with `N` registered ledger rows:
 
 ## Latest snapshot after A independently reviewed and merged B #154, C #152, D #153
 
-Baseline B/C/D-merged main `7a1d39f6502ad43d41059d0106bd9ac9c459a449`; A7-06 new versioned adapter is PARTIAL pending its final-head Windows/privacy CI. This is a synthetic evidence **snapshot**, not full feature maturity, re-run on main after A merges.
+Baseline B/C/D-merged main `7a1d39f6502ad43d41059d0106bd9ac9c459a449`; A7-06 versioned adapter remains PARTIAL even after synthetic Windows/privacy test success, pending candidate-specific A receipt integration and the complete original R7 acceptance. This is a synthetic evidence **snapshot**, not full feature maturity, re-run on main after A merges.
 
 | Team | Formal stage | PASS | PARTIAL | AUDIT_NEEDED | Condition evidence % (PASS/N) | Assessed % ((N−AUDIT_NEEDED)/N) | Evidenced work reach % |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
