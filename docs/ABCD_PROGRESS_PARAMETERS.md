@@ -2,6 +2,10 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## Tenth A indexed candidate-identity progress after A R3 source receipt review — 2026-11-14 JST
+
+A [#175](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/175) actual protected A `Stream.Read` candidate-specific R3 two-fragment receipts plus A #143 ordered identity collision guard permit **A7-02 narrow PASS**, conditioned on [independent A approval](A702_LIVE_CANDIDATE_IDENTITY_SIGNOFF.md) exact-head/post-main CI. B R4 5/5, C R5 4/6, D R6 5/5, A R7 **2/6 =33.3% narrow evidence**; total **16/22 =72.7% narrow evidence**, 6 PARTIAL, none unaudited. **Official full-stage project 59%** unchanged (R0–R4,R6); R5/R7 unaccepted, R8 blocked, real restoration rate unknown. Earlier sections are historical.
+
 ## Ninth A formal R6 and narrow C5-03 acceptance — 2026-11-14 JST
 
 **Official engineering stage progress 59% = R0–R4 plus R6 (independent complete original R6 signoff)**, conditional on [A R6 final CI](R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md); previous sections are historical snapshots. This is strictly synthetic software-engineering acceptance, **not** 59% real file recovery.
