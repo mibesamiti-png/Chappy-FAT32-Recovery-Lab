@@ -203,11 +203,16 @@ foreach($c in $standard){
       $guard.evidence.unobservedPairedEntryIndices -eq 65536 -and
       -not $src.Has4(($fat2+4L*60000L)) -and
       $joined.metrics.unobservedPairedEntryIndices -eq 65536) 'Remote FAT2 index60000 physically not returned: UNKNOWN not healthy'
+   }elseif($c.fault -ceq 'backup'){
+    Assert-R6 ($guard.guardDecision -ceq 'blocked_conflicting_geometry' -and
+      $guard.metrics.fatFixedReturnedBytes -eq 0 -and
+      $null -eq $joined.metrics.pairedCoveragePercent -and
+      $joined.decision -ceq 'consistent_blocked_unattested') 'Contradictory backup geometry denies ALL FAT reads, numeric source only'
    }else{
     Assert-R6 ($guard.metrics.fatFixedReturnedBytes -eq 0 -and
       $guard.metrics.prematureSourceZeroReads -gt 0 -and
       $null -eq $joined.metrics.pairedCoveragePercent -and
-      $joined.decision -ceq 'unknown') ($c.id+' true EOF / conflicting backup -> UNKNOWN or blocked')
+      $joined.decision -ceq 'unknown') ($c.id+' true physical EOF yields UNKNOWN')
    }
   }else{
    Assert-R6 ($guard.guardDecision -ceq 'candidate_geometry_unverified' -and
