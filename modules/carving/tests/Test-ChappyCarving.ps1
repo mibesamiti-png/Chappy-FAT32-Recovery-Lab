@@ -981,3 +981,7 @@ Invoke-CSparseWindowRegression
 # Team C #72: equal-quarter fixed-budget schedule with aligned and off-grid unknown controls.
 . (Join-Path $PSScriptRoot 'R5QuarterStratifiedResearch.ps1')
 Invoke-CQuarterStratifiedWindowRegression
+
+# Team C R5 gate C5-02: usable guarded STL module + G-code compatibility.
+. (Join-Path $PSScriptRoot 'R5StlModuleGateRegression.ps1')
+Invoke-CStlModuleGateRegression
