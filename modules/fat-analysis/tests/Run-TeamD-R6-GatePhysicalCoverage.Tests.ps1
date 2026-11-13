@@ -165,6 +165,7 @@ foreach($case in $cases){
     $before=Hash-D27 $image
     $x=Run-D27 -Image $image -Fat1 $fat1 -Fat2 $fat2 -FatBytes $fatBytes -Stop $case.stop -Chunk $case.chunk
     $r=$x.report
+    Write-Host ('D27 gate reasons for '+$case.id+': '+([string]::Join(',', [string[]]@($r.reasons)))+', D13geometry='+$x.observation.geometryTrustDecision+', eventOuter='+$x.events.Count+', eventD13='+$x.observation.readEvents.Count)
     Check-D27Scope $case.id $x
     Check-D27 ($r.status -ceq $case.expected) ($case.id+' report numeric candidate or conservatively UNKNOWN')
     Check-D27 ((Hash-D27 $image) -ceq $before) ($case.id+' SHA256 unchanged on synthetic input')
