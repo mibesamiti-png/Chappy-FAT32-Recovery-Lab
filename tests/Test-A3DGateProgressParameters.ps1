@@ -101,7 +101,8 @@ $allPass=[regex]::Replace($text,
 $hypothetical=& $tool -LedgerText $allPass
 Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
     $hypothetical.officialWeightedProjectPercent -eq 49 -and
-    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 1 -and`n    $hypothetical.parameters[0].stage -ceq 'R4') 'no_automatic_extra_full_gate_credit'
+    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 1 -and
+    $hypothetical.parameters[0].stage -ceq 'R4') 'no_automatic_extra_full_gate_credit'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
 $duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'
