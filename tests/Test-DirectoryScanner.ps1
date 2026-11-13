@@ -475,6 +475,9 @@ try {
     # Original R4 whole-stage audit: reuse frozen R2 scorer, add R3 SPC1/SPC2 actual physical coverage.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4FormalTwoTrackAcceptance.ps1')
 
+    # B->C5-03: advisory-only actual B directory metadata vs identical C fragment scans.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR5FragmentAdvisorySupport.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
