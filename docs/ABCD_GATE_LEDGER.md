@@ -4,7 +4,7 @@
 
 Read [four-chat gate-closure playbook](ABCD_GATE_CLOSURE_PLAYBOOK.md) and [unchanged original formal roadmap](ABCD_SYNTHETIC_ROADMAP.md) before changing anything.
 
-**Current official completed stage weight: 39% (R0–R3 only).** Rows below are **not a declaration of PASS**. At initialization, individual requirement evidence has NOT been re-audited against current code and the full formal gate. A's second code/CI audit has signed **4 PASS / 22 rows** (B4-01, B4-02, D6-01, A7-03), recorded **6 PARTIAL** (C5-01, C5-02, C5-06, D6-02, D6-03, A7-02) and left **12 AUDIT_NEEDED**. These are narrow stage subchecks, **not** passed R4/R5/R6/R7 stages. A7-02 PR #143 now has [final-head and main 39/39 CI success](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43413134994) but remains PARTIAL until an A-attested live integration adapter exists. Do not confuse absence of this audit with a test failure.
+**Current official completed stage weight: 39% (R0–R3 only).** Rows below are **not a declaration of PASS**. At initialization, individual requirement evidence has NOT been re-audited against current code and the full formal gate. A's third code/CI audit has signed **4 PASS / 22 rows** (B4-01, B4-02, D6-01, A7-03), recorded **10 PARTIAL** (B4-03, C5-01, C5-02, C5-03, C5-06, D6-02, D6-03, D6-04, A7-01, A7-02) and left **8 AUDIT_NEEDED**. The A7-01 PARTIAL upgrade is pending its own final-head synthetic CI; the row must not be treated as signed off before that check. These are narrow stage subchecks, **not** passed R4/R5/R6/R7 stages. A7-02 PR #143 now has [final-head and main 39/39 CI success](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43413134994) but remains PARTIAL until an A-attested live integration adapter exists. Do not confuse absence of this audit with a test failure.
 
 To sign off a row, A (or B/C/D as proposer, then A as verifier) must fill: **status**, code path with HEAD SHA, fixture case IDs, CI URL, actual I/O & UNKNOWN/false-positive scope and explicit residual risks. For `PASS`, independent evidence must cover every requirement in the row; for `PARTIAL`, name missing tests; for `MISSING`, show no implemented support; for `BLOCKED`, name the dependency. `AUDIT_NEEDED` means no completeness assertion has yet been made.
 
@@ -16,7 +16,7 @@ Rows are an operational index of the original formal requirements. **A must add 
 | --- | --- | --- | --- |
 | B4-01 | PASS | `tests/Test-DirectoryScanner.ps1`; synthetic M00/M01/M04/X02 and #136 | Matrix of TP/FP/FN/TN, UNKNOWN and candidate/edge unit by fixture |
 | B4-02 | PASS | #125/#131 B LFN/orphan/deleted tests | Validate both clean + damaged LFN, deletion, orphan coverage and candidate retention |
-| B4-03 | AUDIT_NEEDED | #131/#136 forged-ledger, hidden parent and competing edge cases | Validate false parent/conflicts/cycles, no original path and physical source trust boundary |
+| B4-03 | PARTIAL | #131/#136 forged-ledger, hidden parent and competing edge cases | Validate false parent/conflicts/cycles, no original path and physical source trust boundary |
 | B4-04 | AUDIT_NEEDED | #136 B actual read transcript and A #133/#134 | Bind B-observed spans and short EOF to independent A physical returned events; do not trust B self-ledger |
 | B4-05 | AUDIT_NEEDED | `modules/directory/`, A R7 adapters | Verify bounded, versioned, production-facing result shape and required malformed regression |
 
@@ -26,7 +26,7 @@ Rows are an operational index of the original formal requirements. **A must add 
 | --- | --- | --- | --- |
 | C5-01 | PARTIAL | `modules/carving/Chappy.Carving.psm1`, existing ZIP/3MF tests | Verify ZIP/3MF OPC/XML positive/negative/CRC/decoys and no false integrity claim |
 | C5-02 | PARTIAL | C format tests and production module | Verify binary AND ASCII STL and G-code positives/negatives, parser caps |
-| C5-03 | AUDIT_NEEDED | Existing two-fragment tests and historical C PRs | Withhold start/tail and fragment-order truth; benchmark decoys and correct order |
+| C5-03 | PARTIAL | Existing two-fragment tests and historical C PRs | Withhold start/tail and fragment-order truth; benchmark decoys and correct order |
 | C5-04 | AUDIT_NEEDED | #137 window comparisons and independent artificial SHA scorer | Full SHA vs structure only, TP/FP/FN/TN/UNKNOWN across both corpus tracks, avoid grid bias |
 | C5-05 | AUDIT_NEEDED | A #133/#134 and C source/probe quotas | Actual/unique bytes, calls/probes/candidates/time/memory and true EOF safe failure |
 | C5-06 | PARTIAL | Existing opt-in data-window research and C production scanner | Review whether a **usable bounded guarded candidate feature** rather than only a tests-only helper exists |
@@ -38,14 +38,14 @@ Rows are an operational index of the original formal requirements. **A must add 
 | D6-01 | PASS | D cases M00/M01/M02/X02 and main fixture generator | Verify four primary regression cases and clean controls |
 | D6-02 | PARTIAL | #126/#132/#138 and earlier chain anomaly tests | Complete paired mirror corruption, missing links, distant anomaly, cycles/crosslinks |
 | D6-03 | PARTIAL | A #135 conflicting VBR and D geometry module | Separate BPB/backup/mirror hypotheses and no automatic winner |
-| D6-04 | AUDIT_NEEDED | #126 real observed physical FAT windows, outer A meter | Honest actual vs unique I/O, 4-byte pair coverage, remote UNKNOWN and short EOF |
+| D6-04 | PARTIAL | #126 real observed physical FAT windows, outer A meter | Honest actual vs unique I/O, 4-byte pair coverage, remote UNKNOWN and short EOF |
 | D6-05 | AUDIT_NEEDED | D module exports and tests, fixed vs adaptive #138 | Verify bounded accepted fixed-sample default and no auto FAT copy/repair; **do not promote worse adaptive variant** |
 
 ## R7: Candidate integration — A, formal 10%
 
 | Row | Status | Existing evidence to examine | Specific remaining audit/delivery |
 | --- | --- | --- | --- |
-| A7-01 | AUDIT_NEEDED | #123/#128 synthetic live B/C/D integration | Versioned adapters on actual B/C/D outputs under one nonwritable stream |
+| A7-01 | PARTIAL | #123/#128 synthetic live B/C/D integration | Versioned adapters on actual B/C/D outputs under one nonwritable stream |
 | A7-02 | PARTIAL | #133 candidate tokens and `tests/helpers/Merge-A3DSyntheticEvidence.ps1` | Identity conflicts: same candidate ID with different ordered extents; different ID same bytes |
 | A7-03 | PASS | #133/#134 A receipts, source quota tests | Full candidate physical reread/byte-union, source/candidate phase ID, dedup/cap |
 | A7-04 | AUDIT_NEEDED | #134 early EOF, #135 contradictory BPB | Reordered input, conflicting geometry and extents, forged tokens, early EOF UNKNOWN |
@@ -79,6 +79,19 @@ Each status below is a **narrow formal subcheck**; original full-stage R4–R7 r
 | **D6-03 PARTIAL** | D merged [#146](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/146), new deny-only `modules/fat-analysis/Fat32GeometryHypothesisGate.psm1` with primary+backup independent hypotheses, strictly nonwritable source, <=2048 physical returned B, <=256 reads, always `fatReadAllowed=false` and `fatRegionProbeCount=0`, no FAT winner. On 12 generated standards-shaped FAT32 controls: metadata contradiction TP6 FP0 FN0 TN2 UNKNOWN4; 19024 physical returned source B /200 calls /0 FAT-region reads. Final [D native #43420906023](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43420906023) SUCCESS 87/87 and [privacy/central #43420905966](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43420905966) SUCCESS at `065a139612b4313e6afa896c577045c939ff4120`. | Matching VBRs remain unverified, full geometry provenance and A-source-attested reads unresolved; D6-04/05 require independent audit. |
 
 **Current A-signed row counts** B=2 PASS/5, C=0 PASS +3 PARTIAL/6, D=1 PASS +2 PARTIAL/5, A=1 PASS +1 PARTIAL/6. **Totals: 4 PASS, 6 PARTIAL, 12 AUDIT_NEEDED, 22 registered.** A condition ratio must never be reported as verified restoration percentage; it is separate from full-stage acceptance.
+
+## Third A gate-closure audit — B #148, C #150, D #149, A live BCD envelope (2026-11-13 JST)
+
+Only a narrow **stage subcheck** is assessed here; the original complete R4/R5/R6/R7 formal gates remain unpassed and official whole-stage weighted completion remains **39%**.
+
+| Gate | Accepted experimental evidence | Still missing |
+| --- | --- | --- |
+| **B4-03 PARTIAL** | Reviewed and merged [#148](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/148), exact HEAD `79287202528fbd31a7d1f7e10c5eb5fa9c34c068`. B default-OFF `-NeverPromoteUnattestedParentEdges` causes 6 forged scanner-ledger parent edges to become UNKNOWN/partial instead of apparent probable6, preserving all 6 candidate edges. Three independently observed structural positives also intentionally abstain. No extra reads; no original path. [Native B CI #43430903691](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43430903691), [privacy+central 40/40 #43430903668](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43430903668) SUCCESS. | Independent A-trusted B4-04 source receipts, competing-parent/hidden-window complete acceptance and reviewed versioned B4-05 adapter. |
+| **C5-03 PARTIAL** | Reviewed and merged [#150](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/150), exact HEAD `c8ebc0019a1e5d85d5ec34cc4d604e0a0bc21479`. Default-OFF callable `Get-ChappyFragmentCandidates` searches a fixed 65536B window without original start/tail/SHA, two ordered fragments, bounded physical 81920B and <=16 pair trials; on 9 generated synthetic cases original exact case scorer TP6 FP0 FN2 TN1 with UNKNOWN3, one *different-unit* CRC structural candidate wrong original SHA (ambiguity retained), real physical reversed fragment placement handled, true EOF incomplete. [C native #43431308881](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43431308881) and [privacy+central 40/40 #43431313601](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43431313601) SUCCESS. | Realistic fragmented/large/off-grid ZIP/3MF breadth, original-byte oracle independent, A candidate validation receipts and A7 integration; no original-file claims. |
+| **D6-04 PARTIAL** | Reviewed and merged [#149](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/149), exact HEAD `cbb0e33179a1f3c2291236ea060e7723537ea0be`. New pure `Get-ChappyFatPhysicalPairCoverage` compares D self-events to an independently supplied ordered successful-return event list under <=2048 physical B, 256 events. Five standards-shaped artificial numeric cases show **64/65664** physically complete paired FAT indices (65600 remote UNKNOWN), four malformed/short cases return UNKNOWN/null; 12146 actual returned source B, 11854 unique, 437 calls across 9 sources. [D native #43432917489](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43432917489) and [privacy+central 40/40 #43432917588](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43432917588) SUCCESS. | Caller event list/geometry still not A-attested, incomplete FAT coverage cannot assert mirror health/real owner; A7 source join and D6-05 acceptance. |
+| **A7-01 PARTIAL** | New A-owned [live envelope](R7_LIVE_BCD_ENVELOPE.md) and `core/Chappy.LiveBcdEvidence.psm1` actually execute B geometry+directory+strict parent graph, C bounded image-prefix scanner and D observed-I/O sampler under one A in-process outer successful-return meter. Deny default, artificial nonwritable MemoryStream only, <=120000 returned B and <=512 physical Read calls. Real B/C/D source byte summaries MUST match the outer meter; A candidate definition IDs are normalized but no candidate-specific reread proof is claimed. New `tests/Test-A3DLiveBcdEnvelope.ps1` and 41st isolated central synthetic script. Exact PR-head CI **PENDING at the time of drafting**. | Integration is still artificial memory-only, not source-token authenticated candidate-validation/provenance/format correctness; A7-06 final public-safe interface requires more review. |
+
+**Parameters:** B=2 PASS/1 PARTIAL/2 AUDIT_NEEDED (verified40.0%; assessed60.0%); C=0/4/2 (0.0%;66.7%); D=1/3/1 (20.0%;80.0%); A=1/2/3 (16.7%;50.0%). Total **4 PASS, 10 PARTIAL, 8 AUDIT_NEEDED = 22**, reviewed 63.6% of rows. Assessed or partial ≠ percent implemented and 4/22 PASS ≠ full stage completion. R8 remains blocked and real IMG/card NOT APPROVED.
 
 ## Approved workflow
 
