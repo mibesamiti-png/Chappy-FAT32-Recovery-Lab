@@ -2,6 +2,10 @@
 
 Team A owns this roadmap under [Issue #1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1). The goal is an executable synthetic research system that discovers files, diagnoses corruption, evaluates bounded fragment reconstruction and safely exports candidates. The live roster is [TEAM_DISPATCH.md](TEAM_DISPATCH.md). Milestone numbers below apply to this roadmap. The separate R0–R4 research gates in [ALGORITHM_RESEARCH_PROTOCOL.md](ALGORITHM_RESEARCH_PROTOCOL.md) apply to every new algorithm.
 
+## Seventh A original whole-R4 stage acceptance (2026-11-14 JST)
+
+**Formal R4 = ACCEPTED on generated synthetic evidence only (10% weight)** after A independently reviewed original R4 clauses against B #165 two-track matrix, actual source coverage, hidden-parent/forged ledger/UNKNOWN and bounded versioned B/A integration. Final-head B Windows #43498019222 (1515 assertions), privacy/central #43498019225 (44/44), post B merge main #43501246833 all SUCCESS. [Independent A formal signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md) is contingent on that signoff PR's own final-head/post-main CI. Official fully gated **49% (R0–R4)** after adoption, not actual file recovery or media authenticity; other stages incomplete and R8 blocked. **Original R4 criteria in table below remain unchanged**.
+
 ## R0 inventory — 2026-11-12 JST
 
 Snapshot of main: `1e86ca2c362dc62a7e8010ec0fc92fc7822f2022`. Main includes the 2 MiB FAT32-like clean 3MF, binary STL and G-code generator and independent SHA oracle from #67, the central synthetic runner with 17 suites, and the earlier small legacy damage benchmark. A B/D read-only diagnostic preflight and an independent C carving/export path exist. The preflight and the isolated C export do not yet provide an integrated B/C/D reconstruction-and-export workflow. [Main baseline CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43054246883).
