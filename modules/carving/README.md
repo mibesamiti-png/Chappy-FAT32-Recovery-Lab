@@ -166,3 +166,19 @@ Synthetic negative tests cover CRC tampering, invalid DEFLATE, ZIP truncation, h
 - Validation probes stay within the current scan window and its shared read/probe budget. Under dense adversarial input, the scanner may stop early and **not** find later files. This is intentional, and callers must not infer absence of files from partial results.
 - Returned offsets are logical offsets in the input stream, not clusters or partition-relative addresses.
 - Never send real recovered files, unredacted reports, or source IMG data to GitHub.
+
+## R5 C5-02: bounded opt-in STL format evidence (gate review pending)
+
+This is a **guarded C module**, not a general STL recovery engine, FAT-aware reconstruction or export. The main ZIP/3MF/G-code scanner and its defaults are **unchanged**.
+
+```powershell
+Import-Module .\modules\carving\Chappy.StlEvidence.psm1 -Force
+# Synthetic, generated, strictly non-writable stream supplied by a trusted caller.
+$result = Get-ChappyStlCandidates -Stream $syntheticReadOnlyStream -EnableStlEvidence -StartOffset 0 -MaxScanBytes 65536 -MaxSourceBytes 65536
+```
+
+Without `-EnableStlEvidence` this function returns `status=disabled` and performs **zero source reads**. The caller owns the stream: the module never opens a path or creates an output file. Accepted input is readable, seekable, and **CanWrite=false**. This finite **512-byte aligned** profile recognizes only binary STL with **1–8 facets** within one sector, printable/zero 80-byte header, finite numeric coordinates, and zero attribute bytes, or ASCII STL with **one facet**, well-formed `solid/facet/outer loop/3 vertex/endloop/endfacet/endsolid` and finite coordinates. Other valid but larger, shifted, uncommon-header, or multi-facet STL files remain **UNKNOWN**, not rejected as absent.
+
+The module reserves `MaxScanBytes` (default 65,536 returned bytes) and the identical validator-work ceiling before any reads; at most 128 sector probes, 16 candidates and 30 s cooperative wall-clock work. One fixed 512-byte scratch buffer per probe; `validatorBytesRead` measures bytes inspected in memory, **not peak process memory**. Source `bytesRead` and `readRequests` count actual `Stream.Read` returns/calls. Early EOF, quota/candidate/time exhaustion or unavailable window returns `partial` **with no retained early winner**, while coverage outside the window is always UNKNOWN. An observed STL candidate is `probable` **structural-only**, never authentic original bytes, and is not compatible with the C file exporter; this module has no export API or A-issued source receipts.
+
+Artificial regression: `modules/carving/tests/R5StlModuleGateRegression.ps1` invoked by the Team C Windows PowerShell 5.1 suite. Negative controls include malformed count, ASCII grammar/number, nonfinite triangle float, all-zero vertices, 17B then real EOF, underquota/short window, writable stream and dense structural signature flood. Independent scorer checks exact generated-original SHA, not returned as candidate confidence. User physical microSD and only 31GB master IMG remain **NOT APPROVED for any access**.
