@@ -8,6 +8,11 @@ function Get-ChappyFragmentCandidates {
     [CmdletBinding()]param(
         [Parameter(Mandatory=$true)][IO.Stream]$Source,
         [switch]$EnableFragmentEvidence,
+        # Caller-provided *search window* origin, NEVER original first/tail offset.
+        [ValidateRange(0,9223372036854775806)][long]$StartOffsetBytes=0,
+        # Explicit large-source guard for generated standards-shaped FAT32 tests.
+        # Default is unchanged: refuse sources larger than 2 MiB.
+        [switch]$EnableStandardsShapedSource,
         [ValidateRange(512,65536)][int]$WindowBytes=65536,
         [ValidateRange(1,4)][int]$MaxStarts=4,
         [ValidateRange(1,8)][int]$MaxTails=8,
@@ -22,6 +27,7 @@ function Get-ChappyFragmentCandidates {
     if(-not $EnableFragmentEvidence){
         return [pscustomobject]@{
             schemaVersion='1';team='C';status='disabled';decision='unknown'
+            windowHintOrigin='caller_unattested';searchWindowStartBytes=$null
             scanIncomplete=$true;originalIdentity='unknown';selectedOriginal=$null
             canAutoSelectOriginal=$false;items=@();warnings=@('fragment.optin_required')
             metrics=[pscustomobject]@{
@@ -34,7 +40,15 @@ function Get-ChappyFragmentCandidates {
     if(-not $Source.CanRead -or -not $Source.CanSeek -or $Source.CanWrite) {
         throw 'CFragment requires non-writable readable seekable Stream'
     }
-    if($Source.Length -gt 2097152L) {throw 'CFragment tiny source exceeds 2MiB'}
+    # Large *synthetic* FAT32 buffers require a separate explicit opt-in,
+    # but even then we READ ONLY the same bounded 64 KiB scout and pair probes.
+    # The stream is caller-owned; C cannot attest that the stream is synthetic.
+    if(-not $EnableStandardsShapedSource -and $Source.Length -gt 2097152L){
+        throw 'CFragment default 2MiB source bound exceeded'
+    }
+    if($EnableStandardsShapedSource -and $Source.Length -gt 134217728L){
+        throw 'CFragment guarded source bound 128MiB exceeded'
+    }
     Import-Module (Join-Path $PSScriptRoot 'Chappy.Carving.psm1') -ErrorAction Stop
     # Same finite hypotheses are tried for EVERY case, not passed as truth.
     [int[]]$tailPhases=@(0,1)
@@ -50,13 +64,18 @@ function Get-ChappyFragmentCandidates {
     $records=New-Object 'System.Collections.Generic.List[object]'
     $physical=0L;$requests=0;$sectors=0;$pairs=0;$memoryBytes=0L
     $status='ok';$stop='none'
-    if($WindowBytes%512 -ne 0 -or $WindowBytes -gt $Source.Length){
+    # Validate source-relative 512B window geometry WITHOUT any source reads.
+    # StartOffset is an UNTRUSTED discovery-region hint, not a FAT chain or
+    # first/tail ground truth. Its accuracy must be assessed independently.
+    if($WindowBytes%512 -ne 0 -or $StartOffsetBytes%512 -ne 0){
+        $status='partial';$stop='search.window_alignment'
+    }elseif($StartOffsetBytes -gt ($Source.Length-[long]$WindowBytes)){
         $status='partial';$stop='search.window_unavailable'
     }elseif($MaxSourceBytes -lt $WindowBytes){
         $status='partial';$stop='search.scout_budget_unavailable'
     }
     if($status -eq 'ok'){
-        for($sector=0L;$sector -lt $WindowBytes;$sector+=512L){
+        for($sector=[long]$StartOffsetBytes;$sector -lt ($StartOffsetBytes+[long]$WindowBytes);$sector+=512L){
             if($watch.ElapsedMilliseconds -ge $MaxMilliseconds){$status='partial';$stop='search.time_limit';break}
             [byte[]]$block=New-Object byte[] 512
             [void]$Source.Seek($sector,[IO.SeekOrigin]::Begin)
@@ -175,13 +194,15 @@ function Get-ChappyFragmentCandidates {
     $watch.Stop()
     return [pscustomobject]@{
         schemaVersion='1';team='C';status=$status;decision=$decision
-        scanIncomplete=($WindowBytes -lt $Source.Length -or $status -ne 'ok')
+        windowHintOrigin='caller_unattested';searchWindowStartBytes=[long]$StartOffsetBytes
+        scanIncomplete=($StartOffsetBytes -ne 0 -or $WindowBytes -lt $Source.Length -or $status -ne 'ok')
         originalIdentity='unknown';selectedOriginal=$null;canAutoSelectOriginal=$false
         # Never choose a unique "original"; one_possible means a single
         # *format-consistent* physical hypothesis among the bounded trials.
         items=$(if($status -eq 'ok'){@($accepted.ToArray())}else{@()})
         warnings=$(if($status -eq 'ok'){@('fragment.unscanned_source_unknown')}else{@($stop)})
         metrics=[pscustomobject]@{
+            searchWindowStartBytes=[long]$StartOffsetBytes;searchWindowBytes=[long]$WindowBytes
             sectorProbes=$sectors;startCandidates=$starts.Count;tailCandidates=$tails.Count
             pairAttempts=$pairs;returnedCandidateCount=$positive
             sourceBytesRead=$physical;readRequests=$requests
