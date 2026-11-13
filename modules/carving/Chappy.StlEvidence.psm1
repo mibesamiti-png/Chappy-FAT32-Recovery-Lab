@@ -261,60 +261,7 @@ function Get-ChappyGcodeEvidence {
         $commands=0;$motion=0;$preamble=0;$count=0
         # Permitted *syntax*, not a safety whitelist to execute on a printer:
         # all other G/M/T codes remain UNKNOWN, including manufacturer dialects.
-        $lineRegex='^(?:G(?:0|1|28|90|91|92)|M(?:104|109|106|107|140|190|82|83|84|73))(?:[ \t]+[A-Za-z][-+]?(?:\d+(?:\.\d*)?|\.\d+))*[ \t]*
-
-        foreach($line in $lines){
-            if($clock.ElapsedMilliseconds -ge $MaxWorkMilliseconds){
-                $failed=$true;$result.warnings=@('gcode.time_budget_exhausted');break
-            }
-            if($line.Length -eq 0){continue}
-            if($line.EndsWith([string][char]13)){$line=$line.Substring(0,$line.Length-1)}
-            if($line.Length -gt $MaxLineBytes){
-                $failed=$true;$result.warnings=@('gcode.line_limit');break
-            }
-            $count++
-            if($count -gt $MaxLines){
-                $failed=$true;$result.warnings=@('gcode.line_count_limit');break
-            }
-            # A "G1" inside a semicolon comment is NOT a command.
-            $head=($line -split ';',2)[0].Trim()
-            if($head.Length -eq 0){continue}
-            if($head -cnotmatch $lineRegex){
-                $failed=$true;$result.warnings=@('gcode.outside_strict_profile');break
-            }
-            $commands++
-            if($head -cmatch '^G(?:0|1)(?:[ \t]|$)' -and
-               $head -cmatch '(?:^|[ \t])[XYZ][-+]?(?:\d+(?:\.\d*)?|\.\d+)'){
-                $motion++
-            }
-            if($head -cmatch '^G28(?:[ \t]|$)'){$preamble++}
-        }
-        $result.metrics.linesChecked=$count
-        $result.metrics.commandsChecked=$commands
-        if(-not $failed -and ($count -lt 6 -or $commands -lt 4 -or $motion -lt 1 -or $preamble -lt 1)){
-            $failed=$true;$result.warnings=@('gcode.insufficient_syntax_evidence')
-        }
-    }
-    $clock.Stop()
-    $result.metrics.elapsedMilliseconds=[int]$clock.ElapsedMilliseconds
-    if(-not $failed){
-        $result.status='ok';$result.decision='format_consistent'
-        $result.scanIncomplete=($OffsetBytes -gt 0 -or $LengthBytes -lt $Stream.Length)
-        $result.warnings=$(if($result.scanIncomplete){@('gcode.unobserved_source_unknown')}else{@()})
-        $result.items=@([pscustomobject]@{
-            format='gcode';offsetBytes=$OffsetBytes;lengthBytes=$LengthBytes
-            confidence='probable';originalIdentity='unknown'
-            integrityScope='heuristic_text_only_not_original_file_integrity'
-            evidence=@('gcode.bounded_ascii_syntax_profile','gcode.real_motion','gcode.comment_not_command')
-            sourceOrigin='unattributed_without_A_meter'
-            truncated=$false
-        })
-    }
-    return [pscustomobject]$result
-}
-
-Export-ModuleMember -Function Get-ChappyStlCandidates,Get-ChappyGcodeEvidence
-
+        $lineRegex='^(?:G(?:0|1|28|90|91|92)|M(?:104|109|106|107|140|190|82|83|84|73))(?:[ \t]+[A-Za-z][-+]?(?:\d+(?:\.\d*)?|\.\d+))*[ \t]*$'
 
         foreach($line in $lines){
             if($clock.ElapsedMilliseconds -ge $MaxWorkMilliseconds){
