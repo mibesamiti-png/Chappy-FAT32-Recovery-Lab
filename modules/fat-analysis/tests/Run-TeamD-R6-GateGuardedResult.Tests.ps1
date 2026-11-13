@@ -218,7 +218,8 @@ foreach($c in $cases){
         }
         if($c.id -eq 'call_cap4_1byte'){
             Assert-D605 ($t.calls -eq 4 -and $o.metrics.physicalReadCalls -eq 4 -and
-                $o.metrics.refusedReadCalls -ge 1) 'True physical Read call cap blocks short-return amplification'
+                $o.reasonCodes -contains 'io.bounded_structure_observation_failed' -and
+                $o.guardDecision -ceq 'blocked_insufficient_evidence') 'Inner VBR call quota stops at four physical reads; outer quota not falsely claimed exceeded'
         }
     }
     $allActual+=$t.actual;$allUnique+=$t.unique;$allCalls+=$t.calls
