@@ -985,3 +985,7 @@ Invoke-CQuarterStratifiedWindowRegression
 # Team C R5 gate C5-02: usable guarded STL module + G-code compatibility.
 . (Join-Path $PSScriptRoot 'R5StlModuleGateRegression.ps1')
 Invoke-CStlModuleGateRegression
+
+# Team C R5 ledger C5-01: bounded optional ZIP/3MF OPC/XML evidence gate.
+. (Join-Path $PSScriptRoot 'R5OpcXmlGateRegression.ps1')
+Invoke-C3mfOpcGateRegression

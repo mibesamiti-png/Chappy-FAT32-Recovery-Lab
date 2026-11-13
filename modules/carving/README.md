@@ -182,3 +182,20 @@ Without `-EnableStlEvidence` this function returns `status=disabled` and perform
 The module reserves `MaxScanBytes` (default 65,536 returned bytes) and the identical validator-work ceiling before any reads; at most 128 sector probes, 16 candidates and 30 s cooperative wall-clock work. One fixed 512-byte scratch buffer per probe; `validatorBytesRead` measures bytes inspected in memory, **not peak process memory**. Source `bytesRead` and `readRequests` count actual `Stream.Read` returns/calls. Early EOF, quota/candidate/time exhaustion or unavailable window returns `partial` **with no retained early winner**, while coverage outside the window is always UNKNOWN. An observed STL candidate is `probable` **structural-only**, never authentic original bytes, and is not compatible with the C file exporter; this module has no export API or A-issued source receipts.
 
 Artificial regression: `modules/carving/tests/R5StlModuleGateRegression.ps1` invoked by the Team C Windows PowerShell 5.1 suite. Negative controls include malformed count, ASCII grammar/number, nonfinite triangle float, all-zero vertices, 17B then real EOF, underquota/short window, writable stream and dense structural signature flood. Independent scorer checks exact generated-original SHA, not returned as candidate confidence. User physical microSD and only 31GB master IMG remain **NOT APPROVED for any access**.
+
+## R5 C5-01: optional bounded 3MF ZIP/OPC/XML consistency evidence
+
+This is an **extra validation step on a caller-selected candidate extent**; it is not a candidate finder, recovery engine or original-file authenticator. The existing C ZIP/3MF/G-code signature scanner and exporter stay unchanged. Enable explicitly in **generated synthetic tests** only:
+
+```powershell
+Import-Module .\modules\carving\Chappy.OpcEvidence.psm1 -Force
+$result = Get-Chappy3MfOpcEvidence -Stream $syntheticReadOnlyStream -EnableOpcXmlEvidence -OffsetBytes 0 -LengthBytes 2048
+```
+
+The `LengthBytes` parameter above is merely illustrative: pass the actual bounded proposed ZIP candidate length (128–8192B). The module does not discover this length, any file's original extent or a FAT chain. With `-EnableOpcXmlEvidence` absent it returns `disabled` and reads **zero bytes**. The caller's source must be **non-writable, readable and seekable**; there is no path open, original-file export or payload in the result.
+
+The module reads at most **8192 actual source bytes**, in one bounded in-memory copy, then reuses the existing C ZIP local/central/EOCD + opt-in small CRC check on those bytes. A conservative three-part 3MF OPC profile checks `[Content_Types].xml`, `_rels/.rels` and `3D/3dmodel.model`, expected namespaces, model MIME override, one internal StartPart relationship to `/3D/3dmodel.model`, XML root and `resources/build` elements. **This does not prove full 3MF mesh/resource/build semantics or authentic original bytes**. Other valid 3MF configurations, named parts or format extensions may remain UNKNOWN rather than disproven.
+
+XML is parsed with `XmlReaderSettings.DtdProcessing=Prohibit`, no external resolver and a character limit. ZIP has at most 8 entries and <=32768 B declared total uncompressed; required XML parts each <=8192 actual inflated bytes, <=16384 total XML bytes, max 8192 physical source buffer; remaining in-memory parsing is bounded. Limits/timeouts are cooperative, not an uninterruptible real-time guarantee. Invalid ZIP/CRC, XML/OPC references, short returned source read, quota failure and disallowed XML lead to `partial/unknown` without a winner, A provenance token, filesystem path, or extraction.
+
+See `modules/carving/tests/R5OpcXmlGateRegression.ps1` (12 wholly artificial cases, including corrupted CRC, external DTD, wrong StartPart, missing/duplicate parts, valid-but-byte-changed model and early 17B then EOF); synthetic original SHA is kept in an independent scorer. Original physical microSD and unique master ~31GB IMG remain **NOT APPROVED for access of any kind**. This feature provides C5-01 review evidence but does **not** by itself make the whole R5 formal stage PASS.
