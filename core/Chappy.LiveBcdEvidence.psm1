@@ -8,6 +8,8 @@ Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.Carving.psm1')
 Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32ObservedIoEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Chappy.CandidateDefinitionBoundary.psm1') -Force
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryEvidenceEnvelope.ps1')
+. (Join-Path $PSScriptRoot '..\modules\directory\DirectoryReadReconciliation.ps1')
+. (Join-Path $PSScriptRoot '..\modules\directory\DirectoryParentObservationJoin.ps1')
 Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32GuardedResult.psm1') -Force
 
 if(-not ('ChappyA7LiveMeterV1' -as [type])){
@@ -75,6 +77,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   [switch]$EnableSyntheticLiveBcd,
   # Preserves old A contract unless explicitly selected.
   [switch]$UseVersionedBDContracts,
+  # Requires versioned B and actual A-owned meter; not a caller event array.
+  [switch]$BindAObservedDirectoryReceipts,
   [ValidateRange(1024,120000)][long]$MaxPhysicalReadBytes=120000,
   [ValidateRange(1,512)][int]$MaxReadCalls=512
  )
@@ -89,6 +93,7 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   c=[pscustomobject]@{status='unknown';candidateCount=0;scanIncomplete=$true}
   d=[pscustomobject]@{status='unknown';fatWinner='not_selected';writePermitted=$false}
   candidateDefinitions=@()
+  bPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_directory_source_receipt_v1';decision='not_requested';outerEventOrigin='none';sourceAuthenticity='not_proven';observedCompletedSpans=0;observedStructuralPairs=0;originalParent='unknown';canExport=$false}
   warnings=@('a7.optin_required')
   metrics=[pscustomobject]@{
    actualReturnedBytes=0L;uniqueReturnedBytes=0L;repeatedReturnedBytes=0L
@@ -99,6 +104,10 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
  }
  if(-not $EnableSyntheticLiveBcd){return [pscustomobject]$result}
  $result.status='partial'
+ if($BindAObservedDirectoryReceipts -and -not $UseVersionedBDContracts){
+  $result.warnings=@('a7.directory_receipt_requires_versioned_B')
+  return [pscustomobject]$result
+ }
  $result.warnings=@('a7.unobserved_data_remains_unknown')
  if($Source -isnot [IO.MemoryStream] -or -not $Source.CanRead -or
     -not $Source.CanSeek -or $Source.CanWrite -or
@@ -125,6 +134,30 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
    $result.b=[pscustomobject]@{status=[string]$directory.status;candidateCount=@($directory.items).Count;edgeCount=@($hierarchy.edges).Count;probableParentEdges=$probable}
   }
   if($probable -ne 0){throw 'A7.unattested_parent_confidence'}
+  if($BindAObservedDirectoryReceipts){
+   # Actual positive Stream.Read returns from THIS live A meter only.
+   $aEvents=@($meter.Events | ForEach-Object {
+    [pscustomobject]@{Consumer=[string]$_.Consumer;OffsetBytes=[long]$_.OffsetBytes;ReturnedBytes=[int]$_.ReturnedBytes}
+   })
+   $match=Compare-ChappyBDirectoryReturnedEvidenceV1 -DirectoryEnvelope $directory -OuterReadEvents @($aEvents) -SourceLengthBytes ([long]$Source.Length) -MaxEvents 512 -MaxSpans 8
+   $parent=Get-ChappyBParentObservationV1 -DirectoryEnvelope $directory -OuterReadEvents @($aEvents) -SourceLengthBytes ([long]$Source.Length) -MaxEvents 512 -MaxSpans 8 -MaxEdges 16
+   if($match.decision -ceq 'contradicted' -or
+      $parent.intervalJoin -ceq 'contradicted'){
+    throw 'A7.directory_A_meter_vs_B_source_ledger_contradicted'
+   }
+   $sourceDecision=$(if($match.decision -ceq 'consistent_unattested'){
+     'A_in_process_returned_intervals_consistent'
+    }else{'partial_unknown'})
+   $result.bPhysicalReceipt=[pscustomobject]@{
+    schemaVersion='a7_directory_source_receipt_v1'
+    decision=$sourceDecision
+    outerEventOrigin='A_in_process_live_Stream_Read_only'
+    sourceAuthenticity='not_real_media_authenticated'
+    observedCompletedSpans=[int]$match.metrics.matchingCompletedSpans
+    observedStructuralPairs=[int]$parent.metrics.observedPairUnattested
+    originalParent='unknown';canExport=$false
+   }
+  }
 
   $meter.BeginConsumer('carving')
   $cArgs=@{Stream=$meter;MaxScanBytes=65536;ExtraValidationReadBytes=32768;MaxFileBytes=4096;MaxCandidates=16;MaxProbes=16;MaxProbeBytes=8192}
@@ -186,6 +219,7 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $result.c=[pscustomobject]@{status='unknown';candidateCount=0;scanIncomplete=$true}
   $result.d=[pscustomobject]@{status='unknown';fatWinner='not_selected';writePermitted=$false}
   $result.candidateDefinitions=@()
+  $result.bPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_directory_source_receipt_v1';decision='unattributed';outerEventOrigin='A_in_process_live_Stream_Read_only';sourceAuthenticity='not_proven';observedCompletedSpans=0;observedStructuralPairs=0;originalParent='unknown';canExport=$false}
   $result.sourceReadEvidence='unattributed'
   $result.warnings=@('a7.source_or_module_incomplete_unknown')
   $result.metrics=[pscustomobject]@{
