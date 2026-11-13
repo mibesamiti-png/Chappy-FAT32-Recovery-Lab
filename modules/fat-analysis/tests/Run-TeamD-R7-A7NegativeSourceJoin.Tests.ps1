@@ -134,8 +134,9 @@ foreach($case in $cases){
         $totalReturned+=[long]$a.metrics.actualReturnedBytes
         $sumUnique+=[long]$a.metrics.uniqueReturnedBytes
         $totalCalls+=[long]$a.metrics.physicalReadCalls
+        $guardLog=$(if($null -ne $a.d.PSObject.Properties['guardDecision']){[string]$a.d.guardDecision}else{'not_evaluated'})
         Write-Host ('D R7 A-live case={0} A_source_status={1} Dguard={2} A_FAT_receipt={3} paired={4}/65664 actual/unique={5}/{6} physicalCalls={7}' -f
-            $case.id,$a.status,$a.d.guardDecision,$receipt.decision,$receipt.pairedFullyObservedEntries,$a.metrics.actualReturnedBytes,$a.metrics.uniqueReturnedBytes,$a.metrics.physicalReadCalls)
+            $case.id,$a.status,$guardLog,$receipt.decision,$receipt.pairedFullyObservedEntries,$a.metrics.actualReturnedBytes,$a.metrics.uniqueReturnedBytes,$a.metrics.physicalReadCalls)
     }finally{$stream.Dispose()}
     $fixture=$null;$image=$null
     if($case.id -ne 'clean_SPC1'){[GC]::Collect()}
