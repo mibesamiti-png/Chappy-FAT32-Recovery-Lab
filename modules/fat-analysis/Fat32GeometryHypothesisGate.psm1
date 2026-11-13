@@ -76,13 +76,36 @@ function Get-ChappyFatGeometryHypothesisGate {
     if($null -ne $comparison){
         $agreement=[string]$comparison.agreement
         foreach($c in @($comparison.candidates)){
-            [void]$grades.Add([string]$c.plausibility)
+            # D5 intentionally also supports tiny FAT32-like research
+            # fixtures and reports their raw *numerical* hypotheses. Its
+            # legacy "plausible" grade is NOT permission to read FAT.
+            # Enforce stricter FAT32/mirrored-reader eligibility ONLY at
+            # this deny-first D6-03 production boundary.
+            $strict=New-Object System.Collections.ArrayList
+            $g=$c.geometry
+            if($null -ne $g.extendedFlags -and [long]$g.extendedFlags -ne 0){
+                [void]$strict.Add('bpb.extended_flags_not_mirrored_fixed_compatible')
+            }
+            if($null -ne $g.hiddenSectors -and
+               $null -ne $comparison.mbr.startOffsetBytes -and
+               [long]$g.hiddenSectors -ne [long]($comparison.mbr.startOffsetBytes/512)){
+                [void]$strict.Add('bpb.hidden_sectors_disagrees_with_mbr')
+            }
+            if($null -ne $g.dataClusterCount -and
+               [long]$g.dataClusterCount -lt 65525){
+                [void]$strict.Add('geometry.below_fat32_cluster_threshold')
+            }
+            $contradictions=New-Object System.Collections.ArrayList
+            foreach($code in @($c.reasonCodes)){[void]$contradictions.Add([string]$code)}
+            foreach($code in $strict){[void]$contradictions.Add([string]$code)}
+            $strictGrade=$(if($strict.Count -gt 0){'contradicted'}else{[string]$c.plausibility})
+            [void]$grades.Add($strictGrade)
             [void]$hypotheses.Add([pscustomobject]@{
                 sourceRole=[string]$c.sourceRole
                 locatorTrust='primary_declared_unverified'
                 probeOffsetBytes=$c.probeOffsetBytes
-                plausibility=[string]$c.plausibility
-                contradictionCodes=@($c.reasonCodes)
+                plausibility=$strictGrade
+                contradictionCodes=@($contradictions.ToArray())
                 unknownCodes=@($c.unknownCodes)
                 numericGeometry=[pscustomobject]@{
                     fat1OffsetBytes=$c.geometry.fat1OffsetBytes
@@ -90,6 +113,8 @@ function Get-ChappyFatGeometryHypothesisGate {
                     fatLengthBytes=$c.geometry.fatLengthBytes
                     dataClusterCount=$c.geometry.dataClusterCount
                     rootCluster=$c.geometry.rootCluster
+                    hiddenSectors=$c.geometry.hiddenSectors
+                    extendedFlags=$c.geometry.extendedFlags
                     bytesPerSector=$c.geometry.bytesPerSector
                     sectorsPerCluster=$c.geometry.sectorsPerCluster
                 }
@@ -111,7 +136,8 @@ function Get-ChappyFatGeometryHypothesisGate {
                 numericGeometry=[pscustomobject]@{
                     fat1OffsetBytes=$null;fat2OffsetBytes=$null
                     fatLengthBytes=$null;dataClusterCount=$null
-                    rootCluster=$null;bytesPerSector=$null
+                    rootCluster=$null;hiddenSectors=$null
+                    extendedFlags=$null;bytesPerSector=$null
                     sectorsPerCluster=$null
                 }
                 sourceIdentity='unknown'
