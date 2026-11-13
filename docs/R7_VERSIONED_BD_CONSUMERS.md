@@ -1,0 +1,24 @@
+# Team A R7 A7-06: versioned B4-05 and D6-05 live consumer integration
+
+**Status: A7-06 PARTIAL, not accepted R7 full gate; artificial in-memory test only.** Main base `7a1d39f6502ad43d41059d0106bd9ac9c459a449`. Original 31GB master IMG and physical microSD remain NOT APPROVED for any read/hash/scan/copy/write/extract/repair/upload.
+
+## Why this integration matters
+
+The first A7 live envelope (#151) called B's raw directory/hierarchy functions and D's raw bounded FAT observation separately. B #154 and D #153 now export **stable redacted consumer result contracts** and D's safer deny-first VBR policy. Without a real A adapter, those new safety capabilities would remain available only to independent module consumers, not our R7 shared-source workflow.
+
+`core/Chappy.LiveBcdEvidence.psm1` now additionally supports **explicit** `-UseVersionedBDContracts` on the already default-OFF `Invoke-ChappyA7SyntheticLiveBcdEnvelope` function. The legacy path is preserved as the default to avoid regression. With both enable switches, exactly one A-owned nonwritable generated 2–100MiB MemoryStream and <=120,000 successful returned bytes/512 physical Read calls is shared across B, C and D. A independently records actual successful source returns and per-consumer label rather than trusting B/D internal byte ledgers.
+
+- **B:** actual `Get-ChappyBDirectoryEvidenceV1`, strict parent abstention, version `b_directory_evidence_v1`; no raw names, original paths or file contents, only numeric `candidateCount`/`edgeCount` and source status. B scanner's **self-reported directory-returned bytes** must equal the A meter's separate directory phase returned bytes. B-generated spans remain `unattested` and are not A-issued source proof.
+- **C:** existing actual `Get-ChappyCarvingCandidates` remains prefix-bounded in this increment. A normalizes C candidate canonical ID+ordered extent, but **does not re-read every candidate under an A-issued candidate-validation phase**. Original bytes and candidate authenticity remain UNKNOWN.
+- **D:** actual new `Get-ChappyFatGuardedResult` with shared D internal bound 4096B/256 Read calls; checks primary/backup VBR hypotheses **before** optional fixed FAT sampling; mismatched/invalid/short geometry cannot trigger FAT-region reads. The entire D internal geometry+FAT physical returned-byte count must equal A meter's fat phase count. A output carries `d6_guarded_fat_result_v1`, guard decision and FAT probe state, never a copy winner/owner. Explicitly preserves **null** when D did not read FAT; null must never be silently interpreted as zero healthy entries.
+- **Outer A:** independently reconciles summed successful returned bytes across B+C+D+geometry and global unique/repeated bytes. On accounting mismatch, exception, quota/EOF, output is PARTIAL/UNKNOWN, zero selected original or export, and no false healthy/complete state. A does not mint cryptographic device identity or assert actual media authenticity.
+
+## Synthetic executable regression and CI
+
+`tests/Test-A3DVersionedBDContracts.ps1` exercises generated 2MiB M00/M02 (actual B/C/D modules), generated FAT32 65,541-cluster ~32MiB SPC1 (standard-sized geometry) and a global 1024B short-quota negative. Confirms both versioned result contracts, actual outer successful-returned byte sums, nonwritable source unchanged SHA, B no probable original parent, D no FAT winner or write/export. Also checks default disabled = zero physical reads even when selecting the versioned switch.
+
+New isolated Windows PowerShell 5.1 regression appended to central runner: **41 -> 42 scripts**. Require exact final PR-head native Windows 42/42+privacy and post-merge main confirmation. Existing B/C/D native tests remain owned by their separate chat teams; no B/C/D source files modified by A.
+
+## What remains incomplete
+
+R7 still requires A-owned independent candidate-specific **physical revalidation of C's ordered fragment hypotheses** (source ID + Read event/candidate phase, including EOF and conflicting extents), wiring B4-04 directory span provenance, D6-04 actual paired FAT source coverage under the A outer meter, and final accepted public interface contract. A7-06 is **PARTIAL** even with 42/42 isolated tests; it is not a full R7 pass. R4/R5/R6 also retain partial audit rows; R8 synthetic export blocked. The official formally gated weighted project remains **39%**, not a restoration rate.
