@@ -49,7 +49,7 @@ function New-C3mfOpcSyntheticZip {
     }
     $parts=[ordered]@{'[Content_Types].xml'=$typeXml;'_rels/.rels'=$relXml;'3D/3dmodel.model'=$modelXml}
     if($Case -eq 'missing_model_part'){$parts.Remove('3D/3dmodel.model')}
-    if($Case -eq 'plain_zip'){$parts=[ordered]@{'hello.txt'='invented'}}
+    if($Case -eq 'plain_zip'){$parts=[ordered]@{'synthetic_not_a_3mf_file_with_a_longer_name.txt'='invented'}}
     $mem=[IO.MemoryStream]::new()
     $zip=[IO.Compression.ZipArchive]::new($mem,[IO.Compression.ZipArchiveMode]::Create,$true)
     try{
