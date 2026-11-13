@@ -201,6 +201,13 @@ foreach($c in $cases){
                 $normalAdapterActual=$t.actual
                 Assert-D605 ($normalAdapterActual -eq $normalBaselineActual+2048 -and
                     $o.metrics.geometryGateReturnedBytes -eq 2048) 'Added safety preflight measured exactly 2048 physical returned B (not free)'
+                $tooTight=Invoke-D605Case -Data $data -Enabled -Bytes 2048
+                Assert-D605 ($tooTight.report.status -ceq 'unknown' -and
+                    $tooTight.report.guardDecision -ceq 'candidate_geometry_unverified' -and
+                    $tooTight.report.fatProbeState -ceq 'incomplete_source_or_budget_UNKNOWN' -and
+                    $tooTight.actual -eq 2048 -and $tooTight.fatCalls -eq 0 -and
+                    $null -eq $tooTight.report.evidence.pairedCoveragePercent -and
+                    $tooTight.report.metrics.refusedReadCalls -ge 1) 'One shared 2048B quota cannot be reused for fixed FAT: no actual FAT read, UNKNOWN result'
             }finally{$baseline.Dispose()}
         }
     }else{
