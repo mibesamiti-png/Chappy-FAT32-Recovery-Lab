@@ -2,6 +2,10 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## Current narrow D6-04 gate proposal — eighth A round, 2026-11-14 JST
+
+After D [#166](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/166) and A [#169](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/169) real same-invocation A physical returned-event binding, **D6-04 narrowly PASS** subject to [independent A signoff](D604_A_SOURCE_BOUND_SIGNOFF.md) exact final-head/post-main Windows/privacy CI. B R4 **5 PASS/0 PARTIAL**, C R5 **3/3**, D R6 **5/0**, A R7 **1/5**. Total **14 PASS/8 PARTIAL/0 unaudited** =63.6% narrow verified conditions, 100% condition audit. **Official fully accepted project weight = 49%** (R0–R4 only). D's 5/5 indexed subchecks do NOT automatically pass original R6 whole-stage roadmap; D next audits formal R6. No real media recovery rate is known. Historical snapshots below retain earlier values.
+
 ## Current stage milestone and narrow-condition parameters — seventh A round, 2026-11-14 JST
 
 **Official whole-stage weighted project = 49%** (R0–R4 only; explicit [original R4 A signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md) and A signoff PR final-head/post-main CI required). B's original R4 acceptance is on generated synthetic evidence only. **This does not mean 49% of real files recovered.** Physical card/master IMG remain NOT APPROVED. Historical sections below retain their dates and earlier 39% snapshots.
