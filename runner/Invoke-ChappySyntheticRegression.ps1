@@ -53,6 +53,7 @@ $tests=@(
     'tests\Test-A3DStandardDataWindowBridge.ps1',
     'tests\Test-A3DStandardCCandidateReceipts.ps1',
     'tests\Test-A3DCandidateReadTrust.ps1',
+    'tests\Test-A3DCandidateDefinitionBoundary.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
     'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
