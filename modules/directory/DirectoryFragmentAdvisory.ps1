@@ -3,6 +3,50 @@
 # Never ranks, removes, selects, reconstructs or authenticates an original file.
 . (Join-Path $PSScriptRoot 'DirectoryParentObservationJoin.ps1')
 
+# A C candidate supplied to B is UNTRUSTED caller metadata. Check its
+# own two ordered source extents before attaching even an advisory size
+# association. This checks self-consistency, NEVER C physical source receipt.
+function Test-ChappyBCFragmentSpanContractV1 {
+    [CmdletBinding(PositionalBinding=$false)]
+    param([Parameter(Mandatory)][psobject]$Candidate,
+          [Parameter(Mandatory)][long]$SourceLengthBytes)
+    try {
+        if($Candidate.sourceOrigin -cne 'unattributed_without_A_meter' -or
+           $Candidate.confidence -cne 'probable' -or
+           $null -eq $Candidate.sourceSpans){return $false}
+        $parts=@($Candidate.sourceSpans)
+        if($parts.Count -ne 2 -or $null -eq $parts[0] -or
+           $null -eq $parts[1]){return $false}
+        [long]$f=[long]$Candidate.firstOffset
+        [long]$fl=[long]$Candidate.firstBytes
+        [long]$s=[long]$Candidate.secondOffset
+        [long]$sl=[long]$Candidate.secondBytes
+        if($f -lt 0 -or $s -lt 0 -or $fl -lt 1 -or $sl -lt 1 -or
+           $fl -gt 1056 -or $sl -gt 1056 -or
+           $fl -gt (1056L-$sl) -or
+           $f -gt ($SourceLengthBytes-$fl) -or
+           $s -gt ($SourceLengthBytes-$sl) -or
+           ($f -lt ($s+$sl) -and $s -lt ($f+$fl))){return $false}
+        if([long]$Candidate.offsetBytes -ne $f -or
+           [long]$Candidate.lengthBytes -ne ($fl+$sl) -or
+           [string]$Candidate.candidateKey -cne ('3mf:{0}+{1},{2}+{3}' -f $f,$fl,$s,$sl)){
+            return $false
+        }
+        if([long]$parts[0].offsetBytes -ne $f -or
+           [long]$parts[0].lengthBytes -ne $fl -or
+           [string]$parts[0].origin -cne 'source_observed_unattested' -or
+           [long]$parts[1].offsetBytes -ne $s -or
+           [long]$parts[1].lengthBytes -ne $sl -or
+           [string]$parts[1].origin -cne 'source_observed_unattested'){
+            return $false
+        }
+        return $true
+    }catch{
+        # Bad caller payload must never reveal data or cause a verified claim.
+        return $false
+    }
+}
+
 function Get-ChappyBFragmentAdvisoryV1 {
     [CmdletBinding(PositionalBinding=$false)]
     param(
@@ -84,6 +128,7 @@ function Get-ChappyBFragmentAdvisoryV1 {
             if($safe){
                 $status='entry_unobserved_unknown'
                 $reason='bc503_unobserved_first_cluster'
+                $spanContract=Test-ChappyBCFragmentSpanContractV1 -Candidate $c -SourceLengthBytes $SourceLengthBytes
                 if($c.format -ceq '3mf' -and $c.possible -eq $true -and
                    $c.originalIdentity -ceq 'unknown' -and
                    $c.integrityScope -ceq 'structural_only_not_original_file_integrity' -and
@@ -91,7 +136,8 @@ function Get-ChappyBFragmentAdvisoryV1 {
                    [long]$c.secondOffset -ge 0 -and [long]$c.secondBytes -gt 0 -and
                    [long]$c.firstOffset -le ($SourceLengthBytes-[long]$c.firstBytes) -and
                    [long]$c.secondOffset -le ($SourceLengthBytes-[long]$c.secondBytes) -and
-                   [long]$c.lengthBytes -eq ([long]$c.firstBytes+[long]$c.secondBytes)){
+                   [long]$c.lengthBytes -eq ([long]$c.firstBytes+[long]$c.secondBytes) -and
+                   $spanContract){
                     $found=New-Object System.Collections.ArrayList
                     foreach($bc in $bCandidates){
                         if($bc.deleted -or $bc.isDirectory -or
@@ -116,7 +162,7 @@ function Get-ChappyBFragmentAdvisoryV1 {
                             $reason='bc503_size_disagrees_no_candidate_veto'
                         }else{$reason='bc503_size_not_observed'}
                     }elseif($found.Count -gt 1){$reason='bc503_duplicate_b_entries_unknown'}
-                }else{$reason='bc503_malformed_or_unavailable_c_candidate'}
+                }else{$reason=$(if(-not $spanContract){'bc503_inconsistent_c_source_spans'}else{'bc503_malformed_or_unavailable_c_candidate'})}
             }
             switch($status){
                 'size_consistent_unattested' {$yes++}
