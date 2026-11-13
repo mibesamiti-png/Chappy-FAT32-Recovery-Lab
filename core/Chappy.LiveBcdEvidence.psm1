@@ -7,6 +7,8 @@ Set-StrictMode -Version Latest
 Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.Carving.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32ObservedIoEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Chappy.CandidateDefinitionBoundary.psm1') -Force
+. (Join-Path $PSScriptRoot '..\modules\directory\DirectoryEvidenceEnvelope.ps1')
+Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32GuardedResult.psm1') -Force
 
 if(-not ('ChappyA7LiveMeterV1' -as [type])){
 Add-Type -ErrorAction Stop -TypeDefinition @'
@@ -71,6 +73,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
  param(
   [Parameter(Mandatory)][IO.Stream]$Source,
   [switch]$EnableSyntheticLiveBcd,
+  # Preserves old A contract unless explicitly selected.
+  [switch]$UseVersionedBDContracts,
   [ValidateRange(1024,120000)][long]$MaxPhysicalReadBytes=120000,
   [ValidateRange(1,512)][int]$MaxReadCalls=512
  )
@@ -108,11 +112,18 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $geo=Get-ChappyFat32Geometry -Stream $meter
   if($null -eq $geo -or $geo.fatCount -ne 2){throw 'A7.geometry_unresolved'}
   $meter.BeginConsumer('directory')
-  $dirArgs=@{Stream=$meter;Geometry=$geo;MaxScanBytes=[int][Math]::Min(1024,[long]$geo.clusterSizeBytes);MaxCandidates=16;MaxDirectories=4;RecordDirectoryReadSpans=$true;MaxDirectoryReadSpans=8}
-  $directory=Get-ChappyDirectoryCandidates @dirArgs
-  $hierarchy=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $directory -MaxNodes 256 -MaxEdges 256 -NeverPromoteUnattestedParentEdges
-  $probable=@($hierarchy.edges|Where-Object {$_.confidence -ceq 'probable'}).Count
-  $result.b=[pscustomobject]@{status=[string]$directory.status;candidateCount=@($directory.items).Count;edgeCount=@($hierarchy.edges).Count;probableParentEdges=$probable}
+  if($UseVersionedBDContracts){
+   $directory=Get-ChappyBDirectoryEvidenceV1 -Stream $meter -Geometry $geo -EnableDirectoryEvidenceV1 -MaxScanBytes ([long][Math]::Min(1024,[long]$geo.clusterSizeBytes)) -MaxCandidates 16 -MaxDirectories 4 -MaxReadSpans 8 -MaxNodes 16 -MaxEdges 16
+   if($directory.schemaVersion -cne 'b_directory_evidence_v1' -or $directory.status -ceq 'error' -or [string]$directory.metrics.sourceReadAttestation -cne 'unattested'){throw 'A7.versioned_B_contract_unknown_or_invalid'}
+   $probable=@($directory.parentEdges|Where-Object {$_.confidence -ceq 'probable'}).Count
+   $result.b=[pscustomobject]@{status=[string]$directory.status;schemaVersion='b_directory_evidence_v1';candidateCount=@($directory.candidates).Count;edgeCount=@($directory.parentEdges).Count;probableParentEdges=$probable;sourceReadAttestation='B_unattested_A_checks_outer_source'}
+  }else{
+   $dirArgs=@{Stream=$meter;Geometry=$geo;MaxScanBytes=[int][Math]::Min(1024,[long]$geo.clusterSizeBytes);MaxCandidates=16;MaxDirectories=4;RecordDirectoryReadSpans=$true;MaxDirectoryReadSpans=8}
+   $directory=Get-ChappyDirectoryCandidates @dirArgs
+   $hierarchy=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $directory -MaxNodes 256 -MaxEdges 256 -NeverPromoteUnattestedParentEdges
+   $probable=@($hierarchy.edges|Where-Object {$_.confidence -ceq 'probable'}).Count
+   $result.b=[pscustomobject]@{status=[string]$directory.status;candidateCount=@($directory.items).Count;edgeCount=@($hierarchy.edges).Count;probableParentEdges=$probable}
+  }
   if($probable -ne 0){throw 'A7.unattested_parent_confidence'}
 
   $meter.BeginConsumer('carving')
@@ -135,17 +146,26 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
    [pscustomobject]@{candidateId=$_.candidateId;format=$_.format;orderedExtents=@($_.orderedExtents);status=$_.status;physicalCandidateValidation='not_performed';originalIdentity='unknown'}
   })
   $meter.BeginConsumer('fat')
-  $fat=Get-ChappyFatObservedIoEvidence -Stream $meter -Mode MirrorAndChain -MaxReadBytes 2048
-  $result.d=[pscustomobject]@{status=[string]$fat.status;fatWinner='not_selected';writePermitted=$false}
+  if($UseVersionedBDContracts){
+   # D guard checks competing VBRs BEFORE any optional fixed FAT reads.
+   $fat=Get-ChappyFatGuardedResult -Stream $meter -EnableGuardedDiagnostics -MaxPhysicalReadBytes 4096 -MaxPhysicalReadCalls 256
+   if($fat.contractVersion -cne 'd6_guarded_fat_result_v1' -or $fat.writePermitted -or $fat.fatCopyWinner -cne 'not_selected'){throw 'A7.versioned_D_contract_invalid'}
+   $result.d=[pscustomobject]@{status=[string]$fat.status;contractVersion='d6_guarded_fat_result_v1';guardDecision=[string]$fat.guardDecision;fatProbeState=[string]$fat.fatProbeState;fatFixedReturnedBytes=$(if($null -eq $fat.metrics.fatFixedReturnedBytes){$null}else{[long]$fat.metrics.fatFixedReturnedBytes});fatWinner='not_selected';writePermitted=$false;sourceReadAttestation='D_unattested_A_checks_outer_source'}
+  }else{
+   $fat=Get-ChappyFatObservedIoEvidence -Stream $meter -Mode MirrorAndChain -MaxReadBytes 2048
+   $result.d=[pscustomobject]@{status=[string]$fat.status;fatWinner='not_selected';writePermitted=$false}
+  }
   $total=@{geometry=0L;directory=0L;carving=0L;fat=0L}
   $events=@($meter.Events)
   foreach($event in $events){
    if(-not $total.ContainsKey([string]$event.Consumer)){throw 'A7.unrecognized_consumer'}
    $total[[string]$event.Consumer]+=[long]$event.ReturnedBytes
   }
-  if($total.directory -ne [long]$directory.metrics.bytesRead -or
+  $bExpected=$(if($UseVersionedBDContracts){[long]$directory.metrics.bReturnedDirectoryBytes}else{[long]$directory.metrics.bytesRead})
+  $dExpected=$(if($UseVersionedBDContracts){[long]$fat.metrics.actualReturnedBytes}else{[long]$fat.metrics.bytesRead})
+  if($total.directory -ne $bExpected -or
      $total.carving -ne [long]$carving.metrics.bytesRead -or
-     $total.fat -ne [long]$fat.metrics.bytesRead -or
+     $total.fat -ne $dExpected -or
      ($total.geometry+$total.directory+$total.carving+$total.fat) -ne $meter.Returned){
       throw 'A7.source_meter_and_module_counts_disagree'
   }

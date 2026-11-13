@@ -11,17 +11,17 @@ For a team with `N` registered ledger rows:
 - **Gate blockers** = status `BLOCKED`; **implementation missing** = `MISSING`; **awaiting audit** = `AUDIT_NEEDED`. Preserve all three separately.
 - **Official weighted project progress** = **39%**, the separately accepted full stages R0=5%, R1=10%, R2=12%, R3=12%. R4=10, R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited before their **entire original formal stage criteria** have A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
 
-## Latest snapshot after A independently reviewed and merged B #148, C #150, D #149
+## Latest snapshot after A independently reviewed and merged B #154, C #152, D #153
 
-Baseline merged main `e0bb8b2dd778760da8a8a81c6592c8eea730b6d7`; A7-01 latest live adapter remains PARTIAL even when its isolated synthetic CI passes, pending A-issued candidate-specific validation receipts and a fully accepted R7 interface. This is an evidence **snapshot**, re-run the script on main after final A merge.
+Baseline B/C/D-merged main `7a1d39f6502ad43d41059d0106bd9ac9c459a449`; A7-06 versioned adapter remains PARTIAL even after synthetic Windows/privacy test success, pending candidate-specific A receipt integration and the complete original R7 acceptance. This is a synthetic evidence **snapshot**, not full feature maturity, re-run on main after A merges.
 
 | Team | Formal stage | PASS | PARTIAL | AUDIT_NEEDED | Condition evidence % (PASS/N) | Assessed % ((N−AUDIT_NEEDED)/N) | Evidenced work reach % |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| B | R4 | 2/5 | 1/5 | 2/5 | **40.0%** | 60.0% | 60.0% |
-| C | R5 | 0/6 | 4/6 | 2/6 | **0.0%** | 66.7% | 66.7% |
-| D | R6 | 1/5 | 3/5 | 1/5 | **20.0%** | 80.0% | 80.0% |
-| A | R7 | 1/6 | 2/6 | 3/6 | **16.7%** | 50.0% | 50.0% |
-| **Total** | R4–R7 | **4/22** | **10/22** | **8/22** | **18.2%** | **63.6%** | **63.6%** |
+| B | R4 | 3/5 | 1/5 | 1/5 | **60.0%** | 80.0% | 80.0% |
+| C | R5 | 1/6 | 4/6 | 1/6 | **16.7%** | 83.3% | 83.3% |
+| D | R6 | 2/5 | 3/5 | 0/5 | **40.0%** | 100.0% | 100.0% |
+| A | R7 | 1/6 | 3/6 | 2/6 | **16.7%** | 66.7% | 66.7% |
+| **Total** | R4–R7 | **7/22** | **11/22** | **4/22** | **31.8%** | **81.8%** | **81.8%** |
 
 *These percentages are not full engineering completion, not a likelihood of real file recovery, not comparable to the original informal 79–86% estimates. C’s 0% verified row evidence is not 0% implemented work: four actual positive capabilities are PARTIAL but incomplete for their broad formal gate.*
 
@@ -54,3 +54,8 @@ Every chat should record `rowId`, last-reviewed HEAD, exact CI and next missing 
 ## Prior audited snapshot, for comparable change measurement
 
 Before this A round: 4 PASS, 6 PARTIAL, 12 AUDIT_NEEDED out of 22; assessment 45.5%. This round after B #148, C #150, D #149 and pending A live adapter: 4 PASS, 10 PARTIAL, 8 AUDIT_NEEDED out of 22; assessment 63.6% (**+18.1 percentage points reviewed**, not +18.1% engineering completeness). No new original formal stage gate passed. Verified PASS-ratio remains 18.2%, official weighted project remains 39%.
+
+
+## Fourth audit snapshot — progress deltas (A review, 2026-11-14 JST)
+
+Compared with preceding third A round (4 PASS / 10 PARTIAL / 8 AUDIT_NEEDED, **63.6%** assessed) the current **provisional** main+new-A-branch ledger has **7 PASS / 11 PARTIAL / 4 AUDIT_NEEDED, 81.8% assessed**. That is **+3 separately A-signed narrow PASS rows**, **−4 audit-needed rows**, **+18.2 percentage points of assessed gate-row coverage**. These are distinct from official project progress, which remains **39%**; they are NOT actual restoration success or full engineering completeness. A7-06 partial proposal requires final A PR-head native Windows/privacy CI. The `core/Get-ChappyABCDProgress.ps1 -AsJson` command recomputes these from newest ledger rows; no hardcoded subjective progress estimate.

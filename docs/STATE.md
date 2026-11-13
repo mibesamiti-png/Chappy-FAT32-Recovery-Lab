@@ -1,5 +1,16 @@
 # STATE — latest 2026-11-13 four-chat operating redesign
 
+## ACTIVE A gate-closeout — 2026-11-14 JST, four independent chats
+
+A independently reviewed final-PR-HEAD Windows PowerShell 5.1/privacy CI and merged B [#154](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/154) versioned redacted directory interface (`78517d8c`), C [#152](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/152) cross-track independent SHA scorer (`f0661679`), and D [#153](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/153) deny-first versioned FAT diagnostics (`7a1d39f6`). The three exact-head CI pairs passed 41/41 central artificial scripts and B 1363/D 108 native assertions. Final main after three merges: `7a1d39f6502ad43d41059d0106bd9ac9c459a449`. Post-main native Windows/privacy CI must also be checked; do not invent success if pending.
+
+**A formal row audit evidence:** newly PASS **B4-05, C5-04, D6-05**. A7-06 now PARTIAL as a draft candidate versioned-consumer integration, pending final CI. Current A branch `integration/a-r7-versioned-bd-consumer-adapters-20261114` adds opt-in actual B4-05/D6-05 result contracts under one A in-process successful-returned-byte meter, plus `tests/Test-A3DVersionedBDContracts.ps1` (central runner 41→42) and [A7 contract](R7_VERSIONED_BD_CONSUMERS.md). No B/C/D source changes. No candidate-original SHA or real source authenticity claim.
+
+Proposed auditable progress: **B R4 3 PASS/1 PARTIAL/1 AUDIT** (60.0% narrow verified,80.0% assessed), **C R5 1/4/1** (16.7%,83.3%), **D R6 2/3/0** (40.0%,100.0%), **A R7 1/3/2** (16.7%,66.7%). Overall **7 PASS/11 PARTIAL/4 AUDIT_NEEDED =22**, audited coverage 81.8% vs earlier 63.6%, verified scoped conditions 31.8%. None of these ratios means completed software features or restoration success. **Official fully gated project remains 39%** R0–R3; R4–R7 not whole-gate accepted, R8 blocked.
+
+A next P1 after A branch CI/merge: A7-02/A7-06 candidate-specific C fragment source-reread receipts and B4-04/D6-04 actual outer-source binding; B next B4-04, C next C5-05, D next D6-02/03. Four chats operate independently, A alone merges. Only generated artificial nonwritable sources; **actual microSD and sole master IMG NOT APPROVED for any access**.
+
+
 ## ACTIVE A R7 shared-source-envelope checkpoint — 2026-11-13 JST
 
 A independently reviewed final-head Windows PowerShell 5.1 + privacy CI, then safely merged B [#148](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/148) strict unattested parent abstention, C [#150](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/150) bounded non-oracle two-fragment scanner and D [#149](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/149) returned-byte FAT paired-coverage reporter. Current starting main `e0bb8b2dd778760da8a8a81c6592c8eea730b6d7`; post-merge [D CI #43435004049](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43435004049) SUCCESS, [privacy/central #43435004175](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43435004175) initially pending at this checkpoint. Exact PR-head 40/40 Windows CI and privacy were green before integration.
