@@ -13,7 +13,7 @@ For a team with `N` registered ledger rows:
 
 ## Latest snapshot after A independently reviewed and merged B #148, C #150, D #149
 
-Baseline merged main `e0bb8b2dd778760da8a8a81c6592c8eea730b6d7`; A7-01 latest live adapter remains PARTIAL pending final-head CI in A Draft. This is an evidence **snapshot**, re-run the script on main after final A merge.
+Baseline merged main `e0bb8b2dd778760da8a8a81c6592c8eea730b6d7`; A7-01 latest live adapter remains PARTIAL even when its isolated synthetic CI passes, pending A-issued candidate-specific validation receipts and a fully accepted R7 interface. This is an evidence **snapshot**, re-run the script on main after final A merge.
 
 | Team | Formal stage | PASS | PARTIAL | AUDIT_NEEDED | Condition evidence % (PASS/N) | Assessed % ((N−AUDIT_NEEDED)/N) | Evidenced work reach % |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
