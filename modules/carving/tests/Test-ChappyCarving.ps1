@@ -1009,3 +1009,7 @@ Invoke-C5OpcStartPartBreadthGate
 # Team C Issue #72 C5-02: 20 STL and 20 G-code strict synthetic acceptance cases.
 . (Join-Path $PSScriptRoot 'R5FormatBreadthGateRegression.ps1')
 Invoke-CFormatBreadthGate
+
+# Team C R5 C5-03: two-corpus R2/R3 non-oracle two-piece data-window acceptance.
+. (Join-Path $PSScriptRoot 'R5R3FragmentDataWindowGate.ps1')
+Invoke-C5R3PairGate
