@@ -269,6 +269,14 @@ function Get-ChappyFatGuardedResult {
                     $out.reasonCodes+= 'coverage.outer_meter_or_D_fat_observation_incomplete_UNKNOWN'
                     $out.reasonCodes+= @($coverage.reasons)
                     $out.fatProbeState='sampled_but_coverage_UNKNOWN'
+                    if($meter.PhaseReturnedBytes('fat_fixed') -eq 0 -or
+                       $meter.RefusedReadCalls -gt 0 -or
+                       $meter.PrematureSourceZero -gt 0){
+                        # No physical FAT bytes (or source quota failure):
+                        # never call this a completed sample.
+                        $out.status='unknown'
+                        $out.fatProbeState='incomplete_source_or_budget_UNKNOWN'
+                    }
                     # Never leave a positive mirror/cycle number on a source
                     # with premature physical zero or unmatched D returned spans.
                     if($meter.PrematureSourceZero -gt 0 -or $meter.RefusedReadCalls -gt 0){
