@@ -105,3 +105,6 @@ jobs:
       - name: Run Team D D6-03 strict equal-but-unsafe FAT32 BPB boundary gate
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-StrictBpbBoundary.Tests.ps1
+      - name: Run Team D D6-04 guarded actual FAT source-read transcript join
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-GuardedReturnJoin.Tests.ps1
