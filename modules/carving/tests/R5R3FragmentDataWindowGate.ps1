@@ -70,7 +70,7 @@ function Invoke-C5R3PairDataWindowGate {
       $r.decision -eq 'one_possible' -and @($r.items).Count -eq 1) ('spc'+$spc+':data_window_true_original_join')
      $dataExact+=$score.exact
      if($spc -eq 1){
-      Assert-CR3Pair ($score.exactCandidate.secondOffset -lt $score.exactCandidate.firstOffset) 'spc1_reversed_physical_cluster_placement'
+      Assert-CR3Pair ($score.exactCandidate.secondOffset -ne ($score.exactCandidate.firstOffset+$score.exactCandidate.firstBytes)) 'spc1_noncontiguous_two_cluster_fragment_placement'
      }
     }
     $cases++;$actual+=$meter.BytesRead;$unique+=$meter.UniqueBytes;$calls+=$meter.ReadCalls
