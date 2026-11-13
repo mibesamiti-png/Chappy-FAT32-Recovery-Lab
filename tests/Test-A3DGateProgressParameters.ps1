@@ -103,7 +103,7 @@ Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
     $hypothetical.officialWeightedProjectPercent -eq 39 -and
     @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 0) 'no_automatic_full_gate_credit'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
-$duplicated=$text+"\n| B4-01 | PASS | duplicate forged row | x |\n"
+$duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'
 $missing=$text.Replace('| C5-06 | PARTIAL |','| C5-06 | REDACTED |')
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $missing }) 'reject_unknown_row_status'
