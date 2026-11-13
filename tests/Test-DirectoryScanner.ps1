@@ -463,6 +463,9 @@ try {
     # B4-02 formal acceptance: valid/corrupt LFN, deleted on/off, orphan/decoy.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateLFNDeletionOrphanAcceptance.ps1')
 
+    # B4-05 versioned bounded directory envelope on generated/short-EOF sources.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateResultEnvelope.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
