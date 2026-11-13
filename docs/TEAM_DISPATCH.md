@@ -1,5 +1,11 @@
 # Team Dispatch — authoritative live roster
 
+## ACTIVE A seventh review and formal R4 signoff — 2026-11-14 JST
+
+After B [#165](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/165), D [#166](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/166), C [#167](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/167) independently passed exact final-head Windows PS5.1 and privacy CI, A merged them individually into main. B post-merge [#43501246833](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43501246833) also SUCCESS. A independently ACCEPTS the **original full R4 synthetic evidence stage** after two-corpus source/coverage audit (NOT just B4-01..05 5/5), documented [R4 A signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md); formal **49% official weighted** (R0–R4), conditional on this A signoff PR's exact-head and post-main CI. Real restoration UNKNOWN, real media strictly NOT APPROVED.
+
+B **after** final A signoff CI green: move to B-owned, default-OFF advisory-only directory/fragment evidence and independent negative scorer for C5-03, following [B->C transition](BC_SUPPORT_HANDOFF.md), **not** C production edits. C independently keeps C5-03/05/06, with C5-02 narrow PASS only under strict guarded format profile after #167; C overall 3/6 narrow. D 4/5; D6-04 still PARTIAL until A personally binds D #166 outer spans to one actual in-process A meter. A R7 1/6 and next P1 is the D live meter join while C candidate validation remains separately guarded. B5/5 C3/6 D4/5 A1/6 =13/22 narrow PASS, 9 PARTIAL, 0 unaudited. Only A can merge and sign original stages; four distinct chats. R8 still blocked.
+
 ## ACTIVE A B->C assistance dispatch — 2026-11-14 JST (supersedes older B next-work sections)
 
 **Current truth:** main at initial assignment `fd3fcade5f695c72473cb60ac3fa58516a477dd1` (A #163 merged); [post-main Windows PS5.1/privacy 44/44 success](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43481358196). Zero open PRs at dispatch. B 5/5 narrow R4 subrows, C 2/6 R5, D 4/5 R6, A 1/6 R7. **Official 39%** remains until original whole-stage signoff.
