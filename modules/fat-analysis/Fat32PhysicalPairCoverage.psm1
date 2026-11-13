@@ -67,8 +67,31 @@ function Get-ChappyFatPhysicalPairCoverage {
     if($internal.Count -ne $count){
         [void]$reasons.Add('source.event_count_mismatch')
     }
-    if($Observation.geometryTrustDecision -cne 'plausible_unverified'){
-        [void]$reasons.Add('geometry.source_metadata_not_plausible')
+    # D13 intentionally budgets only 1024B for MBR+primary VBR, but the
+    # older geometry parser expects four 512B sectors. After that phase cap
+    # it labels *unread backup and FSInfo* as truncated/reject. These two
+    # reason codes are NOT physical source EOF or BPB contradiction.
+    # Permit only bounded NUMERIC arithmetic on explicitly unverified caller
+    # FAT offsets when these are the sole reasons. Never promote BPB trust.
+    $unobservedSecondaryCodes=@(
+        'io.backup_vbr_truncated','io.fsinfo_truncated',
+        'budget.backup_vbr_unread','budget.fsinfo_unread'
+    )
+    $hardReasons=@($Observation.geometryReasonCodes |
+        Where-Object { $unobservedSecondaryCodes -cnotcontains [string]$_ })
+    $geometryPhase=@($Observation.phaseSummaries |
+        Where-Object {$_.phase -ceq 'geometry'})
+    $secondaryUnreadOnly=(
+        $Observation.geometryTrustDecision -ceq 'reject' -and
+        $hardReasons.Count -eq 0 -and
+        @($Observation.geometryReasonCodes).Count -gt 0 -and
+        $Observation.metrics.phaseBudgetClipped -and
+        $geometryPhase.Count -eq 1 -and
+        [long]$geometryPhase[0].bytesRead -eq 1024
+    )
+    if($Observation.geometryTrustDecision -cne 'plausible_unverified' -and
+       -not $secondaryUnreadOnly){
+        [void]$reasons.Add('geometry.hard_contradiction_or_unread_primary_UNKNOWN')
     }
     if([long]$Observation.metrics.prematureSourceZeroReads -gt 0){
         [void]$reasons.Add('io.premature_source_zero_UNKNOWN')
