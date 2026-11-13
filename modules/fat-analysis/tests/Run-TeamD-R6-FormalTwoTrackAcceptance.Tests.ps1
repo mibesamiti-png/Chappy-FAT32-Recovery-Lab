@@ -7,11 +7,13 @@ $ErrorActionPreference='Stop'
 $root=Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
 . (Join-Path $root 'tests\helpers\New-Chappy3DDamagedFixture.ps1')
 . (Join-Path $root 'tests\helpers\New-ChappyA3DStandardFixture.ps1')
-Import-Module (Join-Path $PSScriptRoot '..\Fat32GeometryTrust.psm1') -Force
-Import-Module (Join-Path $PSScriptRoot '..\Fat32MirrorWindows.psm1') -Force
+# GuardedResult force-imports a nested geometry dependency. On Windows PS5.1
+# import direct compact readers LAST to keep their public commands visible.
 Import-Module (Join-Path $PSScriptRoot '..\Fat32GuardedResult.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\Fat32GuardedReturnedSourceJoin.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\Fat32SharedChainEvidence.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\Fat32GeometryTrust.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\Fat32MirrorWindows.psm1') -Force
 $script:Pass=0;$script:Fail=0
 function Assert-R6([bool]$ok,[string]$desc){
  if($ok){$script:Pass++;Write-Host ('PASS '+$desc)}
