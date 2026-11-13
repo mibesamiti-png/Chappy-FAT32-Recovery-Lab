@@ -267,6 +267,7 @@ function Get-ChappyFatGuardedResult {
                     )
                 }else{
                     $out.reasonCodes+= 'coverage.outer_meter_or_D_fat_observation_incomplete_UNKNOWN'
+                    $out.reasonCodes+= @($coverage.reasons)
                     $out.fatProbeState='sampled_but_coverage_UNKNOWN'
                     # Never leave a positive mirror/cycle number on a source
                     # with premature physical zero or unmatched D returned spans.
