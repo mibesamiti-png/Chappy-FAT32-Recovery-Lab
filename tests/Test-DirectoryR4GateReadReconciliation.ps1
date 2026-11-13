@@ -23,6 +23,7 @@ function Test-B404Claim {
     param([psobject]$Evidence,[object[]]$Events,[long]$Length,
         [string]$Decision,[string]$Code,[string]$Label)
     $actual=Compare-ChappyBDirectoryReturnedEvidenceV1 -DirectoryEnvelope $Evidence -OuterReadEvents $Events -SourceLengthBytes $Length
+    Write-Host ('B4-04 TRACE: {0}, decision={1}, reason={2}, Breturned={3}, outerReturned={4}, unique={5}, events={6}, spans={7}, matched={8}' -f $Label,$actual.decision,([string]::Join(',',@($actual.reasonCodes))),$actual.metrics.bClaimedReturnedDirectoryBytes,$actual.metrics.outerDirectoryReturnedBytes,$actual.metrics.outerDirectoryUniqueBytes,$actual.metrics.outerDirectoryReadEvents,$actual.metrics.bClaimedCompletedSpans,$actual.metrics.matchingCompletedSpans)
     Assert-B ($actual.schemaVersion -ceq 'b_directory_outer_reconciliation_v1' -and
         $actual.decision -ceq $Decision -and
         $actual.reasonCodes -contains $Code -and
