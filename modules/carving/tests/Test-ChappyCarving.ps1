@@ -997,3 +997,7 @@ Invoke-CFragmentModuleGateRegression
 # Team C R5 C5-04: independent original SHA and UNKNOWN on 2MiB and standards-shaped FAT32 synthetic tracks.
 . (Join-Path $PSScriptRoot 'R5CrossTrackOriginalScorerGate.ps1')
 Invoke-C5CrossTrackOriginalScorer
+
+# Team C R5 C5-05: source returned/unique reads, early EOF, bounded scratch and C-unattested coverage.
+. (Join-Path $PSScriptRoot 'R5SourceCoverageGate.ps1')
+Invoke-C5CoverageGate
