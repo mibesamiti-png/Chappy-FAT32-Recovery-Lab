@@ -299,6 +299,18 @@ try {
         }).Count -eq 1) 'Conflicting direct parent and dotdot kept separate'
         Assert-B ($anomalies.metrics.unresolvedTargetReferences -eq 1 -and
                   @($anomalies.edges|Where-Object {$_.childCluster -eq 80 -or $_.childCluster -eq 55}).Count -eq 0) 'No fabricated edges to missing child or hint-only orphan'
+        # B4-03: strict receipt-less mode preserves cycles, multiple parents,
+        # duplicate links, hint conflict and unobserved targets. No I/O.
+        $strictAnomalies=Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -NeverPromoteUnattestedParentEdges
+        Assert-B ($strictAnomalies.metrics.edgeAssertions -eq $anomalies.metrics.edgeAssertions -and
+                  $strictAnomalies.metrics.nodes -eq $anomalies.metrics.nodes -and
+                  $strictAnomalies.metrics.unresolvedTargetReferences -eq $anomalies.metrics.unresolvedTargetReferences -and
+                  $strictAnomalies.metrics.probableEdgeAssertions -eq 0 -and
+                  ([string]::Join('|',@($strictAnomalies.edges|ForEach-Object{$_.relationStatus}))) -ceq
+                  ([string]::Join('|',@($anomalies.edges|ForEach-Object{$_.relationStatus}))) -and
+                  @($strictAnomalies.edges|Where-Object{$_.confidence -eq 'verified' -or
+                      $_.PSObject.Properties.Name -contains 'originalPath'}).Count -eq 0
+        ) 'B4-03 strict graph keeps all competing-parent, duplicate, cycle, hint-conflict and missing-target reasons'
         $limitedGraph = Get-ChappyDirectoryHierarchyEvidence -DirectoryResult $graphFixture -MaxNodes 3 -MaxEdges 1
         Assert-B ($limitedGraph.scanIncomplete -and $limitedGraph.status -eq 'partial' -and
                   $limitedGraph.metrics.nodes -le 3 -and $limitedGraph.metrics.edgeAssertions -le 1) 'Hierarchy node and edge budgets bounded'

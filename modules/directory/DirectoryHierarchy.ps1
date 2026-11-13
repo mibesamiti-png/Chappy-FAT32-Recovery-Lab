@@ -27,7 +27,12 @@ function Get-ChappyDirectoryHierarchyEvidence {
         # R9 experiment, default OFF. Only an independent scanner-produced
         # bounded interval ledger can corroborate byte counts. A caller can
         # forge the object; this is NOT an authenticated source.
-        [switch]$RequireObservedClusterIntervals
+        [switch]$RequireObservedClusterIntervals,
+        # B4-03 default-OFF conservative boundary. B's caller-owned coverage
+        # ledger cannot authenticate original-media read provenance.
+        # Preserve candidates but never call a parent edge probable until
+        # the A-owned independent source evidence contract can decide.
+        [switch]$NeverPromoteUnattestedParentEdges
     )
     if ($MaxNodes -lt 1 -or $MaxNodes -gt 100000 -or
         $MaxEdges -lt 1 -or $MaxEdges -gt 200000 -or
@@ -366,13 +371,25 @@ function Get-ChappyDirectoryHierarchyEvidence {
     # Preserve all links as candidates but never elevate them to probable.
     $probableEdges = 0L
     $partialEdges = 0L
+    $unattestedPromotionsSuppressed = 0L
     foreach ($edge in $edges) {
         if ($incomplete -and $edge.confidence -eq 'probable') {
             $edge.confidence = 'partial'
             $edge.evidence = @($edge.evidence) + @('hierarchy_coverage_incomplete')
         }
+        # Never mistake a forged scanner-owned coverage report for an
+        # A-issued physical-source receipt. There is deliberately NO caller-
+        # supplied attestation/token field that could override this switch.
+        if ($NeverPromoteUnattestedParentEdges -and $edge.confidence -eq 'probable') {
+            $edge.confidence = 'partial'
+            $edge.evidence = @($edge.evidence) + @('independent_source_attestation_required')
+            $unattestedPromotionsSuppressed++
+        }
         if ($edge.confidence -eq 'probable') { $probableEdges++ }
         else { $partialEdges++ }
+    }
+    if ($unattestedPromotionsSuppressed -gt 0) {
+        [void]$warnings.Add('hierarchy_independent_source_receipt_not_provided')
     }
 
     if ($DetectConflictingContainerObservations) {
@@ -411,6 +428,7 @@ function Get-ChappyDirectoryHierarchyEvidence {
             nodes = $nodes.Count
             edgeAssertions = $edges.Count
             probableEdgeAssertions = $probableEdges
+            unattestedProbableSuppressed = $unattestedPromotionsSuppressed
             partialEdgeAssertions = $partialEdges
             hintCount = $hints.Count
             unresolvedTargetReferences = $unobservedTargets
