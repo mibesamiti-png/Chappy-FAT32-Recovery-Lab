@@ -147,7 +147,7 @@ $shift.parentEdges[0].entryOffsetBytes=1536L
 Test-B403Adversarial $shift $b403GoodEvents 'unobserved_unknown' 'parent entry offset shifted to child cluster'
 # Self-forged complete B cluster with no actual returned source bytes.
 $fakeRead=Copy-B403SyntheticEnvelope $b403Good
-$fakeRead.directoryReadSpans[2].offsetBytes=2048L
+$fakeRead.directoryReadSpans[2].offsetBytes=2560L
 Test-B403Adversarial $fakeRead $b403GoodEvents 'contradicted_read_ledger' 'forged B completed read span'
 # Same B report but missing actual A-shaped outer source event (not source receipt).
 $less=New-Object System.Collections.ArrayList
