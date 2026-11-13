@@ -186,6 +186,10 @@ foreach($c in $scenarios){
         Assert-D603 ($r.metrics.refusedReadCalls -ge 1 -and
             $r.metrics.physicalReadCalls -eq 4 -and
             $measure.calls -eq 4) 'Physical Read-call cap refuses one-byte amplification'
+        Assert-D603 ($r.hypotheses[0].plausibility -ceq 'insufficient_evidence' -and
+            $r.hypotheses[1].plausibility -ceq 'insufficient_evidence' -and
+            $null -eq $r.hypotheses[0].numericGeometry.fat1OffsetBytes -and
+            $null -eq $r.hypotheses[1].numericGeometry.fat1OffsetBytes) 'Call-cap failure returns two explicitly UNKNOWN BPB roles, no guessed FAT offsets'
     }
     if($c.id -eq 'clean_spc1' -or $c.id -eq 'backup_reserve33') {
         $base=Run-D603 -Data $image -Bytes 2048 -Baseline
