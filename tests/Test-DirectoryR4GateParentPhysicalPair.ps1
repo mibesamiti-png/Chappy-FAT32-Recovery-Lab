@@ -172,6 +172,46 @@ $noEvents=Get-ChappyBParentObservationV1 -DirectoryEnvelope $b403Good -OuterRead
 Assert-B ($noEvents.metrics.observedPairUnattested -eq 0 -and
     $noEvents.intervalJoin -eq 'contradicted' -and
     $noEvents.originalIdentity -eq 'unknown') 'B4-03 B self-only scan never earns physical structural label'
+# B4-03 SUPPLEMENTAL (separate from frozen 12-source matrix): an ACTUAL
+# synthetically returned 3<->4 cyclic parent graph, not merely a forged
+# relationStatus in post-scan metadata. Root2 is empty; both unlinked
+# directory containers contain real dot/dotdot and an opposing child entry.
+[byte[]]$b403CycleBytes=New-Object byte[] 2560
+Add-BR4Entries $b403CycleBytes 1536 @(
+    (New-BR4Entry '.          ' 0x10 3 0)
+    (New-BR4Entry '..         ' 0x10 4 0)
+    (New-BR4Entry 'CYC4    DIR' 0x10 4 0)
+)
+Add-BR4Entries $b403CycleBytes 2048 @(
+    (New-BR4Entry '.          ' 0x10 4 0)
+    (New-BR4Entry '..         ' 0x10 3 0)
+    (New-BR4Entry 'CYC3    DIR' 0x10 3 0)
+)
+$b403CycleBefore=Get-BR4Sha $b403CycleBytes
+$b403CycleReader=[ChappyBR4ObservedParentPositive.MeteredStream]::new($b403CycleBytes,97,-1L,128)
+try {
+    $b403CycleB=Get-ChappyBDirectoryEvidenceV1 -Stream $b403CycleReader -Geometry $b403Geo -EnableDirectoryEvidenceV1 -MaxScanBytes 1536 -MaxCandidates 16 -MaxDirectories 8 -MaxReadSpans 8
+    $b403CycleEvents=@(New-B404AEventCopies @($b403CycleReader.Events) 1024L)
+    $b403CycleResult=Get-ChappyBParentObservationV1 -DirectoryEnvelope $b403CycleB -OuterReadEvents $b403CycleEvents -SourceLengthBytes $b403CycleBytes.Length
+    Assert-B ($b403CycleReader.ReturnedBytes -eq 1536 -and
+        $b403CycleReader.Calls -eq 18 -and
+        (Test-BR4EventsMatchInput @($b403CycleReader.Events) $b403CycleBytes) -and
+        $b403CycleResult.intervalJoin -eq 'consistent_unattested') 'B4-03 supplemented ACTUAL synthetic cyclic parent source returns 1536B and 18 calls'
+    Assert-B ($b403CycleB.parentEdges.Count -ge 2 -and
+        @($b403CycleB.parentEdges|Where-Object{
+            $_.relationStatus -eq 'cycle_detected'
+        }).Count -ge 1 -and
+        $b403CycleResult.metrics.observedPairUnattested -eq 0 -and
+        $b403CycleResult.metrics.ambiguousStructural -ge 1 -and
+        @($b403CycleResult.parentObservations|Where-Object{
+            $_.relationStatus -eq 'cycle_detected' -and
+            $_.observation -eq 'ambiguous_structural'
+        }).Count -ge 1) 'B4-03 actual observed cycle links remain ambiguous structural, never original parent'
+    Test-B403Safety $b403CycleResult 'physically-observed-cycle-separate-supplemental'
+    Write-Host ('B4-03 SUPPLEMENTAL PHYSICAL CYCLE: B edges={0}, cycle reasons={1}, structural positives={2}, source returned={3}B calls={4}, original parent UNKNOWN' -f $b403CycleB.parentEdges.Count,@($b403CycleB.parentEdges|Where-Object{$_.relationStatus -eq 'cycle_detected'}).Count,$b403CycleResult.metrics.observedPairUnattested,$b403CycleReader.ReturnedBytes,$b403CycleReader.Calls)
+}finally{$b403CycleReader.Dispose()}
+Assert-B ((Get-BR4Sha $b403CycleBytes) -ceq $b403CycleBefore) 'B4-03 supplemental cyclic source SHA-256 unchanged'
+
 foreach($row in $b403CaseRows){Write-Host ('B4-03 PARENT MATRIX: '+$row)}
 Write-Host ('B4-03 PARENT OBSERVATION: 3 seeds * 4 cases = {0} genuine synthetic scans; matched structural observed-but-unattested={1}, competing-parent ambiguous cases={2}, early-EOF UNKNOWN={3}, orphan/no-parent={4}; actual returned={5}B, directory returned={6}B, Read calls={7}; 7 injected metadata attacks denied, 1 caller-attested spoof does NOT upgrade, original path always UNKNOWN' -f
     $b403Scans,$b403Observed,$b403Ambiguous,$b403ShortUnknown,$b403NoParent,
