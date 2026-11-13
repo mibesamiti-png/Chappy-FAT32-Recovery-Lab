@@ -150,7 +150,7 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
    # D guard checks competing VBRs BEFORE any optional fixed FAT reads.
    $fat=Get-ChappyFatGuardedResult -Stream $meter -EnableGuardedDiagnostics -MaxPhysicalReadBytes 4096 -MaxPhysicalReadCalls 256
    if($fat.contractVersion -cne 'd6_guarded_fat_result_v1' -or $fat.writePermitted -or $fat.fatCopyWinner -cne 'not_selected'){throw 'A7.versioned_D_contract_invalid'}
-   $result.d=[pscustomobject]@{status=[string]$fat.status;contractVersion='d6_guarded_fat_result_v1';guardDecision=[string]$fat.guardDecision;fatProbeState=[string]$fat.fatProbeState;fatFixedReturnedBytes=[long]$fat.metrics.fatFixedReturnedBytes;fatWinner='not_selected';writePermitted=$false;sourceReadAttestation='D_unattested_A_checks_outer_source'}
+   $result.d=[pscustomobject]@{status=[string]$fat.status;contractVersion='d6_guarded_fat_result_v1';guardDecision=[string]$fat.guardDecision;fatProbeState=[string]$fat.fatProbeState;fatFixedReturnedBytes=$(if($null -eq $fat.metrics.fatFixedReturnedBytes){$null}else{[long]$fat.metrics.fatFixedReturnedBytes});fatWinner='not_selected';writePermitted=$false;sourceReadAttestation='D_unattested_A_checks_outer_source'}
   }else{
    $fat=Get-ChappyFatObservedIoEvidence -Stream $meter -Mode MirrorAndChain -MaxReadBytes 2048
    $result.d=[pscustomobject]@{status=[string]$fat.status;fatWinner='not_selected';writePermitted=$false}
