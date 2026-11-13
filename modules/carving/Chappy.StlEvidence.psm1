@@ -47,23 +47,30 @@ function Get-CStlAsciiSectorLength {
     $raw=[Text.Encoding]::ASCII.GetString($Block,0,$end)
     if ($raw -match '[^\x09\x0A\x0D\x20-\x7E]') { return 0 }
     $lines=@($raw -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_.Length -gt 0 })
-    # Strict 1-facet ASCII STL subset; other STL remains UNKNOWN, not invalid.
-    if ($lines.Count -ne 9) { return 0 }
-    if ($lines[0] -cnotmatch '^solid(?: .*)?$' -or $lines[8] -cnotmatch '^endsolid(?: .*)?$') { return 0 }
-    if ($lines[0].Substring(5).Trim() -cne $lines[8].Substring(8).Trim()) { return 0 }
-    if ($lines[2] -cne 'outer loop' -or $lines[6] -cne 'endloop' -or
-        $lines[7] -cne 'endfacet') { return 0 }
-    foreach ($index in @(1,3,4,5)) {
-        $words=@($lines[$index] -split '\s+')
-        if ($index -eq 1) {
-            if ($words.Count -ne 5 -or $words[0] -cne 'facet' -or $words[1] -cne 'normal') { return 0 }
-            $values=@($words[2],$words[3],$words[4])
-        } else {
-            if ($words.Count -ne 4 -or $words[0] -cne 'vertex') { return 0 }
-            $values=@($words[1],$words[2],$words[3])
-        }
-        foreach ($number in $values) {
-            if (-not (Test-CStlFiniteNumber $number)) { return 0 }
+    # Strict, fully observed 1-4 facet ASCII STL subset within ONE sector.
+    # Everything longer or requiring a second sector remains UNKNOWN.
+    if ($lines.Count -lt 9 -or (($lines.Count-2) % 7) -ne 0) { return 0 }
+    $facets=[int](($lines.Count-2)/7)
+    if ($facets -lt 1 -or $facets -gt 4) { return 0 }
+    $last=$lines.Count-1
+    if ($lines[0] -cnotmatch '^solid(?: .*)?$' -or $lines[$last] -cnotmatch '^endsolid(?: .*)?$') { return 0 }
+    if ($lines[0].Substring(5).Trim() -cne $lines[$last].Substring(8).Trim()) { return 0 }
+    for($f=0;$f -lt $facets;$f++) {
+        $base=1+7*$f
+        if ($lines[$base+1] -cne 'outer loop' -or $lines[$base+5] -cne 'endloop' -or
+            $lines[$base+6] -cne 'endfacet') { return 0 }
+        foreach ($index in @($base,($base+2),($base+3),($base+4))) {
+            $words=@($lines[$index] -split '\s+')
+            if ($index -eq $base) {
+                if ($words.Count -ne 5 -or $words[0] -cne 'facet' -or $words[1] -cne 'normal') { return 0 }
+                $values=@($words[2],$words[3],$words[4])
+            } else {
+                if ($words.Count -ne 4 -or $words[0] -cne 'vertex') { return 0 }
+                $values=@($words[1],$words[2],$words[3])
+            }
+            foreach ($number in $values) {
+                if (-not (Test-CStlFiniteNumber $number)) { return 0 }
+            }
         }
     }
     return $end
@@ -154,7 +161,7 @@ function Get-ChappyStlCandidates {
             $items.Add([pscustomobject]@{
                 format='stl_ascii';offsetBytes=$at;lengthBytes=[long]$ascii
                 confidence='probable';integrityScope='structural_only_not_original_file_integrity'
-                originalIdentity='unknown';evidence=@('stl.ascii_one_facet_syntax')
+                originalIdentity='unknown';evidence=@('stl.ascii_bounded_1_to_4_facets_syntax')
                 truncated=$false
             })
         }
@@ -177,4 +184,133 @@ function Get-ChappyStlCandidates {
     }
     return [pscustomobject]$result
 }
-Export-ModuleMember -Function Get-ChappyStlCandidates
+
+# C5-02: conservative, caller-supplied candidate-span G-code syntax evidence.
+# This is NOT a non-oracle scanner and NEVER an assessment of printer safety.
+# Unsupported (possibly legitimate) commands remain unknown, not "invalid".
+function Get-ChappyGcodeEvidence {
+    [CmdletBinding()]param(
+        [Parameter(Mandatory=$true)][IO.Stream]$Stream,
+        [switch]$EnableGcodeEvidence,
+        [ValidateRange(0,9223372036854775806)][long]$OffsetBytes=0,
+        [Parameter(Mandatory=$true)][ValidateRange(48,8192)][long]$LengthBytes,
+        [ValidateRange(1,8192)][long]$MaxSourceBytes=8192,
+        [ValidateRange(1,128)][int]$MaxLines=128,
+        [ValidateRange(32,160)][int]$MaxLineBytes=160,
+        [ValidateRange(100,30000)][int]$MaxWorkMilliseconds=30000
+    )
+    $result=[ordered]@{
+        schemaVersion='1';team='C';status='disabled';decision='unknown'
+        scanIncomplete=$true;originalIdentity='unknown';items=@()
+        warnings=@('gcode.optin_required');errors=@()
+        metrics=[pscustomobject]@{
+            bytesRead=0L;uniquePhysicalBytesRead=0L;readRequests=0
+            linesChecked=0;commandsChecked=0;elapsedMilliseconds=0
+            maxCandidateScratchBytes=8192;peakProcessMemoryStatus='not_measured'
+            peakProcessMemoryBytes=$null
+        }
+    }
+    if (-not $EnableGcodeEvidence) { return [pscustomobject]$result }
+    $result.status='partial';$result.warnings=@('gcode.unsupported_or_incomplete')
+    if (-not $Stream.CanRead -or -not $Stream.CanSeek -or $Stream.CanWrite) {
+        $result.status='error';$result.errors=@('gcode.readonly_stream_required')
+        return [pscustomobject]$result
+    }
+    if ($LengthBytes -gt $MaxSourceBytes) {
+        $result.warnings=@('gcode.quota_unavailable')
+        return [pscustomobject]$result
+    }
+    if ($OffsetBytes -gt ($Stream.Length-$LengthBytes)) {
+        $result.warnings=@('gcode.outside_source')
+        return [pscustomobject]$result
+    }
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    [byte[]]$data=New-Object byte[] ([int]$LengthBytes)
+    [void]$Stream.Seek($OffsetBytes,[IO.SeekOrigin]::Begin)
+    $gotTotal=0
+    $failed=$false
+    while($gotTotal -lt $data.Length) {
+        if($clock.ElapsedMilliseconds -ge $MaxWorkMilliseconds){
+            $failed=$true;$result.warnings=@('gcode.time_budget_exhausted');break
+        }
+        $got=$Stream.Read($data,$gotTotal,($data.Length-$gotTotal))
+        $result.metrics.readRequests++
+        if($got -le 0){
+            $failed=$true;$result.warnings=@('gcode.true_eof');break
+        }
+        $gotTotal+=$got
+        $result.metrics.bytesRead+=[long]$got
+    }
+    # One contiguous no-reread candidate span; unique physical source bytes
+    # are exactly the actual returned positive Stream.Read bytes.
+    $result.metrics.uniquePhysicalBytesRead=$result.metrics.bytesRead
+    if(-not $failed) {
+        foreach($byte in $data){
+            if($byte -ne 9 -and $byte -ne 10 -and $byte -ne 13 -and
+               ($byte -lt 32 -or $byte -gt 126)){
+                $failed=$true;$result.warnings=@('gcode.unsupported_encoding');break
+            }
+        }
+    }
+    if(-not $failed -and $data[$data.Length-1] -ne 10){
+        $failed=$true;$result.warnings=@('gcode.unterminated_last_line')
+    }
+    if(-not $failed){
+        $text=[Text.Encoding]::ASCII.GetString($data)
+        $lines=$text -split '\n'
+        $commands=0;$motion=0;$preamble=0;$count=0
+        # Permitted *syntax*, not a safety whitelist to execute on a printer:
+        # all other G/M/T codes remain UNKNOWN, including manufacturer dialects.
+        $lineRegex='^(?:G(?:0|1|28|90|91|92)|M(?:104|109|106|107|140|190|82|83|84|73))(?:[ \t]+[A-Za-z][-+]?(?:\d+(?:\.\d*)?|\.\d+))*[ \t]*
+
+        foreach($line in $lines){
+            if($clock.ElapsedMilliseconds -ge $MaxWorkMilliseconds){
+                $failed=$true;$result.warnings=@('gcode.time_budget_exhausted');break
+            }
+            if($line.Length -eq 0){continue}
+            if($line.EndsWith([string][char]13)){$line=$line.Substring(0,$line.Length-1)}
+            if($line.Length -gt $MaxLineBytes){
+                $failed=$true;$result.warnings=@('gcode.line_limit');break
+            }
+            $count++
+            if($count -gt $MaxLines){
+                $failed=$true;$result.warnings=@('gcode.line_count_limit');break
+            }
+            # A "G1" inside a semicolon comment is NOT a command.
+            $head=($line -split ';',2)[0].Trim()
+            if($head.Length -eq 0){continue}
+            if($head -cnotmatch $lineRegex){
+                $failed=$true;$result.warnings=@('gcode.outside_strict_profile');break
+            }
+            $commands++
+            if($head -cmatch '^G(?:0|1)(?:[ \t]|$)' -and
+               $head -cmatch '(?:^|[ \t])[XYZ][-+]?(?:\d+(?:\.\d*)?|\.\d+)'){
+                $motion++
+            }
+            if($head -cmatch '^G28(?:[ \t]|$)'){$preamble++}
+        }
+        $result.metrics.linesChecked=$count
+        $result.metrics.commandsChecked=$commands
+        if(-not $failed -and ($count -lt 6 -or $commands -lt 4 -or $motion -lt 1 -or $preamble -lt 1)){
+            $failed=$true;$result.warnings=@('gcode.insufficient_syntax_evidence')
+        }
+    }
+    $clock.Stop()
+    $result.metrics.elapsedMilliseconds=[int]$clock.ElapsedMilliseconds
+    if(-not $failed){
+        $result.status='ok';$result.decision='format_consistent'
+        $result.scanIncomplete=($OffsetBytes -gt 0 -or $LengthBytes -lt $Stream.Length)
+        $result.warnings=$(if($result.scanIncomplete){@('gcode.unobserved_source_unknown')}else{@()})
+        $result.items=@([pscustomobject]@{
+            format='gcode';offsetBytes=$OffsetBytes;lengthBytes=$LengthBytes
+            confidence='probable';originalIdentity='unknown'
+            integrityScope='heuristic_text_only_not_original_file_integrity'
+            evidence=@('gcode.bounded_ascii_syntax_profile','gcode.real_motion','gcode.comment_not_command')
+            sourceOrigin='unattributed_without_A_meter'
+            truncated=$false
+        })
+    }
+    return [pscustomobject]$result
+}
+
+Export-ModuleMember -Function Get-ChappyStlCandidates,Get-ChappyGcodeEvidence
