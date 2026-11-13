@@ -10,6 +10,12 @@ To sign off a row, A (or B/C/D as proposer, then A as verifier) must fill: **sta
 
 Rows are an operational index of the original formal requirements. **A must add any omitted mandatory requirement before declaring the parent R4/R5/R6/R7 milestone passed**. Do not delete, merge or weaken rows merely to increase the ratio. Every new research or implementation PR must explicitly reference the ledger row it aims to close.
 
+## Eighth A independent D6-04 narrow source-attestation audit — 2026-11-14 JST
+
+**Current narrow status conditional on final A signoff PR and post-main CI:** D6-04 **PASS as one indexed synthetic condition** after D #166 actual returned FAT numeric event comparator and A #169 exact **same-session** protected in-process FAT `Stream.Read` returns. A exact-head native Windows/privacy [#43502899365](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43502899365) **45/45 SUCCESS** with R3 SPC1/SPC2 paired 128/65664 and remote 65536 UNKNOWN; official 49% unchanged. D's pure caller-supplied events alone were NOT A authority. A matched actual D consumer physical call counts, observed returned spans, phase, union, short EOF and refused writable/quota. See [A D6-04 scope proof](D604_A_SOURCE_BOUND_SIGNOFF.md). A #169 [post-main CI #43503435690](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43503435690) and this signoff PR own exact-final HEAD/post-main must also succeed before status effective. This is never original file authenticity.
+
+**After this narrow D6-04 conditional signoff**, B=5/5 PASS, C=3/6 PASS, D=5/5 PASS, A=1/6 PASS => **14 PASS / 8 PARTIAL / 0 AUDIT_NEEDED of 22** (63.6% narrowly signed indexed conditions). **Official whole-stage 49%** remains R0–R4, **not** actual recovery. D's original full R6 needs an independent whole-stage roadmap audit before its formal 10% can be credited; A R7 and C R5 incomplete, R8 blocked. Real card and sole master IMG NOT APPROVED for ANY access. Prior snapshots below are historical.
+
 ## Seventh A independent formal R4 acceptance and C5-02 scope audit — 2026-11-14 JST
 
 **NEW CURRENT DISPOSITION:** A independently reviewed original *whole* R4 roadmap (not merely B4-01..05), B [#165](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/165) final native Windows 1515 assertions [#43498019222](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43498019222), privacy/central 44/44 [#43498019225](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43498019225), plus post-merged B main [#43501246833](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43501246833), and ACCEPTS original R4 **synthetic directory evidence** 10% weight subject to this A signoff PR's final-head/post-main CI. **Official weighted 49% = R0–R4 only**, not real recovery. This is a deliberate separate A stage signature, NOT row-count automation. See [full A signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md). B may transition to optional C assistance only after A signoff's post-main CI passes.
@@ -46,7 +52,7 @@ A also reviewed C [#167](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery
 | D6-01 | PASS | D cases M00/M01/M02/X02 and main fixture generator | Verify four primary regression cases and clean controls |
 | D6-02 | PASS | #126/#132/#138 and earlier chain anomaly tests | Complete paired mirror corruption, missing links, distant anomaly, cycles/crosslinks |
 | D6-03 | PASS | A #135 conflicting VBR and D geometry module | Separate BPB/backup/mirror hypotheses and no automatic winner |
-| D6-04 | PARTIAL | #126 real observed physical FAT windows, outer A meter | Honest actual vs unique I/O, 4-byte pair coverage, remote UNKNOWN and short EOF |
+| D6-04 | PASS | [D #166](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/166) + [A #169](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/169) guarded actual returned 4B pair A meter | Narrow A in-process synthetic FAT1/FAT2 actual/unique returned source binding, incomplete remote UNKNOWN; whole R6 original stage still pending |
 | D6-05 | PASS | D module exports and tests, fixed vs adaptive #138 | Verify bounded accepted fixed-sample default and no auto FAT copy/repair; **do not promote worse adaptive variant** |
 
 ## R7: Candidate integration — A, formal 10%
