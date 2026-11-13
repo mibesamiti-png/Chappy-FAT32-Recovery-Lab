@@ -472,6 +472,9 @@ try {
     # B4-03: A-shaped physical return intervals vs structural parent+dotdot pairs.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateParentPhysicalPair.ps1')
 
+    # Original R4 whole-stage audit: reuse frozen R2 scorer, add R3 SPC1/SPC2 actual physical coverage.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4FormalTwoTrackAcceptance.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
