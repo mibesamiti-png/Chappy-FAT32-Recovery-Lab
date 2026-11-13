@@ -64,6 +64,7 @@ $bc503AdvisorTP=0;$bc503AdvisorFP=0;$bc503AdvisorFN=0;$bc503AdvisorTN=0;$bc503Ad
 $bc503TotalCActual=0L;$bc503TotalCUnique=0L;$bc503TotalCReads=0L
 $bc503TotalBActual=0L;$bc503TotalBCalls=0L
 $bc503ShortUnknown=0;$bc503QuotaUnknown=0;$bc503ForgedDenied=0
+$bc506AttackCount=0
 foreach($scenario in @('normal','wrong_size','hidden_entry','reverse_order')){
     [byte[]]$bc503Image=[byte[]]$bc503Clean.image.Clone()
     # The directory contains the independently observed start cluster4 and
@@ -190,6 +191,60 @@ foreach($scenario in @('normal','wrong_size','hidden_entry','reverse_order')){
             Assert-BC503Safety $x 'forged parent'
             Assert-B ($x.status -ceq 'unknown' -and $x.metrics.sizeConsistentUnattested -eq 0) 'BC5-03 forged parent/path metadata cannot support candidate selection'
             $bc503ForgedDenied++
+            # Adversarial C5-06 report contract: deliberately break ONE C
+            # candidate after genuine C discovery, leave the other unchanged.
+            # Neither source scan, its original SHA nor its budget changes.
+            foreach($bc506Attack in @(
+                'first_span_offset','second_span_length','source_origin_spoof',
+                'first_span_origin_spoof','candidate_key_forged',
+                'public_offset_conflict','overlapping_spans','missing_spans'
+            )){
+                $bc506Report=Copy-BC503Envelope $bc503C1.report
+                $bc506Target=$bc506Report.items[0]
+                switch($bc506Attack){
+                    'first_span_offset' {
+                        $bc506Target.sourceSpans[0].offsetBytes=[long]$bc506Target.firstOffset+512L
+                    }
+                    'second_span_length' {
+                        $bc506Target.sourceSpans[1].lengthBytes=[long]$bc506Target.secondBytes+1L
+                    }
+                    'source_origin_spoof' {
+                        $bc506Target.sourceOrigin='A_verified'
+                    }
+                    'first_span_origin_spoof' {
+                        $bc506Target.sourceSpans[0].origin='A_verified'
+                    }
+                    'candidate_key_forged' {
+                        $bc506Target.candidateKey='3mf:forged_candidate_key'
+                    }
+                    'public_offset_conflict' {
+                        $bc506Target.offsetBytes=[long]$bc506Target.firstOffset+32L
+                    }
+                    'overlapping_spans' {
+                        $bc506Target.secondOffset=[long]$bc506Target.firstOffset+64L
+                        $bc506Target.sourceSpans[1].offsetBytes=$bc506Target.secondOffset
+                        $bc506Target.candidateKey=('3mf:{0}+{1},{2}+{3}' -f
+                            $bc506Target.firstOffset,$bc506Target.firstBytes,
+                            $bc506Target.secondOffset,$bc506Target.secondBytes)
+                    }
+                    'missing_spans' {
+                        $bc506Target.sourceSpans=@()
+                    }
+                }
+                $bc506Result=Get-ChappyBFragmentAdvisoryV1 -DirectoryEnvelope $b -OuterReadEvents $events -FragmentReport $bc506Report -SourceLengthBytes $bc503Image.Length -EnableBFragmentAdvisory
+                Assert-BC503Safety $bc506Result ('C5-06-'+$bc506Attack)
+                Assert-B ($bc506Result.status -ceq 'partial' -and
+                    $bc506Result.annotations.Count -eq 2 -and
+                    $bc506Result.annotations[0].cCandidateIndex -eq 0 -and
+                    $bc506Result.annotations[0].relation -ceq 'entry_unobserved_unknown' -and
+                    $bc506Result.annotations[0].reasonCode -ceq 'bc503_inconsistent_c_source_spans' -and
+                    $bc506Result.annotations[1].relation -ceq 'size_consistent_unattested' -and
+                    $bc506Result.metrics.sizeConsistentUnattested -eq 1 -and
+                    $bc506Result.metrics.entryUnobservedUnknown -eq 1 -and
+                    $bStream.Calls -eq $readsBefore -and
+                    ($bc503C1.report|ConvertTo-Json -Depth 12 -Compress) -ceq $cBefore) ('BC5-06 forged C source span/ID contradiction denied, valid candidate retained: '+$bc506Attack)
+                $bc506AttackCount++
+            }
         }
         $bc503TotalBActual+=[long]$bStream.ReturnedBytes
         $bc503TotalBCalls+=[long]$bStream.Calls
@@ -228,6 +283,7 @@ foreach($scenario in @('normal','wrong_size','hidden_entry','reverse_order')){
     Assert-B ((Get-A3DSha256 $bc503Image) -ceq $bc503Before) ('BC5-03 invented full source SHA before/after intact '+$scenario)
     $bc503ScenarioCount++
 }
+Assert-B ($bc506AttackCount -eq 8) 'BC5-06 eight forged internal C candidate span/identity contradictions denied without original promotion'
 Assert-B ($bc503ScenarioCount -eq 4 -and
     $bc503BaselineTP -eq 4 -and $bc503BaselineFP -eq 4 -and
     $bc503BaselineFN -eq 0 -and $bc503BaselineTN -eq 0 -and
