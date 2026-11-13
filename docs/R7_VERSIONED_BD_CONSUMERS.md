@@ -17,7 +17,7 @@ The first A7 live envelope (#151) called B's raw directory/hierarchy functions a
 
 `tests/Test-A3DVersionedBDContracts.ps1` exercises generated 2MiB M00/M02 (actual B/C/D modules), generated FAT32 65,541-cluster ~32MiB SPC1 (standard-sized geometry) and a global 1024B short-quota negative. Confirms both versioned result contracts, actual outer successful-returned byte sums, nonwritable source unchanged SHA, B no probable original parent, D no FAT winner or write/export. Also checks default disabled = zero physical reads even when selecting the versioned switch.
 
-New isolated Windows PowerShell 5.1 regression appended to central runner: **41 -> 42 scripts**. Require exact final PR-head native Windows 42/42+privacy and post-merge main confirmation. Existing B/C/D native tests remain owned by their separate chat teams; no B/C/D source files modified by A.
+New isolated Windows PowerShell 5.1 regression appended to central runner: **41 -> 42 scripts**. [A code-head CI #43457132142](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43457132142) passed 42/42+privacy with compact M00 and M02 guard `blocked_contradicted_geometry`, and standard-size generated FAT32 guard `candidate_geometry_unverified`, fixed sampling performed. Final PR-head and post-main CI confirmation remain mandatory. Existing B/C/D native tests remain owned by their separate chat teams; no B/C/D source files modified by A.
 
 ## What remains incomplete
 
