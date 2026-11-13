@@ -1001,3 +1001,7 @@ Invoke-C5CrossTrackOriginalScorer
 # Team C R5 C5-05: source returned/unique reads, early EOF, bounded scratch and C-unattested coverage.
 . (Join-Path $PSScriptRoot 'R5SourceCoverageGate.ps1')
 Invoke-C5CoverageGate
+
+# C R5 C5-01: real OPC StartPart reference/part names and effective MIME, forged XML negatives.
+. (Join-Path $PSScriptRoot 'R5OpcStartPartBreadthGate.ps1')
+Invoke-C5OpcStartPartBreadthGate
