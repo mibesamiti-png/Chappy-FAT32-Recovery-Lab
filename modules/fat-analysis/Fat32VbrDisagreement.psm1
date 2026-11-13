@@ -37,6 +37,7 @@ function Get-D5Bpb {
         rootEntryCount=[long][BitConverter]::ToUInt16($B,17)
         total16=[long][BitConverter]::ToUInt16($B,19)
         fat16=[long][BitConverter]::ToUInt16($B,22)
+        hiddenSectors=[long][BitConverter]::ToUInt32($B,28)
         totalSectors=[long][BitConverter]::ToUInt32($B,32)
         fatSectors=[long][BitConverter]::ToUInt32($B,36)
         extendedFlags=[long][BitConverter]::ToUInt16($B,40)
@@ -129,6 +130,8 @@ function Get-D5Candidate {
             reservedSectors=$(if($Bpb){$Bpb.reservedSectors}else{$null})
             fatCopies=$(if($Bpb){$Bpb.fatCopies}else{$null})
             totalSectors=$(if($Bpb){$Bpb.totalSectors}else{$null})
+            hiddenSectors=$(if($Bpb){$Bpb.hiddenSectors}else{$null})
+            extendedFlags=$(if($Bpb){$Bpb.extendedFlags}else{$null})
             fatSectors=$(if($Bpb){$Bpb.fatSectors}else{$null})
             rootCluster=$(if($Bpb){$Bpb.rootCluster}else{$null})
             fsInfoSector=$(if($Bpb){$Bpb.fsInfoSector}else{$null})
@@ -239,7 +242,7 @@ function Get-ChappyFatVbrDisagreement {
     $ba=Get-D5Candidate -Role 'backup' -ProbeOffset $backupOffset -Bpb $backup -ReadProblem $bProblem -Start $start -Length $length -StreamLength $Stream.Length -Fs $fs -FsLocation $fsLocation -BadMbr $anchorBad
     $diff=New-Object System.Collections.ArrayList
     if($null -ne $primary -and $null -ne $backup){
-        foreach($key in @('bootJump','signature','bytesPerSector','sectorsPerCluster','reservedSectors','fatCopies','rootEntryCount','total16','fat16','totalSectors','fatSectors','extendedFlags','version','rootCluster','fsInfoSector','backupBootSector')){
+        foreach($key in @('bootJump','signature','bytesPerSector','sectorsPerCluster','reservedSectors','fatCopies','rootEntryCount','total16','fat16','hiddenSectors','totalSectors','fatSectors','extendedFlags','version','rootCluster','fsInfoSector','backupBootSector')){
             if($primary.$key -ne $backup.$key){[void]$diff.Add(('bpb.'+$key))}
         }
     }
