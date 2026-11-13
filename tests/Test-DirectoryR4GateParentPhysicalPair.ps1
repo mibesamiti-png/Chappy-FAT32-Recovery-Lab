@@ -177,16 +177,18 @@ Assert-B ($noEvents.metrics.observedPairUnattested -eq 0 -and
 # relationStatus in post-scan metadata. Root2 is empty; both unlinked
 # directory containers contain real dot/dotdot and an opposing child entry.
 [byte[]]$b403CycleBytes=New-Object byte[] 2560
-Add-BR4Entries $b403CycleBytes 1536 @(
-    (New-BR4Entry '.          ' 0x10 3 0)
-    (New-BR4Entry '..         ' 0x10 4 0)
-    (New-BR4Entry 'CYC4    DIR' 0x10 4 0)
-)
-Add-BR4Entries $b403CycleBytes 2048 @(
-    (New-BR4Entry '.          ' 0x10 4 0)
-    (New-BR4Entry '..         ' 0x10 3 0)
-    (New-BR4Entry 'CYC3    DIR' 0x10 3 0)
-)
+# Preserve each 32-byte record as ONE ArrayList element; PowerShell
+# @(... ) would otherwise enumerate a [byte[]] into individual bytes.
+$b403Cycle3=New-Object System.Collections.ArrayList
+[void]$b403Cycle3.Add((New-BR4Entry '.          ' 0x10 3 0))
+[void]$b403Cycle3.Add((New-BR4Entry '..         ' 0x10 4 0))
+[void]$b403Cycle3.Add((New-BR4Entry 'CYC4    DIR' 0x10 4 0))
+Add-BR4Entries $b403CycleBytes 1536 @($b403Cycle3.ToArray())
+$b403Cycle4=New-Object System.Collections.ArrayList
+[void]$b403Cycle4.Add((New-BR4Entry '.          ' 0x10 4 0))
+[void]$b403Cycle4.Add((New-BR4Entry '..         ' 0x10 3 0))
+[void]$b403Cycle4.Add((New-BR4Entry 'CYC3    DIR' 0x10 3 0))
+Add-BR4Entries $b403CycleBytes 2048 @($b403Cycle4.ToArray())
 $b403CycleBefore=Get-BR4Sha $b403CycleBytes
 $b403CycleReader=[ChappyBR4ObservedParentPositive.MeteredStream]::new($b403CycleBytes,97,-1L,128)
 try {
