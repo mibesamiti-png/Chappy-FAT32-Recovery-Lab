@@ -57,6 +57,7 @@ $tests=@(
     'tests\Test-A3DGateProgressParameters.ps1',
     'tests\Test-A3DLiveBcdEnvelope.ps1',
     'tests\Test-A3DVersionedBDContracts.ps1',
+    'tests\Test-A3DFragmentPhysicalReceipts.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
     'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
