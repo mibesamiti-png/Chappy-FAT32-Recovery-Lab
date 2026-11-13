@@ -63,14 +63,16 @@ function New-C3mfOpcSyntheticZip {
     }finally{$zip.Dispose()}
     [byte[]]$bytes=$mem.ToArray()
     $mem.Dispose()
-    if($Case -eq 'crc_payload_corrupt'){
-        # Alter a compressed local member without adjusting the ZIP central CRC.
-        Assert-C3mfOpc ([BitConverter]::ToUInt32($bytes,0) -eq 0x04034b50) 'synthetic_local_zip_marker'
-        $nameSize=[BitConverter]::ToUInt16($bytes,26)
-        $extraSize=[BitConverter]::ToUInt16($bytes,28)
-        $at=30+$nameSize+$extraSize
-        Assert-C3mfOpc ($at -lt ($bytes.Length-100)) 'synthetic_crc_mutation_offset'
-        $bytes[$at]=[byte]($bytes[$at] -bxor 1)
+    if($Case -eq 'crc_metadata_mismatch'){
+        # Deterministically make the declared central-directory CRC wrong.
+        # A one-bit mutation in a DEFLATE bitstream is *not* guaranteed to
+        # change its decoded payload; don't use that as a CRC negative oracle.
+        $at=-1
+        for($i=0;$i -le ($bytes.Length-46);$i++){
+            if([BitConverter]::ToUInt32($bytes,$i) -eq 0x02014b50){$at=$i;break}
+        }
+        Assert-C3mfOpc ($at -ge 0) 'synthetic_central_directory_found'
+        $bytes[$at+16]=[byte]($bytes[$at+16] -bxor 1)
     }
     return ,$bytes
 }
@@ -80,7 +82,7 @@ function Invoke-C3mfOpcGateRegression {
     $names=@('clean','model_xml_invalid','wrong_relationship_target','wrong_content_type',
         'missing_startpart','duplicate_startpart','missing_model_part',
         'model_with_external_dtd','model_payload_changed','plain_zip',
-        'crc_payload_corrupt','oversized_model_xml')
+        'crc_metadata_mismatch','oversized_model_xml')
     $canonical=New-C3mfOpcSyntheticZip -Case 'clean'
     $canonicalSha=Get-C3mfFixtureSha $canonical
     $newTP=0;$newTN=0;$newFP=0;$newFN=0
