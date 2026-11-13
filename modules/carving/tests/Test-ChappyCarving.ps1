@@ -993,3 +993,7 @@ Invoke-C3mfOpcGateRegression
 # C R5 formal ledger C5-03: non-oracle guarded two-fragment callable module gate.
 . (Join-Path $PSScriptRoot 'R5FragmentModuleGateRegression.ps1')
 Invoke-CFragmentModuleGateRegression
+
+# Team C R5 C5-04: independent original SHA and UNKNOWN on 2MiB and standards-shaped FAT32 synthetic tracks.
+. (Join-Path $PSScriptRoot 'R5CrossTrackOriginalScorerGate.ps1')
+Invoke-C5CrossTrackOriginalScorer
