@@ -99,3 +99,6 @@ jobs:
       - name: Run Team D D6-05 stable guarded fixed FAT result acceptance
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-GateGuardedResult.Tests.ps1
+      - name: Run Team D D6-02 original fixed FAT anomaly acceptance matrix
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-OriginalFatAcceptance.Tests.ps1
