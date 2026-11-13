@@ -2,6 +2,20 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## Ninth A formal R6 and narrow C5-03 acceptance — 2026-11-14 JST
+
+**Official engineering stage progress 59% = R0–R4 plus R6 (independent complete original R6 signoff)**, conditional on [A R6 final CI](R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md); previous sections are historical snapshots. This is strictly synthetic software-engineering acceptance, **not** 59% real file recovery.
+
+| Team | Stage | PASS | PARTIAL | A whole-stage acceptance |
+| --- | --- | ---: | ---: | --- |
+| B | R4 | 5/5 | 0 | R4 accepted |
+| C | R5 | 4/6 | 2 | R5 NOT accepted |
+| D | R6 | 5/5 | 0 | **R6 separately A accepted** after two-track audit/CI |
+| A | R7 | 1/6 | 5 | R7 NOT accepted |
+| **Total** | R4–R7 | **15/22 (68.2%)** | **7** | **59% formal weighted** |
+
+All 22 subrows assessed (100%), but PARTIAL is not half complete. C5-03 scoped two-piece acceptance from C #172 does not establish arbitrary fragments, geometry authenticity, original identity or trustworthy physical source for real data. Real media remains inaccessible/not approved.
+
 ## Current narrow D6-04 gate proposal — eighth A round, 2026-11-14 JST
 
 After D [#166](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/166) and A [#169](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/169) real same-invocation A physical returned-event binding, **D6-04 narrowly PASS** subject to [independent A signoff](D604_A_SOURCE_BOUND_SIGNOFF.md) exact final-head/post-main Windows/privacy CI. B R4 **5 PASS/0 PARTIAL**, C R5 **3/3**, D R6 **5/0**, A R7 **1/5**. Total **14 PASS/8 PARTIAL/0 unaudited** =63.6% narrow verified conditions, 100% condition audit. **Official fully accepted project weight = 49%** (R0–R4 only). D's 5/5 indexed subchecks do NOT automatically pass original R6 whole-stage roadmap; D next audits formal R6. No real media recovery rate is known. Historical snapshots below retain earlier values.
@@ -27,7 +41,7 @@ For a team with `N` registered ledger rows:
 - **Audited / assessed condition coverage** = `(N−AUDIT_NEEDED)/N × 100%`. `PARTIAL`, `MISSING` and `BLOCKED` all count as *reviewed*, even if feature completion is 0%. This measures how much of the backlog is understood, not how much code is finished.
 - **Evidenced work reach** = `(PASS+PARTIAL)/N × 100%`; only indicates the fraction of rows with **some confirmed positive implementation/test evidence**, never a weighted estimate of completed function. We do NOT convert PARTIAL to 50% PASS; `AUDIT_NEEDED` does NOT mean feature missing.
 - **Gate blockers** = status `BLOCKED`; **implementation missing** = `MISSING`; **awaiting audit** = `AUDIT_NEEDED`. Preserve all three separately.
-- **Official weighted project progress** = **49%**, independently accepted full stages R0=5%, R1=10%, R2=12%, R3=12%, **R4=10% (separate A original formal-stage signoff)**. R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited until each entire formal stage passes independent A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
+- **Official weighted project progress** = **59%**, independently accepted full stages R0=5%, R1=10%, R2=12%, R3=12%, R4=10%, **R6=10% (separate A original whole-stage signoff)**, conditional on exact-final/post-main A acceptance CI. R5=15, R7=10, R8=9, R9=5, R10=2 are not credited until each entire stage passes independent A signoff. **Never automatically promote official progress because all 22 subrows became PASS.**
 
 ## Latest snapshot after A independently reviewed and merged B #162, C #160, D #161
 

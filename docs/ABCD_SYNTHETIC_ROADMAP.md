@@ -2,6 +2,10 @@
 
 Team A owns this roadmap under [Issue #1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1). The goal is an executable synthetic research system that discovers files, diagnoses corruption, evaluates bounded fragment reconstruction and safely exports candidates. The live roster is [TEAM_DISPATCH.md](TEAM_DISPATCH.md). Milestone numbers below apply to this roadmap. The separate R0–R4 research gates in [ALGORITHM_RESEARCH_PROTOCOL.md](ALGORITHM_RESEARCH_PROTOCOL.md) apply to every new algorithm.
 
+## Ninth A original R6 FAT evidence acceptance (2026-11-14 JST)
+
+**Formal original R6 = A ACCEPTED** on entirely generated synthetic evidence, 10% weight **after this A signoff PR's final HEAD and post-main CI**. D #171 plus D earlier accepted modules and A same-session physical reads #169/#170 cover unchanged R6 original test clauses across compact R2 and standard R3 artificial source. Full independent [A original R6 signoff](R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md). Official engineering milestones **59% (R0–R4 + R6)** after final CI, not real file recovery. The original R6 text in table below remains unchanged. R5/R7 unfinished; R8 blocked; real media strictly NOT approved.
+
 ## Seventh A original whole-R4 stage acceptance (2026-11-14 JST)
 
 **Formal R4 = ACCEPTED on generated synthetic evidence only (10% weight)** after A independently reviewed original R4 clauses against B #165 two-track matrix, actual source coverage, hidden-parent/forged ledger/UNKNOWN and bounded versioned B/A integration. Final-head B Windows #43498019222 (1515 assertions), privacy/central #43498019225 (44/44), post B merge main #43501246833 all SUCCESS. [Independent A formal signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md) is contingent on that signoff PR's own final-head/post-main CI. Official fully gated **49% (R0–R4)** after adoption, not actual file recovery or media authenticity; other stages incomplete and R8 blocked. **Original R4 criteria in table below remain unchanged**.
