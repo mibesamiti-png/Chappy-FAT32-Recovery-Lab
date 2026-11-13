@@ -82,7 +82,10 @@ function Invoke-CBreadthStl {
     $null -eq $hits[0].PSObject.Properties['sourceToken']) ($name+':no_original_claim')
    [byte[]]$slice=[byte[]]::new([int]$hits[0].lengthBytes)
    [Array]::Copy($img,10240,$slice,0,$slice.Length)
-   if((Get-A3DSha256 $slice) -ceq (Get-A3DSha256 $data.original)){$shaExact++}else{$shaDifferent++}
+   # Binary STL candidate ends at 84+50*N, not padded 512B sector slack.
+   [byte[]]$reference=[byte[]]::new($slice.Length)
+   [Array]::Copy($data.original,0,$reference,0,$slice.Length)
+   if((Get-A3DSha256 $slice) -ceq (Get-A3DSha256 $reference)){$shaExact++}else{$shaDifferent++}
   }else{$unknown++}
   Write-Host ('C5-02 STL CASE={0} truth={1} found={2} physicalB={3} calls={4}' -f $name,$valid,($hits.Count -eq 1),$res.metrics.bytesRead,$res.metrics.readRequests)
  }
