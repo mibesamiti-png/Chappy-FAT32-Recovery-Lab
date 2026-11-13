@@ -93,3 +93,6 @@ jobs:
       - name: Run Team D D6-03 guarded conflicting VBR geometry gate
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R6-GateVbrHypotheses.Tests.ps1
+      - name: Run Team D D6-04 independently metered physical paired FAT coverage gate
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R6-GatePhysicalCoverage.Tests.ps1
