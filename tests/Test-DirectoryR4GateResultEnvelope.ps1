@@ -145,7 +145,7 @@ try {
 } finally {$b405BadCapStream.Dispose()}
 Assert-B ($b405Total -eq 12 -and $b405Errors -eq 3 -and
     $b405Candidates -eq 27 -and $b405Unknown -eq 12 -and
-    @($b405SourceHashes|Select-Object -Unique).Count -eq 12 -and
+    $b405SourceHashes.Count -eq 12 -and
     $b405Outer -eq 21504 -and $b405Directory -eq 9216 -and
     $b405Calls -eq 252) 'B4-05 fixed 3seed x four-case corpus with independent outer source returns'
 Write-Host ('B4-05 SYNTHETIC: rows={0} unknownIdentity={1} unreadableX02={2}, retainedCandidateInstances={3}; actual outer Source.Read return={4}B, B directory return={5}B, Read calls={6}; parent matched structural retained1 partial; early EOF directory17B complete0; user files recovered=0' -f
