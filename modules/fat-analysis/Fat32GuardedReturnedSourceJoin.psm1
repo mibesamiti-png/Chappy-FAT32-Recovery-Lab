@@ -233,10 +233,10 @@ function Compare-ChappyFatGuardedReturnedSourceEvents {
         return [pscustomobject]$out
     }
     $fat1End=$f1+$fb;$fat2End=$f2+$fb
-    foreach($event in $outer){
+    for($idx=0;$idx -lt $outer.Count;$idx++){
         # Same positional ordering as D internal transcript established above.
-        $idx=[array]::IndexOf($outer,$event)
         if([string]$inner[$idx].phase -cne 'fat_fixed'){continue}
+        $event=$outer[$idx]
         $start=[long]$event.OffsetBytes;$n=[long]$event.ReturnedBytes
         for($i=0L;$i -lt $n;$i++){
             $at=[long]($start+$i)
