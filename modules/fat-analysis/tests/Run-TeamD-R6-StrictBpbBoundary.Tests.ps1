@@ -4,9 +4,11 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference='Stop'
 $root=Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
 . (Join-Path $root 'tests\helpers\New-ChappyA3DStandardFixture.ps1')
-Import-Module (Join-Path $PSScriptRoot '..\Fat32VbrDisagreement.psm1') -Force
-Import-Module (Join-Path $PSScriptRoot '..\Fat32GeometryHypothesisGate.psm1') -Force
+# GuardedResult force-imports the geometry gate as its own dependency.
+# Import the two public tested entrypoints in dependency-first, then direct
+# gate LAST so Windows PS5.1 exports both commands to this test runspace.
 Import-Module (Join-Path $PSScriptRoot '..\Fat32GuardedResult.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\Fat32GeometryHypothesisGate.psm1') -Force
 $script:Pass=0;$script:Fail=0
 function Assert-D603B([bool]$Test,[string]$Message){
  if($Test){$script:Pass++;Write-Host ('PASS '+$Message)}
