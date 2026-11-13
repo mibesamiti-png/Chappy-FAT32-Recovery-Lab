@@ -1,5 +1,9 @@
 # STATE — latest 2026-11-13 four-chat operating redesign
 
+## ACTIVE A seventh checkpoint — 2026-11-14 JST
+
+A merged B #165 (formal R4 two-track acceptance, synthetic R2/R3), D #166 (guarded FAT outer source events, NOT A-attested yet), and C #167 (bounded STL/G-code format breadth). Independent exact PR-HEAD native Windows 5.1 and privacy CI PASS for all three, B post-merge main CI #43501246833 PASS. A's independent complete original R4 roadmap audit ACCEPTS its generated-synthetic 10% formal milestone, pending this signoff PR's own final-head and post-main CI; see `docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md`. **Official R0–R4 weight 49%** once adopted, distinct from narrow row PASS and not a real restoration rate. C5-02 narrow PASS; D6-04 PARTIAL until actual same-session A source meter binding. Narrow B5/5 C3/6 D4/5 A1/6, total 13/22 PASS, 9 PARTIAL, none unaudited. R5/R6/R7 unfinished, R8 blocked. After A signoff final CI, B may assist C with bounded B-owned advisory directory hints; four separate chats, A-only merges. Sole master IMG/card NOT APPROVED for ANY access.
+
 ## ACTIVE A sixth gate-closure round — 2026-11-14 JST, four independent existing chats
 
 A independently reviewed exact-head Windows PS5.1 and privacy CI, then squash merged **C [#160](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/160)** (guarded 3MF OPC XML StartPart/forged decoys; C5-01 narrow PASS), **D [#161](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/161)** (matching-but-unsafe VBR/BPB denied before FAT read; D6-03 narrow PASS), **B [#162](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/162)** (physically returned parent/dotdot/cyclic/forged parent graph; B4-03 narrow PASS). Current B/C/D-merged main baseline `ceb890644f7af778a980654532930dca233fc5dc`; post-BCD main central privacy gate [#43479315665](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43479315665) succeeded, 43/43.

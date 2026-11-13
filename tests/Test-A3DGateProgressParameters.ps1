@@ -20,7 +20,7 @@ try{
 $live=[IO.File]::ReadAllText($ledger,[Text.Encoding]::UTF8)
 $liveResult=& $tool -LedgerText $live
 Assert-AProgress ($liveResult.totalConditions -eq 22 -and
-    $liveResult.officialWeightedProjectPercent -eq 39 -and
+    $liveResult.officialWeightedProjectPercent -eq 49 -and
     ($liveResult.signedConditions+$liveResult.partialConditions+
      $liveResult.auditNeededConditions+$liveResult.blockedConditions+
      $liveResult.missingConditions) -eq 22) 'current_live_ledger_valid_but_not_frozen_in_test'
@@ -51,7 +51,7 @@ foreach($group in @(
 $text=$lines -join "`n"
 $progress=& $tool -LedgerText $text
 Assert-AProgress ($progress.schemaVersion -ceq 'abcd_gate_progress_v1' -and
-    $progress.officialWeightedProjectPercent -eq 39 -and
+    $progress.officialWeightedProjectPercent -eq 49 -and
     $progress.totalConditions -eq 22 -and
     $progress.signedConditions -eq 4 -and
     $progress.partialConditions -eq 6 -and
@@ -75,7 +75,7 @@ for($i=0;$i -lt 4;$i++){
         $x.auditNeeded -eq $want.u -and
         $x.evidenceVerifiedPercent -eq $want.v -and
         $x.conditionAssessmentPercent -eq $want.a -and
-        -not $x.officialStagePassed) ('team_'+$want.name+'_measured')
+        $x.officialStagePassed -eq ($want.name -ceq 'B')) ('team_'+$want.name+'_measured')
 }
 Assert-AProgress ($progress.conditionVerifiedPercent -eq 18.2 -and
     $progress.conditionAssessmentPercent -eq 45.5) 'different_verification_and_audit_percentages'
@@ -83,7 +83,7 @@ $pathResult=& $tool -LedgerPath $ledger
 Assert-AProgress ($pathResult.signedConditions -eq $liveResult.signedConditions -and
     $pathResult.partialConditions -eq $liveResult.partialConditions) 'path_and_text_same_current_ledger_result'
 $json=& $tool -LedgerText $text -AsJson | ConvertFrom-Json
-Assert-AProgress ($json.officialWeightedProjectPercent -eq 39 -and
+Assert-AProgress ($json.officialWeightedProjectPercent -eq 49 -and
     $json.parameters.Count -eq 4 -and $json.originalRecoveryRate -ceq 'unknown') 'json_export_safe'
 # A previously audited PASS row may regress to PARTIAL on re-audit.
 $regressed=$text.Replace('| B4-02 | PASS |','| B4-02 | PARTIAL |')
@@ -92,7 +92,7 @@ $delta=& $tool -LedgerText $regressed
 Assert-AProgress ($delta.signedConditions -eq 3 -and
     $delta.partialConditions -eq 7 -and
     $delta.parameters[0].evidenceVerifiedPercent -eq 20.0 -and
-    $delta.officialWeightedProjectPercent -eq 39) 'regressions_not_hidden'
+    $delta.officialWeightedProjectPercent -eq 49) 'regressions_not_hidden'
 # Do not mint official acceptance even when all 22 subrows say PASS:
 # independent original-stage scope and A formal signoff are still required.
 $allPass=[regex]::Replace($text,
@@ -100,8 +100,9 @@ $allPass=[regex]::Replace($text,
  '${1}PASS${2}')
 $hypothetical=& $tool -LedgerText $allPass
 Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
-    $hypothetical.officialWeightedProjectPercent -eq 39 -and
-    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 0) 'no_automatic_full_gate_credit'
+    $hypothetical.officialWeightedProjectPercent -eq 49 -and
+    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 1 -and
+    $hypothetical.parameters[0].stage -ceq 'R4') 'no_automatic_extra_full_gate_credit'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
 $duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'
