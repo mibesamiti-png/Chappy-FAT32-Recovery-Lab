@@ -97,6 +97,27 @@ function Get-ChappyFatGeometryHypothesisGate {
             })
         }
     }
+    # Even if the caller's source stops or the physical read-call ceiling
+    # aborts parsing, preserve a stable two-role result. These are explicitly
+    # UNKNOWN placeholders, never reconstructed or preferred geometries.
+    if($null -eq $comparison){
+        foreach($role in @('primary','backup')){
+            [void]$hypotheses.Add([pscustomobject]@{
+                sourceRole=$role;locatorTrust='unobserved'
+                probeOffsetBytes=$null
+                plausibility='insufficient_evidence'
+                contradictionCodes=@()
+                unknownCodes=@('io.bounded_structure_observation_failed')
+                numericGeometry=[pscustomobject]@{
+                    fat1OffsetBytes=$null;fat2OffsetBytes=$null
+                    fatLengthBytes=$null;dataClusterCount=$null
+                    rootCluster=$null;bytesPerSector=$null
+                    sectorsPerCluster=$null
+                }
+                sourceIdentity='unknown'
+            })
+        }
+    }
     $gate='blocked_insufficient_evidence'
     if($null -eq $comparison -or $trace.ZeroBeforeDeclaredEnd -gt 0 -or
        $quota.RefusedReadCalls -gt 0) {
