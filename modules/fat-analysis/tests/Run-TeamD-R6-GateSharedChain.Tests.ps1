@@ -225,6 +225,37 @@ try{
     $v=$a.Clone();$v.MaxReadBytes=1025
     Assert-D26 (Throws-D26 {Get-ChappyFatSharedChainEvidence @v}) 'Max returned-byte budget hard capped'
 }finally{$ro.Dispose()}
+# Standards-shaped 32.5MiB generated FAT32 control: one positive and
+# one negative under exact same source cap, without passing the scorer's truth
+# or mutation coordinates to the numeric observation module.
+. (Join-Path $root 'tests\helpers\New-ChappyA3DStandardFixture.ps1')
+$standard=New-ChappyA3DStandardFixture -Seed 202614 -SectorsPerCluster 1
+[byte[]]$stdClean=$standard.image
+$stdOriginalSha=Hash-D26 $stdClean
+$stdFatBytes=[long][Math]::Ceiling((4.0*(65541+2))/512.0)*512L
+$stdF1=33L*512L
+$stdF2=$stdF1+$stdFatBytes
+$stdNoShare=Observe-D26 -Image $stdClean -Fat1 $stdF1 -Fat2 $stdF2 -FatLength $stdFatBytes -MaxCluster 65542L
+Check-D26Bound $stdNoShare 'standards FAT32 clean' 256
+Assert-D26 ($stdNoShare.r.sharedObservedInCopies -eq 0 -and
+    $stdNoShare.r.status -ceq 'ok') 'Standards-sized 65541 data clusters clean case remains unshared and candidate-only'
+[byte[]]$stdShared=[byte[]]$stdClean.Clone()
+foreach($fat in @($stdF1,$stdF2)) {
+    Set-D26Entry $stdShared ($fat+16L) ([uint32]8)
+}
+$stdMutatedSha=Hash-D26 $stdShared
+$stdWitness=Observe-D26 -Image $stdShared -Fat1 $stdF1 -Fat2 $stdF2 -FatLength $stdFatBytes -MaxCluster 65542L
+Check-D26Bound $stdWitness 'standards FAT32 shared-node' 256
+Assert-D26 ($stdWitness.r.sharedObservedInCopies -eq 2 -and
+    $stdWitness.r.copies[0].sharedObservedClusterCount -eq 1 -and
+    $stdWitness.r.copies[1].sharedObservedClusterCount -eq 1 -and
+    $stdWitness.r.fileOwner -ceq 'unknown') 'Standards-shaped both FAT copies observe shared node, without real file owner inference'
+Assert-D26 ((Hash-D26 $stdClean) -ceq $stdOriginalSha -and
+    (Hash-D26 $stdShared) -ceq $stdMutatedSha) 'Both standard-size synthetic SHA values unchanged after read-only analysis'
+Write-Host ('D6-02 standard FAT32 numeric witness: clean shared=0, synthetic link4-to8 sharedCopies={0}; actual/unique={1}/{2} bytes' -f
+    $stdWitness.r.sharedObservedInCopies,$stdWitness.actual,$stdWitness.unique)
+$standard=$null;$stdClean=$null;$stdShared=$null
+[GC]::Collect()
 $serialized=$oneR.r|ConvertTo-Json -Depth 8
 Assert-D26 ($serialized -notmatch '(?i)originalFilename|sourcePath|repairTarget|recoveredPayload|fileSha256' -and
     $serialized -match 'fileOwner' -and $serialized -match 'unknown') 'Public-safe numeric result excludes payload, private name and original SHA'
