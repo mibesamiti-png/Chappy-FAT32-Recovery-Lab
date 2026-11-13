@@ -232,9 +232,11 @@ Check-D27 ($bad.status -ceq 'unknown') 'Reordered physical Read events rejected 
 $dup=@($sampleEvents)+@($sampleEvents[0])
 $bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $dup @sampleArgs
 Check-D27 ($bad.status -ceq 'unknown') 'Replayed otherwise valid returned event refused'
-$bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $sampleEvents @sampleArgs -Fat2OffsetBytes ($sampleArgs.Fat1OffsetBytes+4L)
+$overlapArgs=$sampleArgs.Clone();$overlapArgs.Fat2OffsetBytes=$sampleArgs.Fat1OffsetBytes+4L
+$bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $sampleEvents @overlapArgs
 Check-D27 ($bad.status -ceq 'unknown' -and $null -eq $bad.metrics.pairedCoveragePercent) 'Caller overlapping FAT geometry refused'
-$bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $sampleEvents @sampleArgs -Fat1OffsetBytes ([long]::MaxValue-3)
+$hugeArgs=$sampleArgs.Clone();$hugeArgs.Fat1OffsetBytes=[long]::MaxValue-3
+$bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $sampleEvents @hugeArgs
 Check-D27 ($bad.status -ceq 'unknown') 'Huge overflowing source offsets refused without any read'
 $bad=Get-ChappyFatPhysicalPairCoverage -Observation $sample -OuterReturnedEvents $sampleEvents @sampleArgs -MaxReturnedBytes 512
 Check-D27 ($bad.status -ceq 'unknown' -and $null -eq $bad.metrics.pairedCoveragePercent) 'Source return budget too small refuses rather than promoting coverage'
