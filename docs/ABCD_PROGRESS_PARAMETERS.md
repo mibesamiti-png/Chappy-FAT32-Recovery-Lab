@@ -2,6 +2,20 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## Current stage milestone and narrow-condition parameters — seventh A round, 2026-11-14 JST
+
+**Official whole-stage weighted project = 49%** (R0–R4 only; explicit [original R4 A signoff](docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md) and A signoff PR final-head/post-main CI required). B's original R4 acceptance is on generated synthetic evidence only. **This does not mean 49% of real files recovered.** Physical card/master IMG remain NOT APPROVED. Historical sections below retain their dates and earlier 39% snapshots.
+
+| Team | Stage | Signed PASS | PARTIAL | AUDIT_NEEDED | Verified narrow rows | Entire original formal stage |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| B | R4 | 5/5 | 0 | 0 | 100.0% | **A ACCEPTED** synthetic stage, 10 points |
+| C | R5 | 3/6 | 3 | 0 | 50.0% | Not accepted |
+| D | R6 | 4/5 | 1 | 0 | 80.0% | Not accepted |
+| A | R7 | 1/6 | 5 | 0 | 16.7% | Not accepted |
+| **Total** | R4–R7 | **13/22** | **9/22** | **0** | **59.1%** | **49% official whole project** |
+
+Only separately A-signed original milestones affect official percent. The progress script explicitly records R4 acceptance as a separate constant and MUST NOT turn R5/R6/R7 into PASS based merely on all subrows.
+
 ## Exact mathematical definitions
 
 For a team with `N` registered ledger rows:
@@ -9,7 +23,7 @@ For a team with `N` registered ledger rows:
 - **Audited / assessed condition coverage** = `(N−AUDIT_NEEDED)/N × 100%`. `PARTIAL`, `MISSING` and `BLOCKED` all count as *reviewed*, even if feature completion is 0%. This measures how much of the backlog is understood, not how much code is finished.
 - **Evidenced work reach** = `(PASS+PARTIAL)/N × 100%`; only indicates the fraction of rows with **some confirmed positive implementation/test evidence**, never a weighted estimate of completed function. We do NOT convert PARTIAL to 50% PASS; `AUDIT_NEEDED` does NOT mean feature missing.
 - **Gate blockers** = status `BLOCKED`; **implementation missing** = `MISSING`; **awaiting audit** = `AUDIT_NEEDED`. Preserve all three separately.
-- **Official weighted project progress** = **39%**, the separately accepted full stages R0=5%, R1=10%, R2=12%, R3=12%. R4=10, R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited before their **entire original formal stage criteria** have A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
+- **Official weighted project progress** = **49%**, independently accepted full stages R0=5%, R1=10%, R2=12%, R3=12%, **R4=10% (separate A original formal-stage signoff)**. R5=15, R6=10, R7=10, R8=9, R9=5, R10=2 are not credited until each entire formal stage passes independent A signoff and CI. **Never automatically promote official progress because all 22 subrows became PASS.**
 
 ## Latest snapshot after A independently reviewed and merged B #162, C #160, D #161
 
