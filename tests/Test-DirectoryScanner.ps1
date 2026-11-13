@@ -448,6 +448,9 @@ try {
     # Formal R4 B4-01 gate: 3-seed four-case independent candidate and UNKNOWN matrix.
     . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateCorpusMatrix.ps1')
 
+    # B4-02 formal acceptance: valid/corrupt LFN, deleted on/off, orphan/decoy.
+    . (Join-Path $PSScriptRoot 'Test-DirectoryR4GateLFNDeletionOrphanAcceptance.ps1')
+
     Write-Host 'ALL TEAM B SYNTHETIC TESTS PASSED'
 } finally {
     [IO.Directory]::Delete($temp, $true)
