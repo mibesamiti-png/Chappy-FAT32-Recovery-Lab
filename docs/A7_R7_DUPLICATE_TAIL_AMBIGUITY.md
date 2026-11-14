@@ -1,0 +1,21 @@
+# A R7 A7-04/A7-05: physically duplicated alternative tail, no original winner
+
+**Owner A** · 2026-11-14 JST · independent four-chat ABCD project. This is generated synthetic read-only memory source evidence only. NO physical microSD or sole ~31GB master IMG access of any kind (read, hash, scan, copy, export, extract, repair, write, upload), and no user's real filenames/content/paths.
+
+## Why a genuine ambiguous public-source test is required
+
+Earlier A [#187](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/187) confirmed actual source, cross-origin mismatches, late FAT 3B+EOF and external test-only original SHA; A [#188](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/188) adds distinct public candidate discovery/structural/source observation/ambiguity/oracle/recoverability axes and evidence de-duplication: **FOUR phase labels, ONE actual A in-process source, unique/repeated returned byte union**. Both passed native Windows/central privacy exact final-head CI; #188 post-main 50/50 is required before formal signoff.
+
+This PR adds the **51st isolated Windows PowerShell 5.1 synthetic acceptance test**, `tests/Test-A3DPublicDuplicateTailAmbiguity.ps1`, to check **actual production** `Get-ChappyA7PublicEvidenceV1`, not an artificial fake result.
+
+For **each** newly generated R3 standard FAT32 SPC1 fragmented-3MF / SPC2 contiguous physical control (seed202611), A first obtains a source-observed bounded C candidate without any oracle. In a *new test-only synthetic copy* of that source, the test duplicates the actually discovered 512B tail sector into a separate, unused 512B-aligned location at +6144 B. The candidate discovery/validation algorithm is **never passed this new target, the generated oracle location, or any original SHA**; it scans the same B-numeric-origin 32KiB window with the same fixed C probe/length phases and global A 120000 B/512-Read-call caps. This produces two or more equally ZIP/3MF structure-consistent source-returned candidate IDs/ordered extents from **one in-memory A source session**, not two independently authentic original sources.
+
+Expected public result: `decision=source_observed_structural_candidates_only` and `status=partial`, explicit `outcome.ambiguity=multiple_structural_hypotheses`, `oracleByteIdentity=test_only_not_evaluated`, `originalIdentity=unknown`, no source original/parent/FAT winner, no auto-selection/export/repair. Every candidate remains separate, valid and in source-relative order; no duplicate source-event weighting. The test alone **after output** independently reassembles each actual returned extent pair and scores private synthetic SHA: 2+ exact artificial original matches because the same tail content exists twice. Neither public output nor C scanner receives or emits this test oracle. This confirms that **even multiple artificial external SHA-exact candidates cannot identify which physical origin was the true lost file location.**
+
+Unsupported short reads, unknown BPB and cross-source/ID conflicts remain tested in the 50 existing isolated scripts; the source-copy before/after SHA is invariant under scanning. The new artificial fixture is intentionally mutated by test *before* A opens a readonly MemoryStream; no repair/write to a real source is involved.
+
+## Gate and next original R7 audit
+
+A accepts this PR only with exact final HEAD native Windows PS5.1/central privacy **51/51**, and independently checks post-main **51/51**. This strengthens A7-04 disagreement/ambiguity and A7-05 independent oracle separation. **No automatic R7 10-point credit** and no R8 export until A independently audits every unchanged full original R7 acceptance clause, including B/C/D versioned integration, source token/ordered extents, source provenance de-duplication, resource caps, missing/disagreeing/reordered evidence, public outcome classes and test-only independent byte-identical score. Current stage total **74%** (R0-R6 formally accepted synthetic), narrow team indicators **A4/6 B5/5 C6/6 D5/5** before any additional A gate approvals.
+
+Caveat: the generated dual tail test does NOT demonstrate arbitrary real-world original recovery or real device provenance; CRC/ZIP consistency is not an original winner. Source-only production remains default OFF, finite and non-authorizing.
