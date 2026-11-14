@@ -134,6 +134,29 @@ $result=[pscustomobject]@{
     officialUncreditedStages=@($uncreditedWeights.Keys)
     formalStageWeights=[pscustomobject]$formalStageWeights
     futureStageWeights=[pscustomobject]$uncreditedWeights
+    # A-owned R8 developmental checkpoints are NOT original-roadmap stage signoffs.
+    # An undefined future slice denominator MUST NOT become a guessed "R8 %".
+    activeStage=[pscustomobject]@{
+        stage='R8'
+        originalFormalStageStatus='NOT_ACCEPTED'
+        originalStageWeight=9
+        creditedFormalWeight=0
+        experimentalImplementationState='partial_synthetic_only'
+        completedSyntheticSlices=@('R8-P1','R8-P2','R8-P3')
+        completedSyntheticSliceCount=3
+        totalSyntheticSliceCount=$null
+        syntheticSliceCompletionPercent=$null
+        originalFileRecoveryRate='unknown'
+        syntheticScope='generated_nonwritable_memory_to_owned_disposable_temp_only'
+        distinctR7R8SourceMeterSessions=$true
+        nextUnacceptedOriginalRequirements=@(
+            'r8.handle_bound_destination_root_TOCTOU_protection',
+            'r8.disk_full_short_write_readback_failure_matrix',
+            'r8.original_roadmap_full_stage_independent_A_audit'
+        )
+        priorAcceptanceReferences=@('PR191_R8_P1','PR193_R8_P2','PR196_R8_P3')
+        actualCardOrSoleImgApproved=$false
+    }
     signedConditions=$totalPass
     partialConditions=$totalPartial
     auditNeededConditions=$totalAudit
@@ -155,7 +178,8 @@ $result=[pscustomobject]@{
         'nextIncompleteGateId is a ledger-order first incomplete row, not a priority estimate or predicted implementation duration.',
         'conditionAssessmentPercent is reviewed rows / total rows, NOT implementation completeness.',
         'Real microSD and sole master IMG are NOT APPROVED for any access.',
-        'R8 output design may begin only on disposable synthetic inputs AFTER A R7 original-stage acceptance; actual output feature R8 remains unapproved.'
+        'R8 output design may begin only on disposable synthetic inputs AFTER A R7 original-stage acceptance; actual output feature R8 remains unapproved.',
+        'R8 P1/P2/P3 are completed research slices with no fixed total slice denominator; do NOT report an R8 stage completion percent.'
     )
 }
 if($AsJson){$result | ConvertTo-Json -Depth 8}else{$result}
