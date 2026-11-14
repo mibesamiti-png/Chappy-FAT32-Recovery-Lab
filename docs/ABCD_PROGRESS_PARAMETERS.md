@@ -1,5 +1,15 @@
 # ABCD progress parameters — A-owned, verifiable (2026-11-13 JST)
 
+## ACTIVE A R8-P3 parameterized gate checkpoint — 2026-11-14 JST
+
+**Verified latest main** [#196](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/196) at `6534ea008a2a50506e358cb3c892f554302abe4d`: exact PR-head Windows5.1/privacy **54/54** [#43603504369](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43603504369) and **post-main 54/54 SUCCESS** [#43603904432](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43603904432). Artificial SPC1 and SPC2 generated standards FAT32: R7 actual positive returned **110302B/93 calls** and **107108B/85 calls** respectively; independently A-metered R8 rereads **887B/2 calls** each, safe new disposable output SHA matches the generated *external test-only* original oracle. No real media, no original file correctness inference. Physical cards and unique master ~31GB IMG NOT APPROVED for any access.
+
+**Current full original roadmap progress:** **84/100 official synthetic engineering** (R0–R7 independently A-approved), **16/100 uncredited** (R8=9, R9=5, R10=2), no changes. **22/22 narrow R4–R7 indexed conditions PASS**: A6, B5, C6, D5; this is not an original data recovery percentage. Main ledger/source of truth is unchanged.
+
+**New `core/Get-ChappyABCDProgress.ps1 -AsJson` R8 `activeStage` field**: `originalFormalStageStatus=NOT_ACCEPTED`, `originalStageWeight=9`, `creditedFormalWeight=0`, `experimentalImplementationState=partial_synthetic_only`, `completedSyntheticSlices=[R8-P1,R8-P2,R8-P3]`, `completedSyntheticSliceCount=3`, `totalSyntheticSliceCount=null`, `syntheticSliceCompletionPercent=null`, `actualCardOrSoleImgApproved=false`. Report **3 verified synthetic slices, not "R8 3/3" or a percentage**: further original criteria, failure classes, and review are open, so no denominator exists. `distinctR7R8SourceMeterSessions=true`; two successive protected read sessions cannot be merged as one unique-source proof.
+
+**Outstanding before R8 full acceptance:** handle-bound Windows destination directory to narrow privileged path substitution / TOCTOU; artificial disk-full/short-write/readback mismatch and source/output fault matrix; independent A review of the original complete R8 stage. Actual source-path/authenticity and original owner, original SHA and recovery success remain UNKNOWN. This stays a synthetic-only research tool, never a reason to operate on or upload the original card or image.
+
 ## CURRENT A R8-P2 guarded output checkpoint — 2026-11-14 JST
 
 **Formal original-roadmap weighted engineering = 84/100** (R0–R7 independently A-signed), **16/100 not yet earned** (R8 separate destination 9, R9 integrated quality 5, R10 release 2). `core/Get-ChappyABCDProgress.ps1 -AsJson` unchanged and computes these exact weights and **22/22 narrow R4–R7 PASS**, B5/5 C6/6 D5/5 A6/6, with no automatically minted R8 stage points. This is **not real-image recovery completeness**; actual original file identity/owner and recovered count are UNKNOWN.

@@ -32,6 +32,18 @@ Assert-AProgress ($liveResult.totalConditions -eq 22 -and
     ($liveResult.signedConditions+$liveResult.partialConditions+
      $liveResult.auditNeededConditions+$liveResult.blockedConditions+
      $liveResult.missingConditions) -eq 22) 'current_live_ledger_valid_but_not_frozen_in_test'
+Assert-AProgress ($liveResult.activeStage.stage -ceq 'R8' -and
+    $liveResult.activeStage.originalFormalStageStatus -ceq 'NOT_ACCEPTED' -and
+    $liveResult.activeStage.originalStageWeight -eq 9 -and
+    $liveResult.activeStage.creditedFormalWeight -eq 0 -and
+    $liveResult.activeStage.experimentalImplementationState -ceq 'partial_synthetic_only' -and
+    ($liveResult.activeStage.completedSyntheticSlices -join ',') -ceq 'R8-P1,R8-P2,R8-P3' -and
+    $liveResult.activeStage.completedSyntheticSliceCount -eq 3 -and
+    $null -eq $liveResult.activeStage.totalSyntheticSliceCount -and
+    $null -eq $liveResult.activeStage.syntheticSliceCompletionPercent -and
+    $liveResult.activeStage.distinctR7R8SourceMeterSessions -and
+    $liveResult.activeStage.nextUnacceptedOriginalRequirements.Count -eq 3 -and
+    -not $liveResult.activeStage.actualCardOrSoleImgApproved) 'R8_dev_slices_NOT_original_acceptance_or_invented_percent'
 # A frozen independent test ledger ensures future honest A row signoffs do
 # not break CI merely because the live signed-off count has increased.
 $syntheticStates=@{
@@ -116,6 +128,13 @@ Assert-AProgress ($json.officialWeightedProjectPercent -eq 84 -and
     $json.officialRemainingWeightPercent -eq 16 -and
     $json.remainingIncompleteGateCount -eq 18 -and
     $json.parameters[0].nextIncompleteGateId -ceq 'B4-03') 'json_export_safe'
+Assert-AProgress ($json.activeStage.stage -ceq 'R8' -and
+    $json.activeStage.completedSyntheticSliceCount -eq 3 -and
+    $json.activeStage.completedSyntheticSlices.Count -eq 3 -and
+    $null -eq $json.activeStage.totalSyntheticSliceCount -and
+    $null -eq $json.activeStage.syntheticSliceCompletionPercent -and
+    $json.activeStage.creditedFormalWeight -eq 0 -and
+    -not $json.activeStage.actualCardOrSoleImgApproved) 'R8_checkpoint_serialized_without_false_completion_pct'
 # A previously audited PASS row may regress to PARTIAL on re-audit.
 $regressed=$text.Replace('| B4-02 | PASS |','| B4-02 | PARTIAL |')
 Assert-AProgress ($regressed -cne $text) 'regression_fixture_modified'
@@ -139,6 +158,10 @@ Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
     $hypothetical.parameters[3].officialStagePassed -and
     $hypothetical.remainingIncompleteGateCount -eq 0 -and
     $hypothetical.officialRemainingWeightPercent -eq 16) 'no_automatic_R8_R9_R10_credit_even_if_all_indexed_PASS'
+Assert-AProgress ($hypothetical.activeStage.stage -ceq 'R8' -and
+    $hypothetical.activeStage.originalFormalStageStatus -ceq 'NOT_ACCEPTED' -and
+    $hypothetical.activeStage.creditedFormalWeight -eq 0 -and
+    $null -eq $hypothetical.activeStage.syntheticSliceCompletionPercent) 'all_indexed_PASS_cannot_promote_R8_P1P2P3_to_formal_release'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
 $duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'
