@@ -13,7 +13,8 @@ function Test-ChappyR8SyntheticRoot {
     param([string]$Root,[string]$SourceRootForDisjointness)
     if([string]::IsNullOrWhiteSpace($Root) -or
        $Root -match '(^\\\\|^//|[/\\]\.\.?([/\\]|$))' -or
-       $Root -match '(^\\\\\?\\|^\\\\\.\\|:)') {
+       $Root -match '(^\\\\\?\\|^\\\\\.\\) -or
+       ($Root.Length -ge 3 -and $Root.Substring(2) -match ':')') {
         return $null
     }
     if(-not [IO.Path]::IsPathRooted($Root)){return $null}
@@ -37,7 +38,8 @@ function Test-ChappyR8SyntheticRoot {
         if(-not [string]::IsNullOrWhiteSpace($SourceRootForDisjointness)){
             if(-not [IO.Path]::IsPathRooted($SourceRootForDisjointness) -or
                $SourceRootForDisjointness -match '(^\\\\|^//|[/\\]\.\.?([/\\]|$))' -or
-               $SourceRootForDisjointness -match '(^\\\\\?\\|^\\\\\.\\|:)'){
+               $SourceRootForDisjointness -match '(^\\\\\?\\|^\\\\\.\\) -or
+               ($SourceRootForDisjointness.Length -ge 3 -and $SourceRootForDisjointness.Substring(2) -match ':')'){
                 return $null
             }
             # This is ONLY a caller-declared synthetic source location
@@ -139,7 +141,7 @@ function Export-ChappyR8SyntheticCandidateV1 {
     try{
         # CREATE NEW is atomic with respect to an existing file name; NO
         # FileMode.Create, truncation, deleting an unrelated preexisting file.
-        $file=New-Object IO.FileStream($destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        $file=[IO.FileStream]::new($destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
         $createdByThisCall=$true
         [int]$written=0
         while($written -lt $candidate.Length){
