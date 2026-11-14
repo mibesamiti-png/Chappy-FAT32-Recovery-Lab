@@ -2,6 +2,25 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## CURRENT fourteenth A independent full original R7 synthetic-stage acceptance — 2026-11-14 JST
+
+**Conditional on original [A R7 whole-stage audit](R7_FORMAL_ACCEPTANCE_A_R14.md), A #189 exact merged-main and this PR exact final-head/post-main native Windows PowerShell5.1/privacy 51/51:** **84/100 official completed synthetic-engineering stage points** (R0–R7, including the separately reviewed original R7 +10), **16 points uncredited** R8=9, R9=5, R10=2. `core/Get-ChappyABCDProgress.ps1 -AsJson` counts ONLY explicit independently A-approved whole-stage IDs, never automatically from subrow PASS. **All 22/22 indexed synthetic evidence conditions now A-signed PASS** (B5/5 C6/6 D5/5 A6/6), 0 PARTIAL/0 AUDIT_NEEDED. **Actual original file recovery rate UNKNOWN**, not 100%, not 84%, and no real original source access.
+
+| Team | Stage | Indexed A-signed PASS | Partial | Indexed evidence rate | Full original research stage |
+| --- | --- | ---: | ---: | ---: | --- |
+| A | R7 | **6/6** | 0 | 100% | A accepted **synthetic only**, after final CI |
+| B | R4 | **5/5** | 0 | 100% | A accepted synthetic |
+| C | R5 | **6/6** | 0 | 100% | A accepted synthetic |
+| D | R6 | **5/5** | 0 | 100% | A accepted synthetic |
+| **All** | R4–R7 | **22/22** | **0** | **100% indexed** | **84% of full R0–R10 engineering roadmap** |
+
+**Phase vs source accounting:** [A #188](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/188) four evidence reference labels are NOT four independent originals (only one protected A source session); distinct/repeated/actual source returned B and physical calls are separate. [A #189](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/189) actual C scanner produces 2 competing structural 3MF hypotheses in each artificial SPC1/SPC2, no original winner even where test-only synthetic oracle has 2 exact byte matches. [A #187](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/187) conflicting BPB/source/ID and true FAT3B then EOF remain UNKNOWN. **Unrecoverable never inferred from bounded no-hit/EOF**. R8 separate destination safe export is not yet approved or implemented; R9 quality/R10 handoff still pending.
+
+```powershell
+# Reads ONLY the textual signed gate ledger, never the original IMG/card
+powershell.exe -NoProfile -File .\core\Get-ChappyABCDProgress.ps1 -AsJson
+```
+
 ## CURRENT thirteenth A checkpoint — source and public interface, machine-readable progress (2026-11-14 JST)
 
 A independently reviewed/merged [#183](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/183) one actual protected A Stream.Read for B/C/D and C two-piece candidate-specific physical rereads (47/47 final-head and post-main) and [#185](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/185) explicit allowlisted `a7_public_evidence_v1` default-off safe result (48/48 final-head; post-main mandatory). Subject to this [A A7-01/A7-06 independent signoff](A7_R12_A701_A706_SIGNOFF.md) exact-final and post-main 48/48 CI, the 22 indexed synthetic gate conditions are **20 PASS /2 PARTIAL /0 AUDIT_NEEDED (90.9% narrow)**, all 22 assessed. **Official original weighted synthetic engineering remains 74/100**, R0–R6 A-accepted; **26 uncredited** R7=10,R8=9,R9=5,R10=2. **No fraction of recovered user files is known**, real original image/card never accessed or tested. Condition PASS does not mint formal R7 weight.
