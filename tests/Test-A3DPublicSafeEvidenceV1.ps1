@@ -77,7 +77,7 @@ foreach($spc in @(1,2)){
   Check-A7Public ((Get-A3DSha256 $image) -ceq $initial -and -not $memory.CanWrite) ('SPC'+$spc+':unchanged_artificial_source')
   $actual+=[long]$report.metrics.actualReturnedBytes
   $full++
-  Write-Host ('A7 PUBLIC: SPC{0} sourceReturnedB={1} readCalls={2} candidates={3} originalUNKNOWN=yes' -f $spc,$report.metrics.actualReturnedBytes,$report.metrics.physicalReadCalls,$report.metrics.candidateDefinitions.Count)
+  Write-Host ('A7 PUBLIC: SPC{0} sourceReturnedB={1} readCalls={2} candidates={3} originalUNKNOWN=yes' -f $spc,$report.metrics.actualReturnedBytes,$report.metrics.physicalReadCalls,@($report.candidateDefinitions).Count)
  }finally{$memory.Dispose()}
 }
 Check-A7Public ($full -eq 2 -and $actual -gt 0) 'two_generated_standard_source_cases'
