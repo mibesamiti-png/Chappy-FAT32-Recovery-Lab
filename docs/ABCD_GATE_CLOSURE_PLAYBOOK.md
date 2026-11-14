@@ -1,5 +1,7 @@
 # ABCD Four-Chat Gate-Closure Playbook (2026-11-13 JST)
 
+> **ARCHIVED TASK PRIORITIES as of 2026-11-15 JST:** The 2026-11-13 R4/R5/R6/R7 incomplete status and 39% in the historical text below are superseded. A has formally accepted R0–R7 bounded synthetic engineering (84%); B/C/D now independently own A-delegated R8 #198/#199/#200 via [latest active dispatch](TEAM_DISPATCH.md) and the [single BCD prompt](BCD_UNIFIED_BOOTSTRAP_PROMPT.md). Retain this document's immutable safety, measurements, evidence and A-only review rules, but do **not** reactivate old R4–R7 work automatically.
+
 **Status: proposed operating design by Team A.** This playbook governs how the existing **four independent ChatGPT conversations** should prioritize the next work. It does NOT imply four concurrent agents inside a single Work session. A is the integration/QA owner in its original chat; B, C and D continue in their **existing chats**. It supersedes older per-team next-P1 instructions only once A has merged this document and posted new Issue assignments. Canonical sources: [formal roadmap](ABCD_SYNTHETIC_ROADMAP.md), [live roster](TEAM_DISPATCH.md), [research protocol](ALGORITHM_RESEARCH_PROTOCOL.md), [real-media approval gate](LOCAL_READONLY_APPROVAL_GATE.md).
 
 ## 0. The bottleneck and the invariant
