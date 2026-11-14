@@ -81,7 +81,7 @@ foreach($spc in @(1,2)){
    [IO.Path]::GetDirectoryName($yes.outputPath) -ceq $dir -and
    $yes.outputName -match '^candidate-[0-9A-F]{32}\.3mf$' -and
    $yes.outputSha256 -ceq [string]$truth[0].sha256 -and
-   ((Get-A3DSha256 ([IO.File]::ReadAllBytes($yes.outputPath))) -ceq [string]$truth[0].sha256) ('SPC'+$spc+':external_test_only_original_SHA_match_and_new_disposable_file')
+   ((Get-A3DSha256 ([IO.File]::ReadAllBytes($yes.outputPath))) -ceq [string]$truth[0].sha256)) ('SPC'+$spc+':external_test_only_original_SHA_match_and_new_disposable_file')
   Assert-P3 ((Get-A3DSha256 $image) -ceq $imageSha -and
    -not $source.CanWrite) ('SPC'+$spc+':unchanged_generated_source')
   $again=Export-ChappyR8SourceBoundSyntheticCandidateV1 @common -EnableSyntheticR7SourceBindingAndExport
@@ -89,7 +89,7 @@ foreach($spc in @(1,2)){
    $again.decision -ceq 'source_binding_incomplete_UNKNOWN' -and
    -not $again.outputVerified -and
    @([IO.Directory]::GetFiles($dir)).Count -eq 1 -and
-   ((Get-A3DSha256 ([IO.File]::ReadAllBytes($yes.outputPath))) -ceq $yes.outputSha256) ('SPC'+$spc+':CREATE_NEW_collision_does_not_modify_existing_output')
+   ((Get-A3DSha256 ([IO.File]::ReadAllBytes($yes.outputPath))) -ceq $yes.outputSha256)) ('SPC'+$spc+':CREATE_NEW_collision_does_not_modify_existing_output')
   $processed++
   Write-Host ('R8 P3 SYNTHETIC: SPC{0} R7Returned={1}B/{2}calls R8Candidate={3}B/{4}calls output={5}B independentOracleSHA=test_only original=UNKNOWN' -f $spc,$yes.metrics.r7ActualReturnedBytes,$yes.metrics.r7PhysicalReadCalls,$yes.metrics.r8CandidateActualReturnedBytes,$yes.metrics.r8CandidatePhysicalReadCalls,$yes.outputBytes)
  }finally{
