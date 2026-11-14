@@ -9,6 +9,27 @@ function Get-ChappyR8SyntheticSha256 {
     try { return [BitConverter]::ToString($sha.ComputeHash($Bytes)).Replace('-','') }
     finally { $sha.Dispose() }
 }
+# Refuse a reparse point on the destination or ANY ancestor, not only the
+# leaf directory. This is a preflight guard; it does not make a path string
+# race-proof. Actual/media paths remain forbidden by the synthetic-only API.
+function Test-ChappyR8NoReparseAncestors {
+    param([string]$DirectoryPath)
+    try {
+        $current=[IO.DirectoryInfo]::new([IO.Path]::GetFullPath($DirectoryPath))
+        [int]$depth=0
+        while($null -ne $current){
+            if(++$depth -gt 64){return $false}
+            [IO.FileAttributes]$attrs=[IO.File]::GetAttributes($current.FullName)
+            if(($attrs -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+               ($attrs -band [IO.FileAttributes]::Directory) -eq 0){
+                return $false
+            }
+            $current=$current.Parent
+        }
+        return $true
+    }catch{return $false}
+}
+
 function Test-ChappyR8SyntheticRoot {
     param([string]$Root,[string]$SourceRootForDisjointness)
     if([string]::IsNullOrWhiteSpace($Root) -or
@@ -32,7 +53,8 @@ function Test-ChappyR8SyntheticRoot {
             return $null
         }
         $attributes=[IO.File]::GetAttributes($full)
-        if(($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        if((-not (Test-ChappyR8NoReparseAncestors -DirectoryPath $full)) -or
+           ($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
            ($attributes -band [IO.FileAttributes]::Directory) -eq 0){
             return $null
         }
@@ -141,6 +163,11 @@ function Export-ChappyR8SyntheticCandidateV1 {
     $createdByThisCall=$false
     $file=$null
     try{
+        # Revalidate just before CreateNew; still not an OS handle-based
+        # immunity to hostile root replacement between the two operations.
+        if(-not (Test-ChappyR8NoReparseAncestors -DirectoryPath $root)){
+            throw 'r8.synthetic_output_root_changed_or_reparse'
+        }
         # CREATE NEW is atomic with respect to an existing file name; NO
         # FileMode.Create, truncation, deleting an unrelated preexisting file.
         $file=[IO.FileStream]::new($destination,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
@@ -154,6 +181,9 @@ function Export-ChappyR8SyntheticCandidateV1 {
         }
         $file.Flush($true)
         $file.Dispose();$file=$null
+        if(-not (Test-ChappyR8NoReparseAncestors -DirectoryPath $root)){
+            throw 'r8.synthetic_root_changed_before_output_verification'
+        }
         [byte[]]$verify=[IO.File]::ReadAllBytes($destination)
         if($verify.Length -ne $candidate.Length -or
            (Get-ChappyR8SyntheticSha256 $verify) -cne $candidateSha){
@@ -180,7 +210,8 @@ function Export-ChappyR8SyntheticCandidateV1 {
         if($createdByThisCall -and $result.status -cne 'complete'){
             try {
                 $attrs=[IO.File]::GetAttributes($destination)
-                if(($attrs -band [IO.FileAttributes]::ReparsePoint) -eq 0){
+                if(($attrs -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and
+                   (Test-ChappyR8NoReparseAncestors -DirectoryPath $root)){
                     [IO.File]::Delete($destination)
                 }
             }catch{}
