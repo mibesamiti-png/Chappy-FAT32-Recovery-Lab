@@ -4,7 +4,7 @@ Set-StrictMode -Version Latest
 
 function Initialize-ChappyBR8Native {
     if('ChappyBR8RootLeaseNativeV1' -as [type]){return}
-    Add-Type -TypeDefinition @'
+    $nativeSource=@'
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
@@ -113,7 +113,8 @@ public sealed class ChappyBR8RootLeaseNativeV1 : IDisposable {
         if(parentHandle!=null){parentHandle.Dispose();parentHandle=null;}
     }
 }
-'@ -ErrorAction Stop
+'@
+    Add-Type -TypeDefinition $nativeSource -ErrorAction Stop
 }
 
 function New-ChappyBR8GuardResult {
