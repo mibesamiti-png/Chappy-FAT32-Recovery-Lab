@@ -1,6 +1,13 @@
 # Universal Work Instruction — Chappy FAT32 Recovery Lab
 
-## Current operating model (2026-11-13 JST): FOUR EXISTING CHATGPT CHATS, GATE CLOSURE
+## ACTIVE 2026-11-15 JST: B/C/D delegated R8 from A (overrides dated role tasks below)
+
+**Read [top ACTIVE dispatch](TEAM_DISPATCH.md) and [identical BCD bootstrap](BCD_UNIFIED_BOOTSTRAP_PROMPT.md) before acting.** The formerly separate B R4/C R5/D R6 original generated-synthetic stages and A R7 are now independently formally accepted; A assigned new R8 subwork B #198 root safety, C #199 synthetic writer-fault safety, D #200 independent adversarial matrix. Old B #71/C #72/D #73 and research-only R4–R7 proposals remain historical, not currently blocking. Keep each existing chat's B/C/D identity, retain one chat per role; a new roleless chat needs one-time explicit identification. These tasks do not execute automatically across conversations. A exclusively reviews, merges, integrates in shared exporter/bridge/runner and signs full original R8. B/C/D own **only dedicated new files** specified in the top roster, open Draft PRs and never merge or rewrite STATE, ROADMAP, progress ledger, or other team's paths.
+
+Formal weighted artificial engineering remains **84%** (R8 0/9, R9 0/5, R10 0/2); old 22/22 B/C/D/A narrow rows PASS is not real recovery. Physical microSD and sole original ~31GB IMG completely excluded from all read/hash/scan/copy/extract/repair/write/upload. Current guarded synthetic-only default-OFF R8 P1/P2/P3 is NOT full R8 accepted. Final-HEAD Windows PS5.1/privacy and post-main checks remain mandatory. **When older instructions conflict with these ACTIVE assignments, the newest top dispatch and safety take precedence.**
+
+## HISTORICAL operating model (2026-11-13 JST): FOUR EXISTING CHATGPT CHATS, GATE CLOSURE
+
 
 **Active instructions:** [ABCD_GATE_CLOSURE_PLAYBOOK.md](ABCD_GATE_CLOSURE_PLAYBOOK.md), [ABCD_GATE_LEDGER.md](ABCD_GATE_LEDGER.md), [TEAM_DISPATCH.md](TEAM_DISPATCH.md), [formal R0-R10 roadmap](ABCD_SYNTHETIC_ROADMAP.md). This update **supersedes historical per-team experiment/branch assignments** in older sections of this document, but does NOT relax safety, algorithm research evidence gates, PR/CI checks or GitHub ownership.
 

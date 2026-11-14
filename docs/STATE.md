@@ -1,4 +1,10 @@
-# STATE — latest 2026-11-13 four-chat operating redesign
+# STATE — current A/BCD R8 parallel delegation (2026-11-15 JST)
+
+## ACTIVE: A-delegated R8-P4/P5/P6, documented dispatch only (no stage credit)
+
+A created new independent work Issues [B #198](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/198), [C #199](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/199), [D #200](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/200) and the [identical common prompt](BCD_UNIFIED_BOOTSTRAP_PROMPT.md). **Top [TEAM_DISPATCH](TEAM_DISPATCH.md) is the authoritative per-chat task and exclusive file ownership.** B independently builds output-root handle/race guard, C independently builds controlled writer-failure/owned cleanup, D independently builds synthetic adversarial matrix. A alone reads final PR-head CI/diff, merges and connects code, checks post-main CI and independently signs off full original R8; each existing chat retains B/C/D identity. Old B #71/C #72/D #73 research Issues are history, not active work. These new assignments are scheduling/coordination, **not actual P4/P5/P6 implementation or tested pass**.
+
+**Invariant:** R0–R7 whole-stage artificial engineering **84% formally credited**, R8 **0/9** pending complete acceptance, R9 **0/5**, R10 **0/2**. R8 P1/P2/P3 verified narrow synthetic slices; B5 C6 D5 A6=22/22 old indexed R4–R7 synthetic PASS (not original recovery rate). Real microSD/sole ~31GB original IMG NOT APPROVED for any read/hash/scan/copy/extract/repair/write/upload. Original owner/SHA/FAT winner/recovered-file rate UNKNOWN.
 
 ## ACTIVE A seventeenth checkpoint — R8-P3 source-bound synthetic-only output, progress vectors — 2026-11-14 JST
 

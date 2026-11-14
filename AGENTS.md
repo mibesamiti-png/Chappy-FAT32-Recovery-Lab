@@ -1,5 +1,9 @@
 # Instructions for every A/B/C/D developer or AI
 
+## ACTIVE A-delegated R8 parallel work (2026-11-15 JST)
+
+The **top ACTIVE** `docs/TEAM_DISPATCH.md` and `docs/BCD_UNIFIED_BOOTSTRAP_PROMPT.md` override historical B R4/C R5/D R6 task ownership below, without relaxing privacy or safety. B current issue **#198** (standalone root guard), C **#199** (standalone safe fault writer), D **#200** (standalone R8 adversarial test) each uses new exclusive paths. Existing B/C/D chat identity preserved; all three accept exactly the same prompt. A alone owns existing shared exporter/bridge and CI runner, makes final-HEAD decisions, merges, and signs formal R8 whole stage. No B/C/D self-merge. Formal synthetic engineering **84%** is unchanged; R8 0/9 points accepted. Original card / only original IMG unavailable for any operation.
+
 1. Read `README.md`, `docs/STATE.md`, and `docs/TEAM_PROTOCOL.md` before working.
 2. Never upload, request, commit or paste the user's 31GB raw IMG, recovered files, private log files, sensitive file names, or raw data excerpts.
 3. The Windows image file is local-only: AI chats and GitHub Actions cannot directly access it.
