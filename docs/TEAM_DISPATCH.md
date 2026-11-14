@@ -1,6 +1,26 @@
 # Team Dispatch — authoritative live roster
 
-## ACTIVE A R8-P3 integrated; R8 stage metrics explicitly uncredited — 2026-11-14 JST
+## ACTIVE A-delegated B/C/D R8 parallel implementation — 2026-11-15 JST
+
+**This top assignment supersedes all previous R4/R5/R6 B/C/D work cards and previous R8-P3 A-only notes below.** R4/R5/R6/R7 original synthetic gates are independently A-accepted; maintain separate B, C and D existing ChatGPT conversations. Send the **identical** [BCD unified prompt](BCD_UNIFIED_BOOTSTRAP_PROMPT.md) to each already role-assigned conversation; a new chat with no role needs its role declared once.
+
+| Chat / role | ACTIVE Issue (this round) | Exclusively writable files / area | Deliverable to A |
+| --- | --- | --- | --- |
+| **A** (coordinator, only merger) | [#1](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/1) | A integrations, shared core exporter/bridge, dispatch, progress, formal gate | independently review B/C/D, merge in order after exact final-HEAD native PS5.1/privacy CI and re-check main; own full R8 signoff |
+| **B** (R8-P4) | [#198](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/198) | **new only** `core/Chappy.R8RootHandleGuard.psm1`, `tests/Test-BR8RootHandleGuard.ps1`, `docs/R8_B_ROOT_HANDLE_GUARD.md` | default-OFF bounded handle/root reparse/junction/TOCTOU guard; fail closed if a guarantee cannot be established |
+| **C** (R8-P5) | [#199](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/199) | **new only** `core/Chappy.R8FaultSafeWriter.psm1`, `tests/Test-CR8FaultSafeWriter.ps1`, `docs/R8_C_OUTPUT_FAULT_MATRIX.md` | bounded generated-only output write/readback fault matrix, FileMode.CreateNew, owned-only cleanup |
+| **D** (R8-P6) | [#200](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/200) | **new only** `tests/Test-DR8AdversarialMatrix.ps1`, `docs/R8_D_ADVERSARIAL_MATRIX.md`, optional `tests/d-r8/` | independent adversarial R7→R8 synthetic tests and R9 planning; no production A/B/C edits |
+
+### Coordination and merge contract
+
+1. **Latest main first**, then `AGENTS.md`, `docs/BCD_UNIFIED_BOOTSTRAP_PROMPT.md`, this ACTIVE roster and own Issue/branch/live PR. Old #71/#72/#73 remain historical and do not override current A delegation. Existing B/C/D role always wins; never identify role by alphabetical order or issue priority.
+2. Each B/C/D chat creates ONE fresh branch from latest main after confirming no ongoing owned PR; builds only its exclusive new files and own tests/docs; opens a Draft PR to main, **does not merge**. Do not preallocate conflicting branches. A is sole editor of existing `core/Chappy.SyntheticSeparateExportV1.psm1`, `core/Chappy.R8SourceBoundSyntheticBridge.psm1`, CI suite runner, `docs/STATE.md`, progress JSON and this dispatch.
+3. To integrate, A reads each PR diff, tests actual final HEAD and native Windows PowerShell 5.1/privacy, resolves shared API compatibility and merges only the safe reviewed result; main CI independently verified. D tests the currently merged A baseline without assuming new B/C features are already integrated. Cross-team dependency is recorded as an A request instead of editing another team's paths.
+4. **Current official bounded synthetic-engineering progress remains 84% (R0–R7); R8 0/9, R9 0/5, R10 0/2 officially credited.** P1/P2/P3 are synthetic-only slices, no guessed R8 partial percentage. B5/C6/D5/A6=22/22 narrow research rows PASS, not real file recovery or source authenticity. A independently audits the entire unchanged original R8 clause before awarding +9.
+5. Real physical microSD and only ~31GB master IMG remain **NOT APPROVED for any read/hash/scan/copy/extract/repair/write/upload**, including through synthetic-looking memory copies. Synthetic nonwritable MemoryStream and unique disposable test-owned temp outputs only; default-OFF, no overwrites, no arbitrary cleanup, and clear UNKNOWN when unsupported.
+
+## PREVIOUS CHECKPOINT — A R8-P3 integrated; R8 stage metrics explicitly uncredited — 2026-11-14 JST
+
 
 A reviewed/merged [#196](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/196), main `6534ea008a2a50506e358cb3c892f554302abe4d`: a default-OFF R7 source-observed candidate (true A protected B/C/D/C 2-piece on generated standard FAT32) is **independently reread by another bounded A source meter** (887B/2 calls) and saved only under uniquely created disposable OS temp via previously audited R8 P1/P2 `CreateNew`, digest readback, failure cleanup and reparse preflights. No actual real file; R7 vs R8 source meters never counted as same-session original truth. SPC1 R7 110302B/93 calls; SPC2 R7 107108B/85 calls, R8 887B/2 each, private test-only original oracle SHA matches; source bytes unchanged. [Exact final PR-head 54/54](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43603504369) and [post-main 54/54](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43603904432) Windows PS5.1/privacy SUCCESS.
 
