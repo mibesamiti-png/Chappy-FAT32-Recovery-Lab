@@ -140,8 +140,12 @@ try{
     [IO.File]::WriteAllText($sentinel,'GENERATED_SENTINEL',[Text.Encoding]::ASCII)
     $junctionMade=$false
     try{
-        $null=(& $env:ComSpec /d /c ('mklink /J "{0}" "{1}"' -f $jroot,$target) 2>&1)
-        $junctionMade=($LASTEXITCODE -eq 0 -and [IO.Directory]::Exists($jroot) -and
+        $linkExit=1
+        try {
+            $null=(& $env:ComSpec /d /c ('mklink /J "{0}" "{1}"' -f $jroot,$target) 2>&1)
+            $linkExit=$LASTEXITCODE
+        } catch { $linkExit=1 }
+        $junctionMade=($linkExit -eq 0 -and [IO.Directory]::Exists($jroot) -and
             (([IO.File]::GetAttributes($jroot) -band [IO.FileAttributes]::ReparsePoint) -ne 0))
         if($junctionMade){
             $deny=Open-ChappyR8SyntheticRootLeaseV1 -OutputRoot $jroot -EnableSyntheticRootGuard
@@ -162,8 +166,12 @@ try{
     [IO.File]::WriteAllText($sentinel,'GENERATED_SENTINEL',[Text.Encoding]::ASCII)
     $symlinkMade=$false
     try {
-        $null=(& $env:ComSpec /d /c ('mklink /D "{0}" "{1}"' -f $sroot,$target) 2>&1)
-        $symlinkMade=($LASTEXITCODE -eq 0 -and [IO.Directory]::Exists($sroot) -and
+        $linkExit=1
+        try {
+            $null=(& $env:ComSpec /d /c ('mklink /D "{0}" "{1}"' -f $sroot,$target) 2>&1)
+            $linkExit=$LASTEXITCODE
+        } catch { $linkExit=1 }
+        $symlinkMade=($linkExit -eq 0 -and [IO.Directory]::Exists($sroot) -and
             (([IO.File]::GetAttributes($sroot) -band [IO.FileAttributes]::ReparsePoint) -ne 0))
         if($symlinkMade){
             Assert-BR8P4Denied (Open-ChappyR8SyntheticRootLeaseV1 -OutputRoot $sroot -EnableSyntheticRootGuard) 'real synthetic directory symlink root denied'
