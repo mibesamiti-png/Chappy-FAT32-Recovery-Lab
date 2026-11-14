@@ -9,6 +9,14 @@ Import-Module (Join-Path $root 'core\Chappy.SyntheticSeparateExportV1.psm1') -Fo
 function Assert-R8([bool]$OK,[string]$Why) {
     if(-not $OK){throw ('A_R8_SYNTHETIC_EXPORT_FAIL: '+$Why)}
 }
+# Windows PowerShell 5.1 does NOT allow explicit overriding of splatted keys.
+function Invoke-R8CaseOverride {
+    param([hashtable]$Parameters,[string]$Key,[object]$Value)
+    $copy=$Parameters.Clone()
+    $copy[$Key]=$Value
+    return Export-ChappyR8SyntheticCandidateV1 @copy -EnableSyntheticExport
+}
+
 $fixture=New-ChappyA3DCleanFixture -Seed 202611
 $matches=@($fixture.oracle | Where-Object {$_.shortName -ceq 'MODEL   3MF'})
 Assert-R8 ($matches.Count -eq 1) 'synthetic_original_3mf_exists'
@@ -69,11 +77,14 @@ try {
     Assert-R8 ($fault.status -ceq 'partial' -and $fault.outputPath -eq $null -and
         @([IO.Directory]::GetFiles($directory)).Count -eq 1 -and
         (Get-A3DSha256 ([IO.File]::ReadAllBytes($good.outputPath))) -ceq $oracleSha) 'simulated_write_failure_only_owned_cleanup'
-    $reversed=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OrderedExtents @($ordered[1],$ordered[0])
+    $reversed=Invoke-R8CaseOverride -Parameters $arguments -Key 'OrderedExtents' -Value @($ordered[1],$ordered[0])
     Assert-R8 ($reversed.status -ceq 'rejected') 'reordered_span_without_new_ID_deny'
     $overlap=@($ordered[0],$ordered[0])
     $overlapId=('3mf:{0}+{1},{2}+{3}' -f $overlap[0].offsetBytes,$overlap[0].lengthBytes,$overlap[1].offsetBytes,$overlap[1].lengthBytes)
-    $overlapRejected=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -CandidateId $overlapId -OrderedExtents $overlap
+    $overlapArgs=$arguments.Clone()
+    $overlapArgs.CandidateId=$overlapId
+    $overlapArgs.OrderedExtents=$overlap
+    $overlapRejected=Export-ChappyR8SyntheticCandidateV1 @overlapArgs -EnableSyntheticExport
     Assert-R8 ($overlapRejected.status -ceq 'rejected') 'overlapping_extents_denied'
     $quota=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -MaxOutputBytes ([int]$oracle.lengthBytes-1)
     Assert-R8 ($quota.status -ceq 'rejected') 'strict_output_quota'
@@ -82,24 +93,24 @@ try {
     $nested=Join-Path $directory 'subfolder'
     $inside=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -SourceRootForDisjointness $nested
     Assert-R8 ($inside.status -ceq 'rejected') 'declared_source_below_output_denied'
-    $parent=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot ([IO.Path]::GetTempPath())
+    $parent=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value ([IO.Path]::GetTempPath())
     Assert-R8 ($parent.status -ceq 'rejected') 'arbitrary_temp_root_denied'
-    $nestedRoot=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot $nested
+    $nestedRoot=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value $nested
     Assert-R8 ($nestedRoot.status -ceq 'rejected') 'nested_output_root_denied'
-    $traversal=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot (Join-Path $directory '..')
+    $traversal=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value (Join-Path $directory '..')
     Assert-R8 ($traversal.status -ceq 'rejected') 'traversal_denied'
-    $ads=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot ($directory+':meta')
+    $ads=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value ($directory+':meta')
     Assert-R8 ($ads.status -ceq 'rejected') 'ADS_denied'
-    $unc=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot '\\server\share\out'
+    $unc=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value '\\server\share\out'
     Assert-R8 ($unc.status -ceq 'rejected') 'UNC_denied'
-    $device=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -OutputRoot '\\.\C:\notallowed'
+    $device=Invoke-R8CaseOverride -Parameters $arguments -Key 'OutputRoot' -Value '\\.\C:\notallowed'
     Assert-R8 ($device.status -ceq 'rejected') 'device_path_denied'
-    $badId=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -CandidateId '3mf:../../a'
+    $badId=Invoke-R8CaseOverride -Parameters $arguments -Key 'CandidateId' -Value '3mf:../../a'
     Assert-R8 ($badId.status -ceq 'rejected') 'filename_not_user_controlled'
-    $tag=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -SyntheticFixtureTag 'non-synthetic'
+    $tag=Invoke-R8CaseOverride -Parameters $arguments -Key 'SyntheticFixtureTag' -Value 'non-synthetic'
     Assert-R8 ($tag.status -ceq 'rejected') 'synthetic_label_required'
     [byte[]]$tooBig=[byte[]]::new(131073)
-    $large=Export-ChappyR8SyntheticCandidateV1 @arguments -EnableSyntheticExport -SourceBytes $tooBig
+    $large=Invoke-R8CaseOverride -Parameters $arguments -Key 'SourceBytes' -Value $tooBig
     Assert-R8 ($large.status -ceq 'rejected') 'source_bytes_strict_cap'
     Assert-R8 (@([IO.Directory]::GetFiles($directory)).Count -eq 1 -and
         (Get-A3DSha256 $source) -ceq $sourceSha) 'all_denials_leave_source_and_existing_output_unchanged'
