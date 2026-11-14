@@ -114,3 +114,6 @@ jobs:
       - name: Run Team D R7 A live BPB and source-phase negative support
         shell: powershell
         run: .\modules\fat-analysis\tests\Run-TeamD-R7-A7NegativeSourceJoin.Tests.ps1
+      - name: Run Team D R7 A7-04 late FAT 3-byte successful return then physical EOF
+        shell: powershell
+        run: .\modules\fat-analysis\tests\Run-TeamD-R7-A704MidFatShortSource.Tests.ps1
