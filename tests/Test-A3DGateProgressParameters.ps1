@@ -88,7 +88,7 @@ Assert-AProgress ($progress.officialRemainingWeightPercent -eq 26 -and
     ($progress.officialCompletedStages -join ',') -ceq 'R0,R1,R2,R3,R4,R5,R6' -and
     @($progress.officialUncreditedStages).Count -eq 4 -and
     $progress.futureStageWeights.R7 -eq 10 -and
-    $progress.futureStageWeights.R7 -eq 10 -and
+    $progress.futureStageWeights.R8 -eq 9 -and
     $progress.formalStageWeights.R0 -eq 5 -and
     $progress.formalStageWeights.R10 -eq 2) 'explicit_formal_weight_74_plus_remaining_26'
 Assert-AProgress ($progress.remainingIncompleteGateCount -eq 18 -and
@@ -149,10 +149,21 @@ try{
     $actual=[BitConverter]::ToString($afterHasher.ComputeHash([IO.File]::ReadAllBytes($ledger))).Replace('-','')
 }finally{$afterHasher.Dispose()}
 Assert-AProgress ($actual -ceq $sha) 'ledger_never_mutated'
-Write-Host ('PASS: ABCD gate parameters B={0}/{1} C={2}/{3} D={4}/{5} A={6}/{7} official={8}%: passed={9}, partial={10}, auditNeeded={11}, independent evidence only, no real IMG' -f
-    $teams[0].passed,$teams[0].totalConditions,
-    $teams[1].passed,$teams[1].totalConditions,
-    $teams[2].passed,$teams[2].totalConditions,
-    $teams[3].passed,$teams[3].totalConditions,
-    $progress.officialWeightedProjectPercent,
-    $progress.signedConditions,$progress.partialConditions,$progress.auditNeededConditions)
+# Report the ACTUAL CURRENT independently A-signed ledger, not the frozen
+# 4-PASS artificial regression fixture used by the above assertions.
+$actualTeams=@($liveResult.parameters)
+Assert-AProgress ($actualTeams.Count -eq 4 -and
+ ($actualTeams | Measure-Object -Property passed -Sum).Sum -eq $liveResult.signedConditions -and
+ $liveResult.officialWeightedProjectPercent -eq 74 -and
+ $liveResult.remainingIncompleteGateCount -eq @($liveResult.incompleteGateIds).Count) 'live_source_of_truth_metrics_to_print'
+Write-Host ('PASS: ABCD LIVE signed ledger B={0}/{1} C={2}/{3} D={4}/{5} A={6}/{7} officialStageWeight={8}% uncredited={9}% indexedPass={10}/{11} indexedPartial={12} next={13}, independent synthetic evidence ONLY, originalRecovery=UNKNOWN' -f
+ $actualTeams[0].passed,$actualTeams[0].totalConditions,
+ $actualTeams[1].passed,$actualTeams[1].totalConditions,
+ $actualTeams[2].passed,$actualTeams[2].totalConditions,
+ $actualTeams[3].passed,$actualTeams[3].totalConditions,
+ $liveResult.officialWeightedProjectPercent,
+ $liveResult.officialRemainingWeightPercent,
+ $liveResult.signedConditions,$liveResult.totalConditions,
+ $liveResult.partialConditions,
+ (@($liveResult.incompleteGateIds) -join ','))
+Write-Host ('PASS: ABCD frozen independent artificial-parameter regression checks passed; no stage credited merely from indexed conditions.')
