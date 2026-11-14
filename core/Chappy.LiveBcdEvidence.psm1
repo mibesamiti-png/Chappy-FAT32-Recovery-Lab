@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryScanner.ps1')
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryHierarchy.ps1')
 Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.Carving.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.FragmentEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32ObservedIoEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Chappy.CandidateDefinitionBoundary.psm1') -Force
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryEvidenceEnvelope.ps1')
@@ -84,6 +85,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   [switch]$BindAObservedDirectoryReceipts,
   # Requires versioned D and A-owned actual same-session source returns.
   [switch]$BindAObservedFatPairReceipts,
+  # Opt-in same-session C two-fragment candidates, A owns each physical return.
+  [switch]$BindAObservedCFragmentReceipts,
   [ValidateRange(1024,120000)][long]$MaxPhysicalReadBytes=120000,
   [ValidateRange(1,512)][int]$MaxReadCalls=512
  )
@@ -100,12 +103,22 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   candidateDefinitions=@()
   bPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_directory_source_receipt_v1';decision='not_requested';outerEventOrigin='none';sourceAuthenticity='not_proven';observedCompletedSpans=0;observedStructuralPairs=0;originalParent='unknown';canExport=$false}
   dPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_fat_pair_source_receipt_v1';decision='not_requested';outerEventOrigin='none';sourceAuthenticity='not_proven';pairedFullyObservedEntries=$null;unobservedPairedEntryIndices=$null;fatCopyWinner='not_selected';originalIdentity='unknown';canExport=$false}
+  cFragmentPhysicalReceipt=[pscustomobject]@{
+   schemaVersion='a7_live_fragment_receipt_v1';decision='not_requested'
+   sourceOrigin='none';sourceAuthenticity='not_proven'
+   numericDataWindowStartBytes=$null;numericDataWindowTrust='unverified'
+   candidateDefinitions=@();candidateCount=0;sourceObservedCandidateCount=0
+   incompleteOriginalSource=$true;originalIdentity='unknown'
+   canSelectOriginal=$false;canExport=$false;canRepair=$false
+   warnings=@('a7.fragment_mode_not_requested')
+  }
   warnings=@('a7.optin_required')
   metrics=[pscustomobject]@{
    actualReturnedBytes=0L;uniqueReturnedBytes=0L;repeatedReturnedBytes=0L
    physicalReadCalls=0L;maxPhysicalBytes=$MaxPhysicalReadBytes
    geometryReturnedBytes=0L;directoryReturnedBytes=0L
    carvingReturnedBytes=0L;fatReturnedBytes=0L;sourceReadEvents=0
+   fragmentScanReturnedBytes=0L;candidateValidationReturnedBytes=0L
   }
  }
  if(-not $EnableSyntheticLiveBcd){return [pscustomobject]$result}
@@ -116,6 +129,13 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
  }
  if($BindAObservedFatPairReceipts -and -not $UseVersionedBDContracts){
   $result.warnings=@('a7.fat_pair_receipt_requires_versioned_D')
+  return [pscustomobject]$result
+ }
+ if($BindAObservedCFragmentReceipts -and
+    (-not $UseVersionedBDContracts -or
+     -not $BindAObservedDirectoryReceipts -or
+     -not $BindAObservedFatPairReceipts)){
+  $result.warnings=@('a7.fragment_requires_versioned_B_D_and_A_source_receipts')
   return [pscustomobject]$result
  }
  $result.warnings=@('a7.unobserved_data_remains_unknown')
@@ -188,6 +208,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $result.candidateDefinitions=@($defined.candidates|ForEach-Object{
    [pscustomobject]@{candidateId=$_.candidateId;format=$_.format;orderedExtents=@($_.orderedExtents);status=$_.status;physicalCandidateValidation='not_performed';originalIdentity='unknown'}
   })
+  [long]$fragmentScanReturned=0L
+  [long]$candidateValidationReturned=0L
   $meter.BeginConsumer('fat')
   [long]$aFatCallsBefore=$meter.Calls
   [long]$aFatZerosBefore=$meter.ZeroReads
