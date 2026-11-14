@@ -1,5 +1,18 @@
 # ABCD progress parameters — A-owned, verifiable (2026-11-13 JST)
 
+## CURRENT A R8-P2 guarded output checkpoint — 2026-11-14 JST
+
+**Formal original-roadmap weighted engineering = 84/100** (R0–R7 independently A-signed), **16/100 not yet earned** (R8 separate destination 9, R9 integrated quality 5, R10 release 2). `core/Get-ChappyABCDProgress.ps1 -AsJson` unchanged and computes these exact weights and **22/22 narrow R4–R7 PASS**, B5/5 C6/6 D5/5 A6/6, with no automatically minted R8 stage points. This is **not real-image recovery completeness**; actual original file identity/owner and recovered count are UNKNOWN.
+
+**Separate R8 stage engineering status:**
+- Implementation: **in_progress**, P1 CreateNew private generated temp candidate output and P2 reparse ancestry preflights integrated
+- Testing: **P1 and P2 synthetic slices PASS** on exact final PR-head Windows5.1/privacy **53/53**, including 5-process barrier 1 winner/4 safe collisions and actual NTFS disposable-junction output rejection
+- Integration: **merged in main** [#193](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/193) at `6be974d74ae9454772d59392eb7208f5bf395495`; [post-main CI](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43599766008) independently required
+- Documentation: **updated** [R8 P2 evidence and limitations](R8_A_SYNTHETIC_P2_JUNCTION_CONCURRENT.md)
+- **Original full R8 acceptance: NOT_ACCEPTED**, no 9% formal credit until unchanged entire R8 specification independently audited.
+
+The synthetic input label and declared source root do not prove genuine source bytes; Windows path-string reparse checks remain vulnerable to privileged TOCTOU, and R7-origin candidate to separately exported source+output proof, mixed write/disk faults remain open. Next A R8-P3 adds bounded generated standard FAT32 source-return evidence and output safety verification only. **Real physical microSD and sole master ~31GB IMG NOT APPROVED for any read/hash/scan/copy/extract/export/repair/write/upload**.
+
 ## CURRENT A R8-P1 stage development checkpoint — 2026-11-14 JST
 
 **Original complete-stage synthetic engineering = 84/100 weighted**, signed R0–R7; **uncredited 16** (R8 separate destination 9, R9 end-to-end QA 5, R10 release 2). **ABCD indexed R4–R7 conditions all 22/22 PASS** (A6,B5,C6,D5) as bounded synthetic research, **NOT 100% of the entire project and not a recovery-success rate**. `core/Get-ChappyABCDProgress.ps1 -AsJson` is authoritative for these fixed original-roadmap weighted approvals and 22 R4–R7 conditions, never awards future stages automatically.
