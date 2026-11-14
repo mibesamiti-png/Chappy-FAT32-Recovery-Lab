@@ -23,23 +23,42 @@ $temp=[IO.Path]::GetTempPath()
 $owned=Join-Path $temp ('ChappyR8Synthetic-'+[guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($owned)
 try {
-    # Five true concurrent child processes compete for same CreateNew path.
+    # Explicit barrier proves all 5 child processes are ready together before
+    # any exporter gets to call CreateNew, rather than just sequential retries.
+    $signal=Join-Path $owned 'synthetic-start.signal'
     $jobs=@()
     for($i=0;$i -lt 5;$i++){
         $jobs+=Start-Job -Name ('R8P2_'+$i) -ScriptBlock {
-            param($modulePath,[byte[]]$data,[string]$key,[object[]]$parts,[string]$out)
+            param($modulePath,[byte[]]$data,[string]$key,[object[]]$parts,[string]$out,[int]$index,[string]$release)
             $ErrorActionPreference='Stop'
             Import-Module $modulePath -Force
+            [IO.File]::WriteAllText((Join-Path $out ('ready-'+$index+'.signal')),'READY')
+            $released=$false
+            for($wait=0;$wait -lt 600;$wait++){
+                if([IO.File]::Exists($release)){$released=$true;break}
+                Start-Sleep -Milliseconds 50
+            }
+            if(-not $released){throw 'R8 P2 concurrency barrier timeout'}
             Export-ChappyR8SyntheticCandidateV1 -SourceBytes $data -CandidateId $key -OrderedExtents $parts -OutputRoot $out -SyntheticFixtureTag 'A3D-clean-202612' -EnableSyntheticExport
-        } -ArgumentList $module,$source,$id,$extents,$owned
+        } -ArgumentList $module,$source,$id,$extents,$owned,$i,$signal
     }
     try {
+        $allReady=$false
+        for($poll=0;$poll -lt 600;$poll++){
+            if(@([IO.Directory]::GetFiles($owned,'ready-*.signal')).Count -eq 5){
+                $allReady=$true
+                break
+            }
+            Start-Sleep -Milliseconds 50
+        }
+        Assert-R8P2 $allReady 'five_workers_ready_before_simultaneous_release'
+        [IO.File]::WriteAllText($signal,'GO')
         $done=@($jobs|Wait-Job -Timeout 90)
         Assert-R8P2 ($done.Count -eq 5 -and @($jobs|Where-Object {$_.State -cne 'Completed'}).Count -eq 0) 'all_five_concurrent_workers_finished'
         $results=@($jobs | Receive-Job -ErrorAction Stop)
         $ok=@($results | Where-Object {$_.status -ceq 'complete'})
         $collisions=@($results | Where-Object {$_.status -ceq 'partial' -and $_.decision -ceq 'synthetic_export_failed_UNKNOWN'})
-        Assert-R8P2 ($results.Count -eq 5 -and $ok.Count -eq 1 -and $collisions.Count -eq 4 -and @([IO.Directory]::GetFiles($owned)).Count -eq 1) 'atomic_CreateNew_one_winner_four_failures'
+        Assert-R8P2 ($results.Count -eq 5 -and $ok.Count -eq 1 -and $collisions.Count -eq 4 -and @([IO.Directory]::GetFiles($owned,'candidate-*.3mf')).Count -eq 1) 'atomic_CreateNew_one_winner_four_failures'
         $winner=$ok[0]
         [byte[]]$outBytes=[IO.File]::ReadAllBytes([string]$winner.outputPath)
         Assert-R8P2 ($winner.outputVerified -and $winner.sourceUnchanged -and $winner.originalIdentity -ceq 'unknown' -and -not $winner.canExportOriginal -and $winner.outputBytes -eq [int]$oracle.lengthBytes -and (Get-A3DSha256 $outBytes) -ceq [string]$oracle.sha256 -and (Get-A3DSha256 $source) -ceq $sourceSha) 'parallel_artificial_sha_and_source_unchanged'
