@@ -1017,3 +1017,7 @@ Invoke-C5R3PairGate
 # Team C R5 C5-06: versioned default-OFF real C two-piece candidate envelope, R2/R3 proof.
 . (Join-Path $PSScriptRoot 'R5CandidateEvidenceV1Gate.ps1')
 Invoke-C5CandidateEvidenceV1Gate
+
+# Team C R5 C5-05: isolated native Windows child-process scanner memory and actual-source costs.
+. (Join-Path $PSScriptRoot 'R5IsolatedScannerMemoryGate.ps1')
+Invoke-C5IsolatedScannerMemoryGate
