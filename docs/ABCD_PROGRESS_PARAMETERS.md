@@ -1,5 +1,13 @@
 # ABCD progress parameters — A-owned, verifiable (2026-11-13 JST)
 
+## CURRENT A R8-P1 stage development checkpoint — 2026-11-14 JST
+
+**Original complete-stage synthetic engineering = 84/100 weighted**, signed R0–R7; **uncredited 16** (R8 separate destination 9, R9 end-to-end QA 5, R10 release 2). **ABCD indexed R4–R7 conditions all 22/22 PASS** (A6,B5,C6,D5) as bounded synthetic research, **NOT 100% of the entire project and not a recovery-success rate**. `core/Get-ChappyABCDProgress.ps1 -AsJson` is authoritative for these fixed original-roadmap weighted approvals and 22 R4–R7 conditions, never awards future stages automatically.
+
+**R8 stage development status, separate from formal completion:** implementation `in_progress`, testing `partial_passed`, integration `merged_pending_final_main_ci`, documentation `updated`, formal acceptance `NOT_ACCEPTED`. [A R8-P1 #191](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/191) default-OFF generated artificial compact two-span 3MF byte[] exporter into a disposable direct OS temp directory with readback source/output SHA, exact final HEAD native Windows PS5.1/privacy **52/52 PASS**; [post-main #43597007366](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/actions/runs/43597007366) must be checked before confirming final. This first step does NOT close full R8 requirements (hostile reparse/TOCTOU, concurrent collisions, source-root trust, R7 standards geometry integration, failure breadth). **No numeric partial-credit percentage invented for R8**; official weighted total remains 84, remaining 16.
+
+The generated test-only 887B original SHA equality is NOT authentic original lost-file restoration. Actual lost-file recovered count, correct FAT chain, device identity and full-volume geometry UNKNOWN. Real microSD and unique ~31GB master IMG NOT APPROVED for any read/hash/scan/copy/extract/repair/export/write/upload.
+
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
 ## CURRENT fourteenth A independent full original R7 synthetic-stage acceptance — 2026-11-14 JST
