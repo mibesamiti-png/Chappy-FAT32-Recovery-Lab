@@ -65,8 +65,8 @@ foreach($spc in @(1,2)){
    $cursor += [int]$span.lengthBytes
   }
   $candidateSha=Get-A3DSha256 $bytes
-  $truth=@($fixture.oracle | Where-Object {$_.format -ceq '3mf'})
-  $other=@($fixture.oracle | Where-Object {$_.format -ceq 'gcode'})
+  $truth=@($fixture.oracle | Where-Object {$_.shortName -ceq 'MODEL   3MF'})
+  $other=@($fixture.oracle | Where-Object {$_.shortName -ceq 'PRINT   GCO'})
   Assert-A7Conflict ($truth.Count -eq 1 -and $other.Count -eq 1 -and
    [long]$truth[0].lengthBytes -eq [long]$total -and
    $candidateSha -ceq [string]$truth[0].sha256 -and
