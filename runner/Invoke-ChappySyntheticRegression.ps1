@@ -68,6 +68,7 @@ $tests=@(
     'tests\Test-A3DPublicDuplicateTailAmbiguity.ps1',
     'tests\Test-A3DR8SyntheticSeparateExportV1.ps1',
     'tests\Test-A3DR8ConcurrentJunctionSafety.ps1',
+    'tests\Test-A3DR8SourceBoundSyntheticBridge.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
     'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
