@@ -5,6 +5,7 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryScanner.ps1')
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryHierarchy.ps1')
 Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.Carving.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '..\modules\carving\Chappy.FragmentEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '..\modules\fat-analysis\Fat32ObservedIoEvidence.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot 'Chappy.CandidateDefinitionBoundary.psm1') -Force
 . (Join-Path $PSScriptRoot '..\modules\directory\DirectoryEvidenceEnvelope.ps1')
@@ -84,6 +85,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   [switch]$BindAObservedDirectoryReceipts,
   # Requires versioned D and A-owned actual same-session source returns.
   [switch]$BindAObservedFatPairReceipts,
+  # Opt-in same-session C two-fragment candidates, A owns each physical return.
+  [switch]$BindAObservedCFragmentReceipts,
   [ValidateRange(1024,120000)][long]$MaxPhysicalReadBytes=120000,
   [ValidateRange(1,512)][int]$MaxReadCalls=512
  )
@@ -100,12 +103,22 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   candidateDefinitions=@()
   bPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_directory_source_receipt_v1';decision='not_requested';outerEventOrigin='none';sourceAuthenticity='not_proven';observedCompletedSpans=0;observedStructuralPairs=0;originalParent='unknown';canExport=$false}
   dPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_fat_pair_source_receipt_v1';decision='not_requested';outerEventOrigin='none';sourceAuthenticity='not_proven';pairedFullyObservedEntries=$null;unobservedPairedEntryIndices=$null;fatCopyWinner='not_selected';originalIdentity='unknown';canExport=$false}
+  cFragmentPhysicalReceipt=[pscustomobject]@{
+   schemaVersion='a7_live_fragment_receipt_v1';decision='not_requested'
+   sourceOrigin='none';sourceAuthenticity='not_proven'
+   numericDataWindowStartBytes=$null;numericDataWindowTrust='unverified'
+   candidateDefinitions=@();candidateCount=0;sourceObservedCandidateCount=0
+   incompleteOriginalSource=$true;originalIdentity='unknown'
+   canSelectOriginal=$false;canExport=$false;canRepair=$false
+   warnings=@('a7.fragment_mode_not_requested')
+  }
   warnings=@('a7.optin_required')
   metrics=[pscustomobject]@{
    actualReturnedBytes=0L;uniqueReturnedBytes=0L;repeatedReturnedBytes=0L
    physicalReadCalls=0L;maxPhysicalBytes=$MaxPhysicalReadBytes
    geometryReturnedBytes=0L;directoryReturnedBytes=0L
    carvingReturnedBytes=0L;fatReturnedBytes=0L;sourceReadEvents=0
+   fragmentScanReturnedBytes=0L;candidateValidationReturnedBytes=0L
   }
  }
  if(-not $EnableSyntheticLiveBcd){return [pscustomobject]$result}
@@ -116,6 +129,13 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
  }
  if($BindAObservedFatPairReceipts -and -not $UseVersionedBDContracts){
   $result.warnings=@('a7.fat_pair_receipt_requires_versioned_D')
+  return [pscustomobject]$result
+ }
+ if($BindAObservedCFragmentReceipts -and
+    (-not $UseVersionedBDContracts -or
+     -not $BindAObservedDirectoryReceipts -or
+     -not $BindAObservedFatPairReceipts)){
+  $result.warnings=@('a7.fragment_requires_versioned_B_D_and_A_source_receipts')
   return [pscustomobject]$result
  }
  $result.warnings=@('a7.unobserved_data_remains_unknown')
@@ -188,6 +208,8 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $result.candidateDefinitions=@($defined.candidates|ForEach-Object{
    [pscustomobject]@{candidateId=$_.candidateId;format=$_.format;orderedExtents=@($_.orderedExtents);status=$_.status;physicalCandidateValidation='not_performed';originalIdentity='unknown'}
   })
+  [long]$fragmentScanReturned=0L
+  [long]$candidateValidationReturned=0L
   $meter.BeginConsumer('fat')
   [long]$aFatCallsBefore=$meter.Calls
   [long]$aFatZerosBefore=$meter.ZeroReads
@@ -224,7 +246,126 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
    $fat=Get-ChappyFatObservedIoEvidence -Stream $meter -Mode MirrorAndChain -MaxReadBytes 2048
    $result.d=[pscustomobject]@{status=[string]$fat.status;fatWinner='not_selected';writePermitted=$false}
   }
-  $total=@{geometry=0L;directory=0L;carving=0L;fat=0L}
+  if($BindAObservedCFragmentReceipts){
+   # All B/C/D and candidate scans share this protected A invocation/Stream.Read meter.
+   # Independently received source bytes are NOT evidence of original device authenticity.
+   if($result.bPhysicalReceipt.decision -cne 'A_in_process_returned_intervals_consistent' -or
+      $result.dPhysicalReceipt.decision -cne 'A_in_process_numeric_FAT_pair_coverage_consistent'){
+    throw 'A7.fragment_requires_consistent_B_D_source_return_receipts'
+   }
+   [long]$dataStart=[long]$geo.dataOffsetBytes
+   if([long]$geo.clusterCount -lt 65525L -or [int]$geo.fatCount -ne 2 -or
+      $dataStart -le 65536L -or ($dataStart % 512L) -ne 0L -or
+      $dataStart -gt ([long]$Source.Length-32768L)){
+    throw 'A7.fragment_numeric_geometry_unknown'
+   }
+   # C's actual finite scanner accepts A's protected Stream. The newer C facade
+   # accepts MemoryStream only; do NOT mislabel a C facade self-meter as A-attested.
+   $meter.BeginConsumer('carving')
+   [long]$beforeFragment=$meter.Returned
+   $frag=Get-ChappyFragmentCandidates -Source $meter -EnableFragmentEvidence -WindowBytes 32768 -StartOffsetBytes $dataStart -EnableStandardsShapedSource -IncludeStartPhasePlusTwo -IncludeFirstPiece560 -MaxPairs 16 -MaxStarts 4 -MaxTails 8 -MaxSourceBytes 81920 -MaxValidationBytes 98304
+   $fragmentScanReturned=[long]($meter.Returned-$beforeFragment)
+   if($frag.status -cne 'ok' -or
+      [long]$frag.metrics.sourceBytesRead -ne $fragmentScanReturned -or
+      @($frag.items).Count -gt 16){
+    throw 'A7.fragment_C_scanner_incomplete_or_A_meter_disagreement'
+   }
+   $defs=New-Object 'System.Collections.Generic.List[object]'
+   foreach($candidate in @($frag.items)){
+    $spans=@($candidate.sourceSpans)
+    if($candidate.format -cne '3mf' -or
+       $candidate.originalIdentity -cne 'unknown' -or
+       $candidate.sourceOrigin -cne 'unattributed_without_A_meter' -or
+       $candidate.integrityScope -cne 'structural_only_not_original_file_integrity' -or
+       $spans.Count -ne 2){
+     throw 'A7.fragment_untrusted_C_definition'
+    }
+    [long]$start=[long]$spans[0].offsetBytes
+    [long]$startLength=[long]$spans[0].lengthBytes
+    [long]$tail=[long]$spans[1].offsetBytes
+    [long]$tailLength=[long]$spans[1].lengthBytes
+    if([string]$candidate.candidateKey -cne ('3mf:{0}+{1},{2}+{3}' -f $start,$startLength,$tail,$tailLength)){
+     throw 'A7.fragment_C_candidate_key_not_bound_to_ordered_extents'
+    }
+    $defs.Add([pscustomobject]@{
+     candidateId=[string]$candidate.candidateKey
+     format='3mf';sourceToken=$token
+     extents=@(
+      [pscustomobject]@{offsetBytes=$start;lengthBytes=$startLength},
+      [pscustomobject]@{offsetBytes=$tail;lengthBytes=$tailLength}
+     )
+    })
+   }
+   $guard=Resolve-ChappyCandidateDefinitionBoundary -ImageLengthBytes ([long]$Source.Length) -SourceToken $token -Proposals @($defs.ToArray())
+   if($guard.conflictingCandidateIds -gt 0 -or
+      $guard.uniqueCandidateIds -ne @($frag.items).Count){
+    throw 'A7.fragment_identity_or_cross_source_conflict'
+   }
+   $meter.BeginConsumer('candidate_validation')
+   [long]$beforeValidation=$meter.Returned
+   $verified=New-Object 'System.Collections.Generic.List[object]'
+   foreach($entry in @($guard.candidates)){
+    if(-not $entry.independentPhysicalReceiptEligible -or
+       $entry.status -cne 'consistent_definition_only' -or
+       @($entry.orderedExtents).Count -ne 2){
+     throw 'A7.fragment_candidate_not_eligible'
+    }
+    [long]$expected=0L;[long]$gotTotal=0L;[int]$readEvents=0
+    foreach($extent in @($entry.orderedExtents)){
+     [long]$position=[long]$extent.offsetBytes
+     [long]$remaining=[long]$extent.lengthBytes
+     $expected+=$remaining
+     [void]$meter.Seek($position,[IO.SeekOrigin]::Begin)
+     while($remaining -gt 0L){
+      [byte[]]$buffer=[byte[]]::new([int][Math]::Min(512L,$remaining))
+      $previous=@($meter.Events).Count
+      $got=$meter.Read($buffer,0,$buffer.Length)
+      if($got -le 0){throw 'A7.fragment_candidate_actual_return_incomplete_UNKNOWN'}
+      $events=@($meter.Events)
+      if($events.Count -ne $previous+1 -or
+         $events[$previous].Consumer -cne 'candidate_validation' -or
+         [long]$events[$previous].OffsetBytes -ne $position -or
+         [long]$events[$previous].ReturnedBytes -ne $got){
+       throw 'A7.fragment_candidate_not_same_A_source_returned_bytes'
+      }
+      $gotTotal+=$got;$remaining-=$got;$position+=$got;$readEvents++
+     }
+    }
+    if($gotTotal -ne $expected -or $readEvents -le 0){
+     throw 'A7.fragment_candidate_missing_returned_bytes'
+    }
+    $verified.Add([pscustomobject]@{
+     candidateId=[string]$entry.candidateId;format='3mf'
+     orderedExtents=@($entry.orderedExtents)
+     readEvidenceStatus='A_in_process_source_observed'
+     sourceReadEvidenceReference='a7_invocation_candidate_validation'
+     validationReturnedBytes=$gotTotal;expectedExtentBytes=$expected
+     validationReadEvents=$readEvents;integrityScope='structural_only_not_original_file_integrity'
+     originalIdentity='unknown';originalShaVerified=$false
+     sourceAuthenticity='not_real_media_authenticated'
+     canSelectOriginal=$false;canExport=$false;canRepair=$false
+    })
+   }
+   $candidateValidationReturned=[long]($meter.Returned-$beforeValidation)
+   $result.cFragmentPhysicalReceipt=[pscustomobject]@{
+    schemaVersion='a7_live_fragment_receipt_v1'
+    decision='source_observed_candidate_definitions_original_UNKNOWN'
+    sourceOrigin='A_in_process_live_Stream_Read_only'
+    sourceAuthenticity='not_real_media_authenticated'
+    numericDataWindowStartBytes=$dataStart
+    numericDataWindowTrust='B_numeric_BPB_unverified'
+    candidateDefinitions=@($verified.ToArray())
+    candidateCount=$verified.Count
+    sourceObservedCandidateCount=$verified.Count
+    fragmentScanReturnedBytes=$fragmentScanReturned
+    candidateValidationReturnedBytes=$candidateValidationReturned
+    incompleteOriginalSource=$true;originalIdentity='unknown'
+    canSelectOriginal=$false;canExport=$false;canRepair=$false
+    warnings=@('a7.unscanned_source_unknown','a7.no_original_sha_or_owner')
+   }
+  }
+
+  $total=@{geometry=0L;directory=0L;carving=0L;fat=0L;candidate_validation=0L}
   $events=@($meter.Events)
   foreach($event in $events){
    if(-not $total.ContainsKey([string]$event.Consumer)){throw 'A7.unrecognized_consumer'}
@@ -233,19 +374,24 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $bExpected=$(if($UseVersionedBDContracts){[long]$directory.metrics.bReturnedDirectoryBytes}else{[long]$directory.metrics.bytesRead})
   $dExpected=$(if($UseVersionedBDContracts){[long]$fat.metrics.actualReturnedBytes}else{[long]$fat.metrics.bytesRead})
   if($total.directory -ne $bExpected -or
-     $total.carving -ne [long]$carving.metrics.bytesRead -or
+     $total.carving -ne ([long]$carving.metrics.bytesRead+$fragmentScanReturned) -or
      $total.fat -ne $dExpected -or
-     ($total.geometry+$total.directory+$total.carving+$total.fat) -ne $meter.Returned){
+     $total.candidate_validation -ne $candidateValidationReturned -or
+     ($total.geometry+$total.directory+$total.carving+$total.fat+
+      $total.candidate_validation) -ne $meter.Returned){
       throw 'A7.source_meter_and_module_counts_disagree'
   }
-  $result.sourceReadEvidence='in_process_source_reads_reconciled_not_candidate_receipts'
-  $result.warnings=@('a7.no_candidate_validation_receipts','a7.original_identity_unknown','a7.no_fat_owner_or_winner')
+  $result.sourceReadEvidence=$(if($BindAObservedCFragmentReceipts){'in_process_source_and_candidate_receipts_not_original_integrity'}else{'in_process_source_reads_reconciled_not_candidate_receipts'})
+  $result.warnings=$(if($BindAObservedCFragmentReceipts){
+   @('a7.unscanned_source_UNKNOWN','a7.no_original_sha_or_owner','a7.no_fat_owner_or_winner')
+  }else{@('a7.no_candidate_validation_receipts','a7.original_identity_unknown','a7.no_fat_owner_or_winner')})
   $result.metrics=[pscustomobject]@{
    actualReturnedBytes=$meter.Returned;uniqueReturnedBytes=$meter.Unique
    repeatedReturnedBytes=$meter.Repeated;physicalReadCalls=$meter.Calls
    maxPhysicalBytes=$MaxPhysicalReadBytes
    geometryReturnedBytes=$total.geometry;directoryReturnedBytes=$total.directory
    carvingReturnedBytes=$total.carving;fatReturnedBytes=$total.fat
+   fragmentScanReturnedBytes=$fragmentScanReturned;candidateValidationReturnedBytes=$candidateValidationReturned
    sourceReadEvents=$events.Count
   }
  }catch{
@@ -257,6 +403,16 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
   $result.candidateDefinitions=@()
   $result.bPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_directory_source_receipt_v1';decision='unattributed';outerEventOrigin='A_in_process_live_Stream_Read_only';sourceAuthenticity='not_proven';observedCompletedSpans=0;observedStructuralPairs=0;originalParent='unknown';canExport=$false}
   $result.dPhysicalReceipt=[pscustomobject]@{schemaVersion='a7_fat_pair_source_receipt_v1';decision='unattributed';outerEventOrigin='A_in_process_live_Stream_Read_only';sourceAuthenticity='not_proven';pairedFullyObservedEntries=$null;unobservedPairedEntryIndices=$null;fatCopyWinner='not_selected';originalIdentity='unknown';canExport=$false}
+  $result.cFragmentPhysicalReceipt=[pscustomobject]@{
+   schemaVersion='a7_live_fragment_receipt_v1'
+   decision='partial_unknown';sourceOrigin='A_in_process_live_Stream_Read_only'
+   sourceAuthenticity='not_proven';numericDataWindowStartBytes=$null
+   numericDataWindowTrust='unverified';candidateDefinitions=@()
+   candidateCount=0;sourceObservedCandidateCount=0
+   incompleteOriginalSource=$true;originalIdentity='unknown'
+   canSelectOriginal=$false;canExport=$false;canRepair=$false
+   warnings=@('a7.source_or_candidate_incomplete_UNKNOWN')
+  }
   $result.sourceReadEvidence='unattributed'
   $result.warnings=@('a7.source_or_module_incomplete_unknown')
   $result.metrics=[pscustomobject]@{
@@ -265,6 +421,7 @@ function Invoke-ChappyA7SyntheticLiveBcdEnvelope {
    maxPhysicalBytes=$MaxPhysicalReadBytes
    geometryReturnedBytes=$null;directoryReturnedBytes=$null
    carvingReturnedBytes=$null;fatReturnedBytes=$null
+   fragmentScanReturnedBytes=$null;candidateValidationReturnedBytes=$null
    sourceReadEvents=@($meter.Events).Count
   }
  }
