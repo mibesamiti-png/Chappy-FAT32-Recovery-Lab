@@ -20,9 +20,9 @@ try{
 $live=[IO.File]::ReadAllText($ledger,[Text.Encoding]::UTF8)
 $liveResult=& $tool -LedgerText $live
 Assert-AProgress ($liveResult.totalConditions -eq 22 -and
-    $liveResult.officialWeightedProjectPercent -eq 59 -and
-    $liveResult.officialRemainingWeightPercent -eq 41 -and
-    @($liveResult.officialUncreditedStages).Count -eq 5 -and
+    $liveResult.officialWeightedProjectPercent -eq 74 -and
+    $liveResult.officialRemainingWeightPercent -eq 26 -and
+    @($liveResult.officialUncreditedStages).Count -eq 4 -and
     $liveResult.remainingIncompleteGateCount -eq ($liveResult.totalConditions-$liveResult.signedConditions) -and
     @($liveResult.incompleteGateIds).Count -eq $liveResult.remainingIncompleteGateCount -and
     ($liveResult.signedConditions+$liveResult.partialConditions+
@@ -55,7 +55,7 @@ foreach($group in @(
 $text=$lines -join "`n"
 $progress=& $tool -LedgerText $text
 Assert-AProgress ($progress.schemaVersion -ceq 'abcd_gate_progress_v1' -and
-    $progress.officialWeightedProjectPercent -eq 59 -and
+    $progress.officialWeightedProjectPercent -eq 74 -and
     $progress.totalConditions -eq 22 -and
     $progress.signedConditions -eq 4 -and
     $progress.partialConditions -eq 6 -and
@@ -79,18 +79,18 @@ for($i=0;$i -lt 4;$i++){
         $x.auditNeeded -eq $want.u -and
         $x.evidenceVerifiedPercent -eq $want.v -and
         $x.conditionAssessmentPercent -eq $want.a -and
-        $x.officialStagePassed -eq ($want.name -cin @('B','D'))) ('team_'+$want.name+'_measured')
+        $x.officialStagePassed -eq ($want.name -cin @('B','C','D'))) ('team_'+$want.name+'_measured')
 }
 Assert-AProgress ($progress.conditionVerifiedPercent -eq 18.2 -and
     $progress.conditionAssessmentPercent -eq 45.5) 'different_verification_and_audit_percentages'
-Assert-AProgress ($progress.officialRemainingWeightPercent -eq 41 -and
-    $progress.officialCompletedStages.Count -eq 6 -and
-    ($progress.officialCompletedStages -join ',') -ceq 'R0,R1,R2,R3,R4,R6' -and
-    @($progress.officialUncreditedStages).Count -eq 5 -and
-    $progress.futureStageWeights.R5 -eq 15 -and
+Assert-AProgress ($progress.officialRemainingWeightPercent -eq 26 -and
+    $progress.officialCompletedStages.Count -eq 7 -and
+    ($progress.officialCompletedStages -join ',') -ceq 'R0,R1,R2,R3,R4,R5,R6' -and
+    @($progress.officialUncreditedStages).Count -eq 4 -and
+    $progress.futureStageWeights.R7 -eq 10 -and
     $progress.futureStageWeights.R7 -eq 10 -and
     $progress.formalStageWeights.R0 -eq 5 -and
-    $progress.formalStageWeights.R10 -eq 2) 'explicit_formal_weight_59_plus_remaining_41'
+    $progress.formalStageWeights.R10 -eq 2) 'explicit_formal_weight_74_plus_remaining_26'
 Assert-AProgress ($progress.remainingIncompleteGateCount -eq 18 -and
     @($progress.incompleteGateIds).Count -eq 18 -and
     $teams[0].nextIncompleteGateId -ceq 'B4-03' -and
@@ -98,8 +98,8 @@ Assert-AProgress ($progress.remainingIncompleteGateCount -eq 18 -and
     @($teams[0].gateRows).Count -eq 5 -and
     $teams[0].formalStageState -ceq 'A_ACCEPTED_SYNTHETIC' -and
     $teams[0].creditedFormalWeight -eq 10 -and
-    $teams[1].formalStageState -ceq 'NOT_YET_ACCEPTED' -and
-    $teams[1].creditedFormalWeight -eq 0 -and
+    $teams[1].formalStageState -ceq 'A_ACCEPTED_SYNTHETIC' -and
+    $teams[1].creditedFormalWeight -eq 15 -and
     $teams[2].formalStageState -ceq 'A_ACCEPTED_SYNTHETIC' -and
     $teams[2].creditedFormalWeight -eq 10 -and
     $teams[3].nextIncompleteGateId -ceq 'A7-01') 'frozen_four_team_machine_readable_gate_parameter_vector'
@@ -107,9 +107,9 @@ $pathResult=& $tool -LedgerPath $ledger
 Assert-AProgress ($pathResult.signedConditions -eq $liveResult.signedConditions -and
     $pathResult.partialConditions -eq $liveResult.partialConditions) 'path_and_text_same_current_ledger_result'
 $json=& $tool -LedgerText $text -AsJson | ConvertFrom-Json
-Assert-AProgress ($json.officialWeightedProjectPercent -eq 59 -and
+Assert-AProgress ($json.officialWeightedProjectPercent -eq 74 -and
     $json.parameters.Count -eq 4 -and $json.originalRecoveryRate -ceq 'unknown' -and
-    $json.officialRemainingWeightPercent -eq 41 -and
+    $json.officialRemainingWeightPercent -eq 26 -and
     $json.remainingIncompleteGateCount -eq 18 -and
     $json.parameters[0].nextIncompleteGateId -ceq 'B4-03') 'json_export_safe'
 # A previously audited PASS row may regress to PARTIAL on re-audit.
@@ -119,22 +119,22 @@ $delta=& $tool -LedgerText $regressed
 Assert-AProgress ($delta.signedConditions -eq 3 -and
     $delta.partialConditions -eq 7 -and
     $delta.parameters[0].evidenceVerifiedPercent -eq 20.0 -and
-    $delta.officialWeightedProjectPercent -eq 59) 'regressions_not_hidden'
-# Do not mint official acceptance even when all 22 subrows say PASS:
+    $delta.officialWeightedProjectPercent -eq 74) 'regressions_not_hidden'
+# R5 is independently A-signed; R7/R8 cannot auto-pass even when all 22 subrows say PASS:
 # independent original-stage scope and A formal signoff are still required.
 $allPass=[regex]::Replace($text,
  '(?m)^(\|\s*(?:B4|C5|D6|A7)-\d{2}\s*\|\s*)(?:PARTIAL|AUDIT_NEEDED|BLOCKED|MISSING)(\s*\|)',
  '${1}PASS${2}')
 $hypothetical=& $tool -LedgerText $allPass
 Assert-AProgress ($hypothetical.signedConditions -eq 22 -and
-    $hypothetical.officialWeightedProjectPercent -eq 59 -and
-    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 2 -and
+    $hypothetical.officialWeightedProjectPercent -eq 74 -and
+    @($hypothetical.parameters|Where-Object {$_.officialStagePassed}).Count -eq 3 -and
     $hypothetical.parameters[0].stage -ceq 'R4' -and
     $hypothetical.parameters[2].stage -ceq 'R6' -and
-    $hypothetical.parameters[1].fullStageReviewCandidate -and
+    $hypothetical.parameters[1].officialStagePassed -and
     $hypothetical.parameters[3].fullStageReviewCandidate -and
     $hypothetical.remainingIncompleteGateCount -eq 0 -and
-    $hypothetical.officialRemainingWeightPercent -eq 41) 'no_automatic_extra_full_gate_credit'
+    $hypothetical.officialRemainingWeightPercent -eq 26) 'no_automatic_extra_full_gate_credit'
 # Refuse malformed/missing/duplicate/forged counts fail-closed.
 $duplicated=$text+"`n| B4-01 | PASS | duplicate forged row | x |`n"
 Assert-AProgress (Throws-AProgress { & $tool -LedgerText $duplicated }) 'reject_duplicate_row'

@@ -46,7 +46,7 @@ $stages=@(
 $formalStageWeights=[ordered]@{
     R0=5;R1=10;R2=12;R3=12;R4=10;R5=15;R6=10;R7=10;R8=9;R9=5;R10=2
 }
-$explicitAApprovedFormalStages=@('R0','R1','R2','R3','R4','R6')
+$explicitAApprovedFormalStages=@('R0','R1','R2','R3','R4','R5','R6')
 [long]$allWeight=0L;[long]$officialWeight=0L
 $uncreditedWeights=[ordered]@{}
 foreach($key in @($formalStageWeights.Keys)) {
@@ -118,8 +118,9 @@ foreach($x in $ary){
     $totalMissing+=$x.missing
 }
 # Explicit Team A original R4 whole-stage audit/signoff is recorded in docs/R4_FORMAL_ACCEPTANCE_A_SIGNOFF.md (PR #165 exact-head + main CI).
+# Original R5 A acceptance is separately documented in docs/R5_FORMAL_ACCEPTANCE_A_R12.md (bounded synthetic research only).
 # Original R6 formal approval is separately recorded in docs/R6_FORMAL_ACCEPTANCE_A_SIGNOFF.md; do NOT infer from D5/5 rows.
-# R0-R4 and R6 fully signed stages, all other stage weights are fixed from the
+# R0-R6 independently signed original synthetic stages; all other weights are fixed from the
 # formally approved roadmap. DO NOT derive a new official number from row PASS.
 $result=[pscustomobject]@{
     schemaVersion='abcd_gate_progress_v1'
@@ -145,11 +146,11 @@ $result=[pscustomobject]@{
     parameters=@($ary)
     limitations=@(
         'PASS labels are A-signed narrow synthetic gate subconditions, not full milestone completion.',
-        'R4 and R6 were independently A-approved on original formal two-track synthetic corpus, not inferred from subrow counts.',
+        'R4, R5 and R6 were independently A-approved against original formal synthetic stages, not inferred from subrow counts.',
         'PARTIAL is no numeric percentage of implementation completeness.',
         'AUDIT_NEEDED does not mean feature missing.',
         'evidenceVerifiedPercent is PASS rows / total rows, NOT engineering or real recovery completion.',
-        'The official 59 percent is derived solely from explicit independently A-approved original stage IDs and fixed roadmap weights.',
+        'The official 74 percent is derived solely from explicit independently A-approved original stage IDs and fixed roadmap weights.',
         'nextIncompleteGateId is a ledger-order first incomplete row, not a priority estimate or predicted implementation duration.',
         'conditionAssessmentPercent is reviewed rows / total rows, NOT implementation completeness.',
         'Real microSD and sole master IMG are NOT APPROVED for any access.',

@@ -2,6 +2,20 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## CURRENT twelfth A formal R5 and resource parameterization — 2026-11-14 JST
+
+**Official full original-stage engineering milestone progress 74% = R0–R6** after independent [A R5 complete-roadmap synthetic signoff](R5_FORMAL_ACCEPTANCE_A_R12.md) and exact-final/post-main Windows/privacy CI; **26% not yet approved** (R7=10, R8=9, R9=5, R10=2). **No real card data recovery rate exists**. Never auto-sign R5/R7 based only on narrow PASS ratios. A progress script now derives the 74 from the fixed 100-point roadmap and explicit A-approved R5 stage ID; source `-AsJson` only reads canonical markdown evidence ledger, not any image or card.
+
+| Team | Stage | Narrow accepted conditions | Narrow condition ratio | Formal original-stage disposition | Incomplete indexed IDs |
+| --- | --- | ---: | ---: | --- | --- |
+| A | R7 | **2/6** | 33.3% | NOT yet accepted | A7-01, A7-04, A7-05, A7-06 |
+| B | R4 | **5/5** | 100.0% | A ACCEPTED synthetic | none; help C negative scoring |
+| C | R5 | **6/6** | 100.0% | **A ACCEPTED synthetic after complete original scope audit** | none; maintain measured controls |
+| D | R6 | **5/5** | 100.0% | A ACCEPTED synthetic | none; help A false source evidence negatives |
+| **All** | R4–R7 | **18/22** | **81.8% indexed** | **74% formal weighted** | 4 partial indexed |
+
+C5-05 indexed synthetic resource condition now PASS on four **isolated-process sampled growth-window** tests with C real source I/O counters and independent source Meter, **not** exact scanner-object peak and not production real-source hard timeout. C5-06 guarded API remains default OFF, source-untrusted and no export. Even A's new PR #183 source returned receipt does not validate an original file's SHA or ownership. R7 still needs complete public interface, disagreement/ambiguous/oracle-state tests and explicit independent A original stage signoff.
+
 ## CURRENT eleventh A checkpoint — machine-readable source-of-truth (2026-11-14 JST)
 
 Core output from `core/Get-ChappyABCDProgress.ps1 -AsJson` now derives the 100-point formal weighted progress only from explicit A-approved original stages (never from subrow PASS), and exposes all 22 canonical IDs with exact statuses, remaining IDs, current ledger-order next incomplete ID, per-team A-accepted formal stage state and credited formal weight, alongside original historical fields. **No estimated implementation effort or recovery probability is fabricated.** See [A source code and signoff proof](A_R11_C506_PROGRESS_PARAMETER_AUDIT.md).
