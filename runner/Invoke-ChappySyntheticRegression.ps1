@@ -63,6 +63,7 @@ $tests=@(
     'tests\Test-A3DLiveStandardFragmentReceipts.ps1',
     'tests\Test-A3DOneSourceBcdFragmentReceipts.ps1',
     'tests\Test-A3DPublicSafeEvidenceV1.ps1',
+    'tests\Test-A3DPublicAdversarialOracleSeparation.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
     'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
