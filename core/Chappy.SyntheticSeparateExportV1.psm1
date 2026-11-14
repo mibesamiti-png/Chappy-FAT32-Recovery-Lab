@@ -12,9 +12,10 @@ function Get-ChappyR8SyntheticSha256 {
 function Test-ChappyR8SyntheticRoot {
     param([string]$Root,[string]$SourceRootForDisjointness)
     if([string]::IsNullOrWhiteSpace($Root) -or
-       $Root -match '(^\\\\|^//|[/\\]\.\.?([/\\]|$))' -or
-       $Root -match '(^\\\\\?\\|^\\\\\.\\) -or
-       ($Root.Length -ge 3 -and $Root.Substring(2) -match ':')') {
+       $Root -match '^\\\\' -or
+       $Root -match '^//' -or
+       $Root -match '[/\\]\.\.?([/\\]|$)' -or
+       ($Root.Length -gt 2 -and $Root.Substring(2).Contains(':'))) {
         return $null
     }
     if(-not [IO.Path]::IsPathRooted($Root)){return $null}
@@ -37,9 +38,10 @@ function Test-ChappyR8SyntheticRoot {
         }
         if(-not [string]::IsNullOrWhiteSpace($SourceRootForDisjointness)){
             if(-not [IO.Path]::IsPathRooted($SourceRootForDisjointness) -or
-               $SourceRootForDisjointness -match '(^\\\\|^//|[/\\]\.\.?([/\\]|$))' -or
-               $SourceRootForDisjointness -match '(^\\\\\?\\|^\\\\\.\\) -or
-               ($SourceRootForDisjointness.Length -ge 3 -and $SourceRootForDisjointness.Substring(2) -match ':')'){
+               $SourceRootForDisjointness -match '^\\\\' -or
+               $SourceRootForDisjointness -match '^//' -or
+               $SourceRootForDisjointness -match '[/\\]\.\.?([/\\]|$)' -or
+               ($SourceRootForDisjointness.Length -gt 2 -and $SourceRootForDisjointness.Substring(2).Contains(':'))){
                 return $null
             }
             # This is ONLY a caller-declared synthetic source location
