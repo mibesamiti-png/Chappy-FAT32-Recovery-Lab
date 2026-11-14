@@ -31,6 +31,18 @@ function Get-ChappyA7PublicEvidenceV1 {
   candidateDefinitions=@();bStatus='unknown';cStatus='unknown';dStatus='unknown'
   warningCodes=@('a7.public_optin_required')
   evidenceReferences=@()
+  # Distinct classification axes must never collapse source-read/structure into original identity.
+  outcome=[pscustomobject]@{
+   discovery='unknown';structure='unverified';sourceObservation='not_observed'
+   ambiguity='unresolved';oracleByteIdentity='test_only_not_evaluated'
+   recoverability='unknown';unrecoverable=$false
+  }
+  # Four phase labels are FOUR OBSERVATIONS OF ONE SOURCE, not four independent originals.
+  evidenceAccounting=[pscustomobject]@{
+   sourceSessionCount=0;phaseLabelCount=0;uniquePhaseLabelCount=0
+   actualReturnedBytes=0L;distinctSourceBytes=0L;repeatedSourceBytes=0L
+   repeatedReadsIndependentEvidence=$false;originalOracleWitnessCount=0
+  }
   limits=[pscustomobject]@{maxPhysicalReadBytes=$MaxPhysicalReadBytes;maxReadCalls=$MaxReadCalls}
   metrics=$metrics
  }
@@ -94,6 +106,12 @@ function Get-ChappyA7PublicEvidenceV1 {
    sourceObservedReturnedBytes=[long]$c.validationReturnedBytes
    sourceObservedReadCalls=[int]$c.validationReadEvents
    integrityScope='structural_only_not_original_file_integrity'
+   candidateState=[pscustomobject]@{
+    discovery='bounded_window_found';structure='3mf_structural_candidate'
+    sourceObservation='A_successfully_returned_candidate_extents'
+    ambiguity='other_hypotheses_or_unscanned_source_unknown'
+    oracleByteIdentity='test_only_not_evaluated';recoverability='unknown'
+   }
    originalIdentity='unknown';originalShaVerified=$false
    canSelectOriginal=$false;canExport=$false;canRepair=$false
   })
@@ -119,6 +137,29 @@ function Get-ChappyA7PublicEvidenceV1 {
  $report.sourceCoverage='partial_32768B_data_window_remote_UNKNOWN'
  $report.candidateDefinitions=@($safe.ToArray())
  $report.evidenceReferences=@('A7.B_directory_actual_read','A7.C_two_piece_actual_scan','A7.D_fat_pair_actual_read','A7.candidate_specific_successful_return')
+ # Source-return byte union is computed by the SAME A meter; repeated bytes and
+ # phase labels must not be promoted into independent source/original proofs.
+ $refs=@($report.evidenceReferences)
+ $uniqueRefs=@($refs | Select-Object -Unique)
+ if($refs.Count -ne 4 -or $uniqueRefs.Count -ne $refs.Count){
+  throw 'A7.public_phase_ref_dedup_failed'
+ }
+ $report.outcome=[pscustomobject]@{
+  discovery='bounded_window_found'
+  structure='structurally_consistent_3mf_not_original'
+  sourceObservation='one_A_invocation_observed'
+  ambiguity=$(if($safe.Count -gt 1){'multiple_structural_hypotheses'}else{'unscanned_regions_or_alternatives_unknown'})
+  oracleByteIdentity='test_only_not_evaluated'
+  recoverability='unknown';unrecoverable=$false
+ }
+ $report.evidenceAccounting=[pscustomobject]@{
+  sourceSessionCount=1
+  phaseLabelCount=$refs.Count;uniquePhaseLabelCount=$uniqueRefs.Count
+  actualReturnedBytes=[long]$metrics.actualReturnedBytes
+  distinctSourceBytes=[long]$metrics.uniqueReturnedBytes
+  repeatedSourceBytes=[long]$metrics.repeatedReturnedBytes
+  repeatedReadsIndependentEvidence=$false;originalOracleWitnessCount=0
+ }
  $report.warningCodes=@('a7.original_file_identity_UNKNOWN','a7.numeric_volume_geometry_not_authenticated','a7.remote_source_unobserved','a7.no_original_SHA')
  return [pscustomobject]$report
 }
