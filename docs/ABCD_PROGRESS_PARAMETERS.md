@@ -2,6 +2,20 @@
 
 **Goal:** Make four separate ChatGPT team chats comparable without inventing percent-complete numbers. Source of truth is the [22-row A-signed R4–R7 gate evidence ledger](ABCD_GATE_LEDGER.md), **not historical subjective B/C/D 81/79/86% estimates**. A edits ledger after independently reviewing actual source and final-head Windows PowerShell 5.1/privacy CI. All metrics are **synthetic engineering evidence**, not user data recovery success.
 
+## CURRENT thirteenth A checkpoint — source and public interface, machine-readable progress (2026-11-14 JST)
+
+A independently reviewed/merged [#183](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/183) one actual protected A Stream.Read for B/C/D and C two-piece candidate-specific physical rereads (47/47 final-head and post-main) and [#185](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/pull/185) explicit allowlisted `a7_public_evidence_v1` default-off safe result (48/48 final-head; post-main mandatory). Subject to this [A A7-01/A7-06 independent signoff](A7_R12_A701_A706_SIGNOFF.md) exact-final and post-main 48/48 CI, the 22 indexed synthetic gate conditions are **20 PASS /2 PARTIAL /0 AUDIT_NEEDED (90.9% narrow)**, all 22 assessed. **Official original weighted synthetic engineering remains 74/100**, R0–R6 A-accepted; **26 uncredited** R7=10,R8=9,R9=5,R10=2. **No fraction of recovered user files is known**, real original image/card never accessed or tested. Condition PASS does not mint formal R7 weight.
+
+| Team | Stage | Narrow PASS | PARTIAL | Indexed verified | Full original stage accepted? | Next incomplete gate |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| A | R7 | **4/6** | **2** | **66.7%** | **NO** | A7-04 (then A7-05) |
+| B | R4 | **5/5** | 0 | 100.0% | YES synthetic | none |
+| C | R5 | **6/6** | 0 | 100.0% | YES synthetic | none |
+| D | R6 | **5/5** | 0 | 100.0% | YES synthetic | none |
+| **Total** | R4–R7 | **20/22** | **2** | **90.9%** | **74% full weighted** | 2 original R7 indexed |
+
+`core/Get-ChappyABCDProgress.ps1 -AsJson` dynamically reads the A-signed current canonical ledger, gives official weighted/remaining, stage approvals, every status and `incompleteGateIds`, `nextIncompleteGateId`; **never** invents partial-complete duration or actual recovery rate. A Windows test now prints the **live signed ledger** status instead of only its artificial frozen regression fixture. The frozen test still proves 22/22 hypothetical PASS cannot sign full R7 automatically. Test number48 exact final CI required; prior sections are historical.
+
 ## CURRENT twelfth A formal R5 and resource parameterization — 2026-11-14 JST
 
 **Official full original-stage engineering milestone progress 74% = R0–R6** after independent [A R5 complete-roadmap synthetic signoff](R5_FORMAL_ACCEPTANCE_A_R12.md) and exact-final/post-main Windows/privacy CI; **26% not yet approved** (R7=10, R8=9, R9=5, R10=2). **No real card data recovery rate exists**. Never auto-sign R5/R7 based only on narrow PASS ratios. A progress script now derives the 74 from the fixed 100-point roadmap and explicit A-approved R5 stage ID; source `-AsJson` only reads canonical markdown evidence ledger, not any image or card.
