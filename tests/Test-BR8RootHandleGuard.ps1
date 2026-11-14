@@ -183,15 +183,46 @@ try{
         [IO.Directory]::Delete($target,$false)
     }
 
-    # A nested ancestor would require traversal past a caller-controlled
-    # directory and is refused *before* any such path could become a root.
+    # Nested ancestor junction: create a junction ONLY under an already
+    # test-owned temp root to a second test-owned temp target. The guard
+    # must deny any nested root without traversing this link. If junction
+    # privilege is absent, still prove rejection of an ordinary nested root.
     $nestedParent=New-BR8P4Root
+    $nestedTarget=Join-Path ([IO.Path]::GetTempPath()) ('ChappyR8Target-'+[guid]::NewGuid().ToString('N'))
+    [void][IO.Directory]::CreateDirectory($nestedTarget)
+    $nestedSentinel=Join-Path $nestedTarget 'sentinel-owned-by-this-test.txt'
+    [IO.File]::WriteAllText($nestedSentinel,'GENERATED_SENTINEL',[Text.Encoding]::ASCII)
+    $nestedLink=Join-Path $nestedParent 'artificial-junction'
+    $nestedLinkMade=$false
+    $nestedLeaf='ChappyR8Synthetic-'+[guid]::NewGuid().ToString('N')
     try{
-        $nestedRoot=Join-Path $nestedParent ('ChappyR8Synthetic-'+[guid]::NewGuid().ToString('N'))
-        [void][IO.Directory]::CreateDirectory($nestedRoot)
-        Assert-BR8P4Denied (Open-ChappyR8SyntheticRootLeaseV1 -OutputRoot $nestedRoot -EnableSyntheticRootGuard) 'nested ancestor output root denied by direct OS-temp-child rule'
-        [IO.Directory]::Delete($nestedRoot,$false)
-    }finally{[IO.Directory]::Delete($nestedParent,$false)}
+        $linkExit=1
+        try {
+            $null=(& $env:ComSpec /d /c ('mklink /J "{0}" "{1}"' -f $nestedLink,$nestedTarget) 2>&1)
+            $linkExit=$LASTEXITCODE
+        }catch{$linkExit=1}
+        $nestedLinkMade=($linkExit -eq 0 -and [IO.Directory]::Exists($nestedLink) -and
+            (([IO.File]::GetAttributes($nestedLink) -band [IO.FileAttributes]::ReparsePoint) -ne 0))
+        if($nestedLinkMade) {
+            $nestedRoot=Join-Path $nestedLink $nestedLeaf
+            [void][IO.Directory]::CreateDirectory((Join-Path $nestedTarget $nestedLeaf))
+            Assert-BR8P4Denied (Open-ChappyR8SyntheticRootLeaseV1 -OutputRoot $nestedRoot -EnableSyntheticRootGuard) 'actual test-owned nested ancestor junction denied'
+            Assert-BR8P4 (Test-BR8P4Sentinel $nestedTarget) 'nested junction target sentinel preserved'
+            [IO.Directory]::Delete((Join-Path $nestedTarget $nestedLeaf),$false)
+        }else{
+            $nestedRoot=Join-Path $nestedParent $nestedLeaf
+            [void][IO.Directory]::CreateDirectory($nestedRoot)
+            Assert-BR8P4Denied (Open-ChappyR8SyntheticRootLeaseV1 -OutputRoot $nestedRoot -EnableSyntheticRootGuard) 'ordinary nested root forbidden; junction variant NOT TESTED'
+            [IO.Directory]::Delete($nestedRoot,$false)
+            Write-Host 'B R8 P4 NESTED-ANCESTOR JUNCTION: NOT TESTED (mklink denied)'
+        }
+    }finally{
+        if($nestedLinkMade){[IO.Directory]::Delete($nestedLink,$false)}
+        Assert-BR8P4 (Test-BR8P4Sentinel $nestedTarget) 'nested junction target untouched by guard'
+        [IO.File]::Delete($nestedSentinel)
+        [IO.Directory]::Delete($nestedTarget,$false)
+        [IO.Directory]::Delete($nestedParent,$false)
+    }
 }finally{$stream.Dispose()}
 $hash=[Security.Cryptography.SHA256]::Create()
 try{$after=[BitConverter]::ToString($hash.ComputeHash($source))}finally{$hash.Dispose()}
