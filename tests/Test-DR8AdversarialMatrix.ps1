@@ -82,6 +82,7 @@ foreach($spc in @(1,2)){
     $sourceSha=Get-A3DSha256 $image
     $oracle=@($fixture.oracle | Where-Object {$_.shortName -ceq 'MODEL   3MF'})
     Assert-DMatrix ($oracle.Count -eq 1 -and $oracle[0].lengthBytes -eq 887) ('SPC'+$spc+':independent_generated_truth')
+    $oracleSha=[string]$oracle[0].sha256
     $dir=New-DMatrixRoot
     try {
         # Default OFF: no source bytes observed, no output even with a valid fixture.
@@ -119,15 +120,15 @@ foreach($spc in @(1,2)){
             $yes.metrics.projectedCandidateBytes -eq 887L) ('SPC'+$spc+':physical_source_receipt_bounds')
         Assert-DMatrix ([IO.File]::Exists([string]$yes.outputPath) -and
             [string]::Equals([IO.Path]::GetDirectoryName([string]$yes.outputPath),$dir,[StringComparison]::OrdinalIgnoreCase) -and
-            $yes.outputSha256 -ceq [string]$oracle[0].sha256 -and
-            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq [string]$oracle[0].sha256 -and
+            $yes.outputSha256 -ceq $oracleSha -and
+            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq $oracleSha -and
             (Get-A3DSha256 $image) -ceq $sourceSha) ('SPC'+$spc+':private_scorer_only_and_source_immutable')
 
         # Same candidate/name cannot overwrite or delete the first successful output.
         $collision=Invoke-DMatrixBridge $image $dir @{}
         Assert-DMatrix ($collision.status -ceq 'partial' -and -not $collision.outputVerified -and
             @([IO.Directory]::GetFiles($dir)).Count -eq 1 -and
-            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq [string]$oracle[0].sha256) ('SPC'+$spc+':CreateNew_collision_owned_file_untouched')
+            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq $oracleSha) ('SPC'+$spc+':CreateNew_collision_owned_file_untouched')
 
         # The canonical ID is observed from A, but is never a selection hint passed in.
         $id=[string]$yes.r7CandidateId
