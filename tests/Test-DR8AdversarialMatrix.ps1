@@ -64,7 +64,8 @@ function Remove-DMatrixRoot {
         $filename=[IO.Path]::GetFileName($candidate)
         if(-not [string]::Equals($candidate,$ExpectedFilePath,[StringComparison]::OrdinalIgnoreCase) -or
            -not [string]::Equals([IO.Path]::GetDirectoryName($candidate),$full,[StringComparison]::OrdinalIgnoreCase) -or
-           $filename -cnotmatch '^candidate-[0-9A-F]{32}\.3mf
+           $filename -cnotmatch '^candidate-[0-9A-F]{32}\.3mf$' -or
+           -not [string]::Equals($filename,$ExpectedFileName,[StringComparison]::Ordinal) -or
            $ExpectedSha256 -cnotmatch '^[0-9A-F]{64}$' -or
            $entries.Count -ne 1 -or
            -not [string]::Equals([string]$entries[0],$candidate,[StringComparison]::OrdinalIgnoreCase)){
