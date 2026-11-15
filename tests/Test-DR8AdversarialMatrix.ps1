@@ -10,6 +10,8 @@ $repoRoot=Split-Path -Parent $PSScriptRoot
 Import-Module (Join-Path $repoRoot 'core\Chappy.R8SourceBoundSyntheticBridge.psm1') -Force
 $script:checks=0
 $script:cases=0
+# Only roots created in this invocation can ever be removed.
+$script:DMatrixCreatedRoots=@{}
 
 function Assert-DMatrix([bool]$Condition,[string]$Name) {
     if(-not $Condition){throw ('D_R8_P6_FAIL: '+$Name)}
@@ -18,24 +20,73 @@ function Assert-DMatrix([bool]$Condition,[string]$Name) {
 function New-DMatrixRoot {
     $path=Join-Path ([IO.Path]::GetTempPath()) ('ChappyR8Synthetic-'+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($path)
+    $script:DMatrixCreatedRoots[$path]=$true
     return $path
 }
-function Remove-DMatrixRoot([string]$Path) {
-    # Owned root, direct OS temp child, no reparse; NEVER clean arbitrary paths.
+function Remove-DMatrixRoot {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$ExpectedFilePath='',
+        [string]$ExpectedSha256=''
+    )
+    # A path that merely LOOKS like a synthetic root does not grant deletion.
+    if(-not $script:DMatrixCreatedRoots.ContainsKey($Path)){
+        throw 'D_R8_P6_FAIL: root not created by this invocation'
+    }
+    $full=[IO.Path]::GetFullPath($Path)
     $temp=[IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd([char[]]@('\','/'))
-    $parent=[IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Path)).TrimEnd([char[]]@('\','/'))
-    $name=[IO.Path]::GetFileName($Path)
-    if(-not [string]::Equals($parent,$temp,[StringComparison]::OrdinalIgnoreCase) -or
+    $parent=[IO.Path]::GetDirectoryName($full).TrimEnd([char[]]@('\','/'))
+    $name=[IO.Path]::GetFileName($full)
+    if(-not [string]::Equals($full,$Path,[StringComparison]::OrdinalIgnoreCase) -or
+       -not [string]::Equals($parent,$temp,[StringComparison]::OrdinalIgnoreCase) -or
        $name -cnotmatch '^ChappyR8Synthetic-[0-9a-f]{32}$'){
         throw 'D_R8_P6_FAIL: unsafe cleanup root'
     }
-    if([IO.Directory]::Exists($Path)){
-        $a=[IO.File]::GetAttributes($Path)
-        if(($a -band [IO.FileAttributes]::ReparsePoint) -ne 0){
-            throw 'D_R8_P6_FAIL: cleanup reparse refused'
-        }
-        [IO.Directory]::Delete($Path,$true)
+    if(-not [IO.Directory]::Exists($full)){
+        throw 'D_R8_P6_FAIL: owned root missing or substituted'
     }
+    $attrs=[IO.File]::GetAttributes($full)
+    if(($attrs -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+       ($attrs -band [IO.FileAttributes]::Directory) -eq 0){
+        throw 'D_R8_P6_FAIL: root reparse or not directory'
+    }
+    $entries=@([IO.Directory]::GetFileSystemEntries($full))
+    if([string]::IsNullOrEmpty($ExpectedFilePath)){
+        # All failed/disabled/unknown cases must leave NO file or subdirectory.
+        if(-not [string]::IsNullOrEmpty($ExpectedSha256) -or $entries.Count -ne 0){
+            throw 'D_R8_P6_FAIL: unexpected entry in no-output root'
+        }
+    } else {
+        $candidate=[IO.Path]::GetFullPath($ExpectedFilePath)
+        $filename=[IO.Path]::GetFileName($candidate)
+        if(-not [string]::Equals($candidate,$ExpectedFilePath,[StringComparison]::OrdinalIgnoreCase) -or
+           -not [string]::Equals([IO.Path]::GetDirectoryName($candidate),$full,[StringComparison]::OrdinalIgnoreCase) -or
+           $filename -cnotmatch '^candidate-[0-9A-F]{32}\.3mf$' -or
+           $ExpectedSha256 -cnotmatch '^[0-9A-F]{64}$' -or
+           $entries.Count -ne 1 -or
+           -not [string]::Equals([string]$entries[0],$candidate,[StringComparison]::OrdinalIgnoreCase)){
+            throw 'D_R8_P6_FAIL: unexpected or non-owned output entry'
+        }
+        $fileAttrs=[IO.File]::GetAttributes($candidate)
+        if(($fileAttrs -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+           ($fileAttrs -band [IO.FileAttributes]::Directory) -ne 0){
+            throw 'D_R8_P6_FAIL: output reparse or directory'
+        }
+        $length=([IO.FileInfo]::new($candidate)).Length
+        if($length -ne 887L -or $length -gt 4096L -or
+           (Get-A3DSha256 ([IO.File]::ReadAllBytes($candidate))) -cne $ExpectedSha256){
+            throw 'D_R8_P6_FAIL: owned artificial output SHA or length changed'
+        }
+        # Only the exact verified A-reported output is deleted; no wildcard.
+        [IO.File]::Delete($candidate)
+    }
+    # Nonrecursive removal fails closed if anything unrecognized appeared.
+    if(@([IO.Directory]::GetFileSystemEntries($full)).Count -ne 0){
+        throw 'D_R8_P6_FAIL: root not empty after exact-owned cleanup'
+    }
+    [IO.Directory]::Delete($full,$false)
+    [void]$script:DMatrixCreatedRoots.Remove($Path)
 }
 function Invoke-DMatrixBridge([byte[]]$Image,[string]$Directory,[hashtable]$Extra) {
     $mem=[IO.MemoryStream]::new($Image,$false)
@@ -98,7 +149,13 @@ foreach($spc in @(1,2)){
         } finally { $offStream.Dispose() }
 
         # ONE structural candidate: a synthetic export is allowed but never an original-file claim.
+        $ownedOutputPath=''
         $yes=Invoke-DMatrixBridge $image $dir @{}
+        # Track exactly the path A reported on this successful CreateNew.
+        # If the result is invalid, fail closed rather than recurse into TEMP.
+        if($yes.status -ceq 'complete' -and $yes.outputVerified){
+            $ownedOutputPath=[string]$yes.outputPath
+        }
         Assert-DMatrix ($yes.schemaVersion -ceq 'r8_synthetic_r7_source_binding_v1' -and
             $yes.status -ceq 'complete' -and $yes.candidateCount -eq 1 -and
             $yes.decision -ceq 'synthetic_source_bound_output_verified_original_UNKNOWN' -and
@@ -216,7 +273,7 @@ foreach($spc in @(1,2)){
         Write-Host ('D R8-P6: SPC{0} candidate=1 R7={1}B/{2}calls R8={3}B/{4}calls, zero/multiple/quotas/EOF/failure=NO_EXPORT original=UNKNOWN' -f
             $spc,$yes.metrics.r7ActualReturnedBytes,$yes.metrics.r7PhysicalReadCalls,$yes.metrics.r8CandidateActualReturnedBytes,$yes.metrics.r8CandidatePhysicalReadCalls)
     } finally {
-        Remove-DMatrixRoot $dir
+        Remove-DMatrixRoot -Path $dir -ExpectedFilePath $ownedOutputPath -ExpectedSha256 $oracleSha
     }
 }
 Assert-DMatrix ($script:cases -eq 18) 'exact_tested_synthetic_case_denominator'
