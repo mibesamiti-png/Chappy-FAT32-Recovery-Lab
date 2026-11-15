@@ -121,14 +121,14 @@ foreach($spc in @(1,2)){
         Assert-DMatrix ([IO.File]::Exists([string]$yes.outputPath) -and
             [string]::Equals([IO.Path]::GetDirectoryName([string]$yes.outputPath),$dir,[StringComparison]::OrdinalIgnoreCase) -and
             $yes.outputSha256 -ceq $oracleSha -and
-            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq $oracleSha -and
+            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath))) -ceq $oracleSha -and
             (Get-A3DSha256 $image) -ceq $sourceSha) ('SPC'+$spc+':private_scorer_only_and_source_immutable')
 
         # Same candidate/name cannot overwrite or delete the first successful output.
         $collision=Invoke-DMatrixBridge $image $dir @{}
         Assert-DMatrix ($collision.status -ceq 'partial' -and -not $collision.outputVerified -and
             @([IO.Directory]::GetFiles($dir)).Count -eq 1 -and
-            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath)) -ceq $oracleSha) ('SPC'+$spc+':CreateNew_collision_owned_file_untouched')
+            (Get-A3DSha256 ([IO.File]::ReadAllBytes([string]$yes.outputPath))) -ceq $oracleSha) ('SPC'+$spc+':CreateNew_collision_owned_file_untouched')
 
         # The canonical ID is observed from A, but is never a selection hint passed in.
         $id=[string]$yes.r7CandidateId
