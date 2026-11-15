@@ -1,6 +1,12 @@
 # Universal Work Instruction — Chappy FAT32 Recovery Lab
 
-## ACTIVE 2026-11-15 JST: B/C/D delegated R8 from A (overrides dated role tasks below)
+## ACTIVE 2026-11-15 JST: B/C standby after A merge; D existing PR fix; A R8-P7
+
+**Always read the first ACTIVE block of [TEAM_DISPATCH.md](TEAM_DISPATCH.md).** B #198 / PR #203 and C #199 / PR #202 have **already merged** as narrowly verified generated-only R8 components; B and C are **STANDBY**, must not start a duplicate branch or a new optional algorithm merely on `続けて`. D #200 has existing Draft PR #205; A requested to replace recursive test-only generated temp cleanup with exact-owned file nonrecursive cleanup, so D must revise its same PR and supply exact new WinPS5.1/privacy CI; do not start a second branch. A owns mandatory [R8-P7 #207](https://github.com/mibesamiti-png/Chappy-FAT32-Recovery-Lab/issues/207) handle-relative output binding and full R8 clause-by-clause gate. **Existing B/C/D conversation identities unchanged; identical single BCD prompt remains supported.** Old active text below is prior checkpoint, not latest instruction.
+
+Formal generated-synthetic 84% (R0–R7) stays unchanged; R8 **NOT_ACCEPTED 0/9**, R9 0/5, R10 0/2; physical microSD and sole original ~31GB IMG not approved for any read/hash/scan/copy/extract/repair/write/upload. B's native preflight **never authorizes write**, and standalone C writer does not prove root-bound race safety. A alone reviews, merges, integrates and verifies final-head/post-main Windows/privacy CI.
+
+## HISTORICAL 2026-11-15 JST: B/C/D delegated R8 from A (prior checkpoint)
 
 **Read [top ACTIVE dispatch](TEAM_DISPATCH.md) and [identical BCD bootstrap](BCD_UNIFIED_BOOTSTRAP_PROMPT.md) before acting.** The formerly separate B R4/C R5/D R6 original generated-synthetic stages and A R7 are now independently formally accepted; A assigned new R8 subwork B #198 root safety, C #199 synthetic writer-fault safety, D #200 independent adversarial matrix. Old B #71/C #72/D #73 and research-only R4–R7 proposals remain historical, not currently blocking. Keep each existing chat's B/C/D identity, retain one chat per role; a new roleless chat needs one-time explicit identification. These tasks do not execute automatically across conversations. A exclusively reviews, merges, integrates in shared exporter/bridge/runner and signs full original R8. B/C/D own **only dedicated new files** specified in the top roster, open Draft PRs and never merge or rewrite STATE, ROADMAP, progress ledger, or other team's paths.
 
