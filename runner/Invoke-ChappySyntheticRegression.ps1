@@ -71,8 +71,17 @@ $tests=@(
     'tests\Test-A3DR8SourceBoundSyntheticBridge.ps1',
     'tests\Test-A3DLiveCCandidateReceipts.ps1',
     'tests\Test-A3DLiveMultiCandidateBoundary.ps1',
-    'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1'
+    'tests\Test-A3DDiscoveredAmbiguousReceipts.ps1',
+    'tests\Test-A3DR8DelegatedRunnerManifest.ps1'
 )
+# A-owned allowlist: no native B/C/D R8 test may be silently skipped when its adapter
+# is submitted; missing module/test pairs are a failing CI condition.
+. (Join-Path $PSScriptRoot 'Chappy.R8DelegatedTestSelection.ps1')
+$delegated=@(Get-ChappyR8DelegatedTestSelection -RepositoryRoot $root)
+foreach($relative in $delegated) {
+    Write-Host ('A R8 delegated native test selected: ' + $relative)
+    $tests += $relative
+}
 $passed=0
 Push-Location $root
 try {
