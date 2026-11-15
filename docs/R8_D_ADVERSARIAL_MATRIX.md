@@ -1,11 +1,19 @@
 # Team D R8-P6 independent adversarial matrix — Issue #200
 
+## 2026-11-15 — A-requested owned-only cleanup revision (pending native CI)
+
+- Remain on existing Draft PR #205 / Issue #200. A requested replacing recursive directory deletion. The D test now records *both* outputPath and outputName from A only after a successful generated-only CreateNew, separately verifies the one direct child filename, source-oracle SHA, 887-byte size, absence of any reparse bit and absence of any other file or directory, deletes only that exact output, then removes the empty invocation-owned root **nonrecursively**.
+- Each fresh synthetic temp root is registered at creation. Root absent, changed or reparse, unknown entries, nested directories, substituted output, wrong hash or unexpected child cause explicit test **FAIL without broad cleanup**. Failure/UNKNOWN scenarios require an empty root.
+- This is test-harness safety, **not proof of race-proof Windows handle-relative output authority**; A still owns R8-P7 handle-relative integration. No original path or file is involved.
+- B #203 and C #202 are now A-merged. D must be verified on an exact branch containing both, with native WinPS5.1/privacy **58/58** including all three delegated scripts. The previous D-only 56/56 on earlier main was real but does not prove this combined result. New CI is not claimed PASS before observation.
+- The original D matrix scenario denominator remains **18** groups. A-only merge and post-main CI, and R8 original full gate, remain outstanding.
+
 ## Frozen scope and safety
 - Base main: b052c3b7c15d54558d6961b49927c395f9967b27 (2026-11-15 JST).
 - D owns ONLY tests/Test-DR8AdversarialMatrix.ps1 and this document. A owns R7/R8 bridge, exporter, central CI runner, review, merge and formal stage signoff.
 - Generate FAT32 using tests/helpers/New-ChappyA3DStandardFixture.ps1 seed 202611, SPC1 fragmented and SPC2 contiguous. The source is a non-writable MemoryStream. Private test scorer oracle is NEVER passed to A candidate selection.
 - Only fresh direct OS-TEMP child roots named ChappyR8Synthetic-<32 lowercase hex>, bounded synthetic files and verified owned-root cleanup. No file path input, actual IMG, device, actual user file or real source used. No test changes B/C production.
-- Existing unmerged B PR #203 and C PR #202 are not assumed integrated.
+- B PR #203 and C PR #202 are now merged on main but remain standalone components; the A R8 exporter is NOT handle-relative race-proof.
 
 ## P1 behavioral matrix (each row independently exercised with SPC1 and SPC2)
 
