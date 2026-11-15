@@ -82,9 +82,9 @@ try{
             $denials++
         }
 
-        # Ordinary rename of a held directory should be denied, because
-        # the native root lease excludes FILE_SHARE_DELETE. If this OS does
-        # permit a rename, MUST NOT remain "handle observed" after the move.
+        # Some Windows environments may rename the owned directory even
+        # while our no-FILE_SHARE_DELETE handle is alive. This is NOT a
+        # security guarantee: successful rename MUST invalidate the lease.
         $movedWhileHeld=$false
         try{
             [IO.Directory]::Move($root,$parking)
@@ -227,5 +227,5 @@ try{
 $hash=[Security.Cryptography.SHA256]::Create()
 try{$after=[BitConverter]::ToString($hash.ComputeHash($source))}finally{$hash.Dispose()}
 Assert-BR8P4 ($before -ceq $after) 'invented 887-byte original synthetic source SHA unchanged'
-Write-Host ('B R8-P4 STANDALONE: checks={0}; actual external source reads=0, output writes=0, output deletes=0, original UNKNOWN; handle PRECHECK ONLY / canAuthorizeWrite=false; junction/symlink NOT TESTED when OS rejects creation' -f $checks)
+Write-Host ('B R8-P4 STANDALONE: checks={0}; rootRenameSucceeded={1}; junctionCreated={2}; symlinkCreated={3}; nestedJunctionCreated={4}; actual source reads=0, output writes=0, output deletes=0, original UNKNOWN; handle PRECHECK ONLY / canAuthorizeWrite=false' -f $checks,$movedWhileHeld,$junctionMade,$symlinkMade,$nestedLinkMade)
 Write-Host 'PASS: B R8-P4 standalone handle/root negative test completed. Not a race-proof exporter.'
