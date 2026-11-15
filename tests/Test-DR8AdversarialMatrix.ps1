@@ -211,12 +211,12 @@ foreach($spc in @(1,2)){
         } finally {Remove-DMatrixRoot $failureRoot}
         Assert-DMatrix ((Get-A3DSha256 $image) -ceq $sourceSha -and
             @([IO.Directory]::GetFiles($dir)).Count -eq 1) ('SPC'+$spc+':baseline_source_and_output_untouched')
-        $script:cases+=2 # default-off, positive and safe CreateNew collision, grouped as 2.
+        $script:cases+=3 # default-off, positive one-candidate export and CreateNew collision.
         Write-Host ('D R8-P6: SPC{0} candidate=1 R7={1}B/{2}calls R8={3}B/{4}calls, zero/multiple/quotas/EOF/failure=NO_EXPORT original=UNKNOWN' -f
             $spc,$yes.metrics.r7ActualReturnedBytes,$yes.metrics.r7PhysicalReadCalls,$yes.metrics.r8CandidateActualReturnedBytes,$yes.metrics.r8CandidatePhysicalReadCalls)
     } finally {
         Remove-DMatrixRoot $dir
     }
 }
-Assert-DMatrix ($script:cases -eq 14) 'exact_tested_synthetic_case_denominator'
+Assert-DMatrix ($script:cases -eq 18) 'exact_tested_synthetic_case_denominator'
 Write-Host ('PASS: D R8-P6 {0} generated-only scenario groups, {1} assertions; never original-media success.' -f $script:cases,$script:checks)
