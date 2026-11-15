@@ -1,6 +1,10 @@
 # Instructions for every A/B/C/D developer or AI
 
-## ACTIVE A-delegated R8 parallel work (2026-11-15 JST)
+## LATEST ACTIVE checkpoint — R8 B/C accepted narrow, D revision, A integration
+
+Read the FIRST ACTIVE block of `docs/TEAM_DISPATCH.md` before doing any task. Team A: Issue **#207** original R8 root-bound output and full gate review. Team B: #198/PR #203 **MERGED and STANDBY**, no automatic extra PRs. Team C: #199/PR #202 **MERGED and STANDBY**, no automatic extra PRs. Team D: Issue #200/PR #205 **REVISION REQUESTED**: fix test-only cleanup within SAME Draft PR and rerun actual native Windows/Privacy final-head test. Never infer a new job merely because the old role had a task. Keep assigned B/C/D chat roles, A alone integrates/reviews/merges, and never relax real-media embargo or synthetic source scope. Formal artificial stage 84% and R8 0/9 unchanged. B `canAuthorizeWrite=false`; C standalone default OFF not a secure general exporter.
+
+## HISTORICAL A-delegated R8 parallel work (2026-11-15 JST)
 
 The **top ACTIVE** `docs/TEAM_DISPATCH.md` and `docs/BCD_UNIFIED_BOOTSTRAP_PROMPT.md` override historical B R4/C R5/D R6 task ownership below, without relaxing privacy or safety. B current issue **#198** (standalone root guard), C **#199** (standalone safe fault writer), D **#200** (standalone R8 adversarial test) each uses new exclusive paths. Existing B/C/D chat identity preserved; all three accept exactly the same prompt. A alone owns existing shared exporter/bridge and CI runner, makes final-HEAD decisions, merges, and signs formal R8 whole stage. No B/C/D self-merge. Formal synthetic engineering **84%** is unchanged; R8 0/9 points accepted. Original card / only original IMG unavailable for any operation.
 
