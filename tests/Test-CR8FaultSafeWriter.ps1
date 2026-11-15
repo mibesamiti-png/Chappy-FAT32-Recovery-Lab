@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 # Team C ACTIVE #199 independent synthetic fault matrix.
-# NOT wired into A's shared runner: A alone adds this standalone test there.
+# Routed by A's merged native test selector once C module/test pair exists.
 [CmdletBinding()]param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -134,7 +134,8 @@ try{
  Assert-CR8Fault ($notOurRoot.status -eq 'rejected' -and
    $notOurRoot.metrics.createdThisCall -eq $false) 'direct_OS_temp_not_disposable_root'
  $total++
- $invalid=Invoke-ChappyR8SyntheticFaultWriterV1 @args -SyntheticFixtureTag 'real-source-not-authorized' -EnableSyntheticFaultWriter
+ $invalidArgs=@{SyntheticCandidateBytes=$candidate;OutputRoot=$root;SyntheticFixtureTag='real-source-not-authorized'}
+ $invalid=Invoke-ChappyR8SyntheticFaultWriterV1 @invalidArgs -EnableSyntheticFaultWriter
  Assert-CR8Fault ($invalid.status -eq 'rejected' -and
    $invalid.metrics.createdThisCall -eq $false) 'not_an_authorized_generated_fixture_label'
  $total++
